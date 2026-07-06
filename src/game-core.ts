@@ -1162,6 +1162,19 @@ function placeLooseBallDefensive(
   return target;
 }
 
+function replayCoordFromDetails(details: Record<string, unknown>): { x: number; y: number } | undefined {
+  const from = details.from;
+  if (typeof from !== "object" || from === null) return undefined;
+  const maybeCoord = from as { x?: unknown; y?: unknown };
+  if (typeof maybeCoord.x !== "number" || typeof maybeCoord.y !== "number") return undefined;
+  return Number.isFinite(maybeCoord.x) && Number.isFinite(maybeCoord.y) ? { x: maybeCoord.x, y: maybeCoord.y } : undefined;
+}
+
+function replayPieceIdFromDetails(details: Record<string, unknown>): number | undefined {
+  const id = details.shooterId ?? details.kickerId;
+  return typeof id === "number" && Number.isFinite(id) ? id : undefined;
+}
+
 function scoreGoal(
   state: FootballChessGameState,
   team: Team,
@@ -1174,6 +1187,8 @@ function scoreGoal(
   pushEvent(events, {
     type: "shot.goal",
     team,
+    pieceId: replayPieceIdFromDetails(details),
+    from: replayCoordFromDetails(details),
     details: { ...details, score: { ...state.score }, kickoffTeam },
   });
   logs.push(`${teamName(team)} goal; kickoff returns to ${teamName(kickoffTeam)}`);
@@ -1399,6 +1414,7 @@ function resolveSetPieceOutcome(
       type: "shot.saved",
       team: kicker.team,
       pieceId: kicker.id,
+      from: replayCoordFromDetails(eventDetails),
       to: coordOf(outcome.gk),
       details: { ...eventDetails, gkId: outcome.gk.id, saveType },
     });

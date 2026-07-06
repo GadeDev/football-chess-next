@@ -402,8 +402,11 @@ test("a successful shot scores and returns kickoff possession to the conceding t
     b: [{ type: "shoot", pieceId: 1, tx: 0, ty: -3, team: "b" }],
   });
 
+  const goal = result.events.find((event) => event.type === "shot.goal");
   assert.equal(result.game.score.b, 1);
-  assert.equal(result.events.some((event) => event.type === "shot.goal"), true);
+  assert.equal(Boolean(goal), true);
+  assert.equal(goal.pieceId, 1);
+  assert.deepEqual(goal.from, { x: 0, y: -2 });
   assert.equal(result.events.some((event) => event.type === "kickoff" && event.team === "r"), true);
   assert.equal(ballHolder(result.game)?.team, "r");
 });
@@ -479,6 +482,7 @@ test("a normal shot miss keeps replay metadata for the GK follow-up", () => {
   assert.deepEqual(miss.from, { x: -1, y: -1 });
   assert.equal(miss.details?.area, "VA");
   assert.equal(saved.type, "shot.saved");
+  assert.deepEqual(saved.from, { x: -1, y: -1 });
   assert.equal(saved.details?.source, "VitalAreaShoot");
   assert.deepEqual(saved.details?.from, { x: -1, y: -1 });
   assert.deepEqual(saved.details?.kickLogs, ["VitalAreaShoot failed-to-CK 5% => GK"]);
