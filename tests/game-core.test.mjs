@@ -298,6 +298,30 @@ test("a normal shot miss outside the GK goal-area catch stops later commands as 
   assert.equal(ballHolder(result.game)?.id, 3);
 });
 
+test("a normal shot miss keeps replay metadata for the GK follow-up", () => {
+  const state = createInitialGameState("b", "failed-0");
+  state.pieces = [
+    piece({ id: 1, team: "b", posType: "fw", cost: 1, x: -1, y: -1, sx: -1, sy: -1 }),
+    piece({ id: 3, team: "r", posType: "gk", cost: 3, x: -1, y: -1, sx: -1, sy: -1 }),
+  ];
+  state.ball = { target: "piece", pieceId: 1, x: null, y: null, lastTeam: "b" };
+
+  const result = resolveServerTurn(state, {
+    b: [{ type: "shoot", pieceId: 1, tx: 0, ty: -3, team: "b" }],
+  });
+  const [miss, saved] = result.events;
+
+  assert.equal(miss.type, "shot.miss");
+  assert.deepEqual(miss.from, { x: -1, y: -1 });
+  assert.equal(miss.details?.area, "VA");
+  assert.equal(saved.type, "shot.saved");
+  assert.equal(saved.details?.source, "VitalAreaShoot");
+  assert.deepEqual(saved.details?.from, { x: -1, y: -1 });
+  assert.deepEqual(saved.details?.kickLogs, ["VitalAreaShoot failed-to-CK 5% => GK"]);
+  assert.equal(saved.details?.gkId, 3);
+  assert.equal(saved.details?.saveType, "failedShoot");
+});
+
 test("a foul set-piece that ends in GK stops later commands in the same turn", () => {
   const state = createInitialGameState("b", "setpiece-stop-unique-1");
   state.pieces = [
