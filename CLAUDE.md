@@ -74,10 +74,11 @@ Claude Code がこのリポジトリで作業する際の指針。詳細な背�
 - **ロジック検証**：DOMをスタブ化して `eval` し、対象関数を実行時テスト（このリポジトリでの標準手法）。
 - **Worker型チェック**：Cloudflare側を触ったら `npm run check:worker` を必ず実行する。
 - **Worker dry-run**：公開前やDurable Object変更後は `npx wrangler deploy --dry-run` でバンドル確認する。
-- **⚠ ブラウザ実描画の確認**：Claude Code のこの環境からは**ローカルの `prototype.html` を起動・スクリーンショットできない**（拡張機能のChromeがローカルファイル/サーバーに到達不可）。見た目の最終確認はユーザーに `! open <path>` で依頼し、必要ならスクリーンショットを貼ってもらう。
+- **⚠ ブラウザ実描画の確認**：Claude Code のこの環境からは**ローカルの `prototype.html` を起動・スクリーンショットできない**（拡張機能のChromeがローカルファイル/サーバーに到達不可。2026-07-06 に `localhost:8000` / `127.0.0.1:8000` の両方で再確認済み）。見た目の最終確認はユーザーに `! open <path>` で依頼し、必要ならスクリーンショットを貼ってもらう。
 
 ## 編集上の注意
 - 画像base64を含む巨大な行があるため、`Read` は範囲指定で。`cat`/`sed` での全文出力は避ける。
 - 内部ロジック（移動可否/パス範囲/確率/コマンド確定）の変更は慎重に。UI改修時は「表示のみ変更、ロジック不変」を原則とする。
 - Codexで継続する場合は、実装・検証・ローカルURL確認までこの単一HTML版で完結させる。演出移植はUnity C#を調べ、ボール軌跡・駒移動・カットインなど小さい単位で移す。
-- Git運用：remote は `origin https://github.com/GadeDev/football-chess-next.git`。最新作業は `origin/codex/prototype-throughpass-move-fix` にある。`origin/main` は別履歴の古い系統なので、統合/上書きはユーザー確認なしに行わない。Pushはユーザーから明示依頼があった場合のみ行う。
+- Git運用：remote は `origin https://github.com/GadeDev/football-chess-next.git`。最新作業は `origin/codex/prototype-throughpass-move-fix` にあり、ローカルにも同名の追跡ブランチを作成済み（2026-07-06。以前はローカル `master` が同リモートブランチを追跡していた）。`origin/main` は別履歴の古い系統なので、統合/上書きはユーザー確認なしに行わない。Pushはユーザーから明示依頼があった場合のみ行う。
+- デプロイ：Worker公開は `npm run check:worker` → `npx wrangler deploy --dry-run` → `npm run deploy:worker`（= `wrangler deploy`）の順で行う。
