@@ -70,6 +70,49 @@ test("pass probability display is hidden for an enemy-only target cell", () => {
   assert.equal(calcPassDisplayProbability(state, passer, 1, 1), 100);
 });
 
+test("online command validation follows chain ball holder for chained passes", () => {
+  const state = createInitialGameState("b", "chain-pass-validation");
+  state.pieces = [
+    piece({ id: 1, team: "b", posType: "mf", cost: 3, x: 0, y: 1, sx: 0, sy: 1 }),
+    piece({ id: 2, team: "b", posType: "mf", cost: 3, x: 0, y: 0, sx: 0, sy: 0 }),
+    piece({ id: 3, team: "b", posType: "fw", cost: 3, x: 0, y: -1, sx: 0, sy: -1 }),
+  ];
+  state.ball = { target: "piece", pieceId: 1, x: null, y: null, lastTeam: "b" };
+
+  const validation = validateCommandsForTeam(state, "b", [
+    { type: "pass", pieceId: 1, targetId: 2, tx: 0, ty: 0, team: "b" },
+    { type: "pass", pieceId: 2, targetId: 3, tx: 0, ty: -1, team: "b" },
+  ]);
+
+  assert.equal(validation.ok, true, validation.errors.join("; "));
+
+  const result = resolveServerTurn(state, { b: validation.commands });
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["pass.completed", "pass.completed", "turn.completed"],
+  );
+  assert.equal(ballHolder(result.game)?.id, 3);
+});
+
+test("online command validation stops kicks after a pass lands in a contested cell", () => {
+  const state = createInitialGameState("b", "chain-pass-contested-validation");
+  state.pieces = [
+    piece({ id: 1, team: "b", posType: "mf", cost: 3, x: 0, y: 1, sx: 0, sy: 1 }),
+    piece({ id: 2, team: "b", posType: "mf", cost: 3, x: 0, y: 0, sx: 0, sy: 0 }),
+    piece({ id: 3, team: "b", posType: "fw", cost: 3, x: 0, y: -1, sx: 0, sy: -1 }),
+    piece({ id: 4, team: "r", posType: "df", cost: 1, x: 0, y: 0, sx: 0, sy: 0 }),
+  ];
+  state.ball = { target: "piece", pieceId: 1, x: null, y: null, lastTeam: "b" };
+
+  const validation = validateCommandsForTeam(state, "b", [
+    { type: "pass", pieceId: 1, targetId: 2, tx: 0, ty: 0, team: "b" },
+    { type: "pass", pieceId: 2, targetId: 3, tx: 0, ty: -1, team: "b" },
+  ]);
+
+  assert.equal(validation.ok, false);
+  assert.equal(validation.errors.some((error) => error.includes("pass requires current chain ball holder")), true);
+});
+
 test("a completed pass into a contested cell skips end-of-turn stationary tackles", () => {
   const state = createInitialGameState("b", "contested-pass-0");
   state.pieces = [

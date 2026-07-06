@@ -1936,6 +1936,7 @@ function hasCommand(pieceId){ return myCommands.some(c=>c.pieceId===pieceId); }
    仕込み中は「いまボールを持っているとみなす駒」を chainHolderId で追跡する。 */
 let chainHolderId=null;   // 仕込み上、現在ボールを持っている駒
 let chainPassCount=0;     // このターンに仕込んだパス回数（Unity MoveNum 相当）
+let chainBallCanMove=true; // Unity BallModel.CanMove 相当。敵同居で止まると追加キック不可。
 let chainMovedIds=new Set(); // このターンに「移動」を仕込んだ駒（=もうパスを受けても蹴れるが移動はできない）
 let chainPassedIds=new Set(); // このターンに「パス／スルーパス」でボールを離した駒（通常移動は追加可）
 
@@ -2176,11 +2177,17 @@ function isMovable(p,x,y){
    ・ゴールマス不可、同マス不可 */
 // 仕込み中の「論理的ボール保持駒」＝連鎖の現在地
 function chainHolder(){ return chainHolderId!=null ? pieceById(chainHolderId) : null; }
+function canChainKick(p){
+  if(!p || !chainBallCanMove)return false;
+  const enemyPieceNum=piecesAt(p.x,p.y).filter(q=>q.team!==p.team).length;
+  return enemyPieceNum===0 || chainPassCount===0;
+}
 function isPassable(p,x,y){
   if(!p)return false;
   // 仕込み中は chainHolder、それ以外は実ボール保持駒
   const holder = state.phase==='input' ? chainHolder() : ballHolder();
   if(!holder||holder.id!==p.id)return false;
+  if(state.phase==='input' && !canChainKick(p))return false;
   const c=cellAt(x,y); if(!c)return false;
   if(c.t==='selfgoal'||c.t==='oppgoal')return false;
   if(p.x===x&&p.y===y)return false;
@@ -2253,6 +2260,7 @@ function selectBallItem(x,y){
 function selectBall(){
   const h=chainHolder();
   if(!h || h.team!==localPlayerTeam()){ playFeedback('error'); log('パスできるボール保持駒がいません'); return; }
+  if(!canChainKick(h)){ playFeedback('error'); log('相手駒と競っているため、このターンは追加キックできません'); return; }
   playFeedback('select');
   state.popup=null; state.selected=h; state.expanded=null;
   state.mode='pass'; state.ballSelected=true;
@@ -2308,8 +2316,9 @@ function movePiece(p,x,y,carryBall){
   if(carryBall){
     // ドリブル＝ボールごと運ぶ。連鎖の起点（論理ボール位置）も移る。続けてその駒からパス/ドリブル可
     chainHolderId=p.id;
-    // ただし「移動済み」なのでこの駒の再移動は不可、パスは可
-    log('→ ボールを運びました。続けてこの駒からパスでつなげます');
+    if(chainBallCanMove && piecesAt(x,y).some(q=>q.team!==p.team)) chainBallCanMove=false;
+    // ただし「移動済み」なのでこの駒の再移動は不可、パスは可（敵同居時はUnity同様に追加キック不可）
+    log(chainBallCanMove ? '→ ボールを運びました。続けてこの駒からパスでつなげます' : '→ 相手駒と競ったため、追加キックは止まります');
   }
   clearSelection(); render();
 }
@@ -2321,6 +2330,7 @@ function doPassToPiece(from,to){
   // 連鎖：ボールは to へ移る。passCount を増やす。
   chainHolderId=to.id;
   chainPassCount++;
+  if(piecesAt(to.x,to.y).some(q=>q.team!==to.team)) chainBallCanMove=false;
   log(`仕込み：${label(from)}→${label(to)} へパス予約（連鎖${chainPassCount}）`);
   // 受け手がまだ移動を仕込んでいなければ、続けてその駒を選択しパスモードに（無限連鎖）
   continueChainFrom(to);
@@ -2337,16 +2347,16 @@ function doPassToCell(from,x,y){
   // スルーパス先は空マス→そのマスに味方を後で動かして受ける運用。連鎖の論理保持は解除。
   chainHolderId=null;
   chainPassCount++;
+  chainBallCanMove=false;
   log(`仕込み：${label(from)} → (${x},${y}) へスルーパス予約`);
   clearSelection(); render();
 }
 /* 連鎖継続：受け手を自動選択してパスモードへ。
-   連鎖継続条件を統一（項目3）：パス回数に関わらず、着地マスに敵駒が存在すれば即連鎖終了。
-   「まだ一度もパスしてない」特例は撤廃し、常に着地マスの敵駒有無のみで判定する。
+   Unity BallModel.CanMove 準拠：着地マスに敵駒がいるとボールが停止し、追加キック不可。
    （加えて、受け手がこのターン移動を仕込み済みなら再度は蹴れるが連鎖UIは畳む） */
 function continueChainFrom(to){
   const enemyAtLanding = piecesAt(to.x,to.y).some(q=>q.team!==to.team);
-  const canChain = !enemyAtLanding && !chainMovedIds.has(to.id);
+  const canChain = canChainKick(to) && !chainMovedIds.has(to.id);
   if(canChain){
     // 連鎖継続＝新しい保持駒のボールが選択された状態にする（続けてパス先が表示される）
     state.popup=null; state.selected=to; state.mode='pass'; state.expanded=null; state.ballSelected=true;
@@ -2364,6 +2374,7 @@ function tryShoot(p){
   myCommands.push({type:'shoot', pieceId:p.id, tx:p.x, ty:p.y, team:localPlayerTeam()});
   playFeedback('shoot');
   chainHolderId=null; // シュートで連鎖終了
+  chainBallCanMove=false;
   log(`仕込み：${label(p)} のシュート予約（${r.area} ${r.prob}%）`);
   clearSelection(); render();
 }
@@ -3403,6 +3414,7 @@ function resetChain(){
   const h=ballHolder();
   chainHolderId = (h && h.team===localPlayerTeam()) ? h.id : null;
   chainPassCount=0;
+  chainBallCanMove=true;
   chainMovedIds=new Set();
   chainPassedIds=new Set();
 }
