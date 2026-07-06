@@ -2977,7 +2977,7 @@ function isFreeBallCatchOffside(team,catchPiece){
 }
 
 /* そのマスに入った駒がボールを拾う。複数ならコスト最高が優先。
-   同値はホスト(青)優先→id昇順（同時ターン処理のマージ順に準拠）。
+   同値はUnity GetHighestCostModel 準拠でランダム。
    誰もいなければボールはそのマスに留まる。 */
 async function pickupLooseBall(){
   if(ball.target!=='cell') return;
@@ -2985,11 +2985,8 @@ async function pickupLooseBall(){
   const sourceTeam=ball.lastTeam||lastHadBallTeam;
   const here=piecesAt(ball.x,ball.y);
   if(here.length===0) return; // 誰も入らなかった→留まる
-  const winner=here.slice().sort((a,b)=>{
-    if(pieceCost(b)!==pieceCost(a)) return pieceCost(b)-pieceCost(a); // コスト降順
-    if(a.team!==b.team) return a.team==='b'?-1:1;                     // 同値ならホスト優先
-    return a.id-b.id;                                                // さらに同値ならid昇順
-  })[0];
+  const winner=highestCostPiece(here);
+  if(!winner) return;
   setBallToPiece(winner,true);
   log(`こぼれ球を ${label(winner)} が確保（コスト${winner.cost}）`);
   if(sourceTeam===winner.team && isFreeBallCatchOffside(winner.team,winner)){

@@ -40,12 +40,12 @@ Claude Code がこのリポジトリで作業する際の指針。詳細な背�
 - 盤面/エリア、デフォルト編成、Unity駒画像、ボール2状態、パス範囲24方向、確率テーブル一式。
 - **同時ターン制**（仕込み→AI裏で計画→「TURN END（決定）」でマージ→リプレイ再生）。
 - **シュート判定フロー**（`resolveShootCommand`）：①経路上の敵DFで確定ブロック ②PA/VAテーブルでDFブロック抽選（唯一の確率ゲート）③GK位置判定（コース差±1でキャッチ）。PK75%/FK50%固定。下部固定ボタンは廃止済み。ボール選択時の弧ポップアップ内に、シュート可能エリアにいる場合のみ「SHOOT」項目が現れ、そこから`tryShoot`を呼ぶ（`buildSelectItems`/`renderSelectFan`）。
-- **こぼれ球共通処理**：`placeLooseBall`/`pickupLooseBall`（コスト最高→ホスト優先→id昇順で確保）。**クリア処理**（自陣PA/GAでの守備成功時は中盤方向へ1マス押し出し `clearPushCell`）。こぼれ球アイコン(`.ballfree`)は駒(`.piece`)と同じ「セル幅%＋max-width上限」方式でサイズ指定（固定pxではない。画面幅変化に連動）。
+- **こぼれ球共通処理**：`placeLooseBall`/`pickupLooseBall`（コスト最高で確保、最高コスト複数ならUnity `GetHighestCostModel()` 準拠で抽選。サーバー側はseeded RNG）。**クリア処理**（自陣PA/GAでの守備成功時は中盤方向へ1マス押し出し `clearPushCell`）。こぼれ球アイコン(`.ballfree`)は駒(`.piece`)と同じ「セル幅%＋max-width上限」方式でサイズ指定（固定pxではない。画面幅変化に連動）。
 - **オフサイド**：方向補正済み `calcOffside`（`attackDir`でチーム別）＋成立後処理 `handleOffside`（位置戻し＋こぼれ球）。通常パス着地で自動判定。
 - **Unity Calculateフェーズ寄せ**：`PrepareMoveOperations`準拠で「着地パス受け手の通常移動→非移動→その他移動」にソート。`mIsMoveBall`相当の `turnBallMoved` で、ドリブル接触時とボール未移動ターン末のタックルを通常処理に統合。フリーボール確保時は `lastHadBallTeam` を見て、同チーム回収ならターン開始位置ベースのオフサイドも判定する。
 - **FOUL/パス確率**：FOUL演出/PK/FKはUnity `TackleAsync` 準拠で、ボール保持チームから見た攻撃側2列（GA/PA/VA/Cross）のみ。中盤などではファウル抽選に当たっても通常タックルへ落ちる。PASS確率表示はUnity `MoveRangeProvider.CalculatePassSuccessProbability` 準拠で、味方がいるマスのみ `経路上FlyingPass成功率の積 × 着地LandingPass成功率` を表示。空マス/相手だけのマスはスルーパス候補なのでPASS確率テキストを出さない。
 - **ゴール後リキックオフ**：Unity `ReKickoffSetup` / `GetReKickOffTeamType` 準拠で、得点後は失点側ボールのキックオフ配置へ戻す。PA/GAへドリブル到達しただけでは得点にせず、得点はシュート/PK/FKなどの解決からのみ発生させる。
-- **遅延行為/消極的戦術**：遅延行為はUnity条件に合わせ、「ターン開始時にボールを持っていたチームが、ターン終了時も同じチームとして自陣保持している場合のみ」カウントする。消極的戦術は「ボールが下2マス外、かつ対象チームの9コマ以上が下2マス」に合わせている。PassiveTacticsマスタJSONはUnityローカルに未同梱のため、PassCut/Tackleのデバフ量は現状-20%近似。
+- **遅延行為/消極的戦術**：遅延行為はUnity条件に合わせ、「ターン開始時にボールを持っていたチームが、ターン終了時も同じチームとして自陣保持している場合のみ」カウントする。消極的戦術は「ボールが下2マス外、かつ対象チームの9コマ以上が下2マス」に合わせている。PassiveTacticsマスタJSONはUnityローカル/`GadeDev/football-chess-app` origin/masterともに未同梱（Entry/enum/Repository参照のみ）のため、PassCut/Tackleのデバフ量は現状-20%近似。
 - **シュート失敗後のCK/GK**：通常シュート失敗後のCK/GKリトライはUnity現行 `ShootAsync` に合わせ、初回CK後の追加CK判定が過剰連鎖しないようにしている。通常シュート失敗でCKにならずGKがゴールエリアにいる場合は `saving`、GKがゴールエリア外（同マス守備など）の場合は `failedShoot` として扱い、後者とファウル由来PK/FK→GKはUnity `OnGK` 同様にそのターンの後続コマンドを停止する。
 - **シュートブロック順/最高コスト抽選**：Unity `IsSuccessShootAvoidanceBlock` 準拠で、シュート元→ゴール手前までの `GetRoute(..., false, false)` を順に見て、GK以外の相手がいるマスは65%で回避抽選する。最初に回避失敗したマスのGK以外・最高コスト守備者がブロックし、最高コストが複数ならUnity `GetHighestCostModel()` と同じく抽選する（サーバー側はseeded RNG）。
 - **15ターン制**：前半15＋AT(0〜1)、後半15＋AT(1〜3)。ChessClockはAT中「45+N」「90+N」表記。
@@ -62,8 +62,8 @@ Claude Code がこのリポジトリで作業する際の指針。詳細な背�
 
 ## 次の残作業
 - ~~オンライン対戦への編成反映~~ → 2026-07-07 に実装済み。ROOM参加時に `deck` を送り、サーバー側で11人/GK1人/自陣配置/1マス3体/コスト上限を検証する。既存デフォルト編成（合計18.5）は互換例外として許可。
-- Unity版との差異をさらに潰す。優先は `StateBattleCalculate` 周辺の同時解決エッジケース、消極的戦術マスタの正式値確認。
-- サーバー権威化の回帰テストを増やす。`src/game-core.ts` に対して、HTML版/Unity版から拾った固定盤面・固定乱数のケースをテスト化する。2026-07-07時点で `npm test` に8ケース（スルーパス+通常移動、PASS表示、PA自動得点防止、得点後キックオフ、通常シュート失敗時のsaving/failedShoot分岐、ファウルPK→GKターン停止、シュートブロック同コスト抽選）を追加済み。
+- Unity版との差異をさらに潰す。優先は `StateBattleCalculate` 周辺の同時解決エッジケース、オンライン再生イベントの細部、消極的戦術マスタ正式値（Unityソース外からの入手が必要）。
+- サーバー権威化の回帰テストを増やす。`src/game-core.ts` に対して、HTML版/Unity版から拾った固定盤面・固定乱数のケースをテスト化する。2026-07-07時点で `npm test` に9ケース（スルーパス+通常移動、PASS表示、PA自動得点防止、得点後キックオフ、通常シュート失敗時のsaving/failedShoot分岐、ファウルPK→GKターン停止、シュートブロック同コスト抽選、こぼれ球同コスト抽選）を追加済み。
 - オンライン再生の完全対応。現状は主要 `TurnEvent` を再生済みだが、全イベントをUnity風の正確な順序・間・カットイン・軌跡に寄せる。
 - 本番運用準備の残り: 正式ルーティングは**universofutbol.comゾーンが別Cloudflareアカウントにあるため保留**（Worker側のベースパス配信は実装済み。詳細はAUTH_UNIVERSOFUTBOL.md）。観戦共有UX、エラー復帰表示。レート制限とROOM作成制限は2026-07-07実装済み。**wrangler.jsoncの`workers_dev: true`は消さないこと**（routes追加時にworkers.devが自動無効化されて公開URLが落ちた事故あり）。
 - ~~公開URLでのプロトタイプHTML配信~~ → 2026-07-06 に static assets 方式で実装済み（下記デプロイ欄参照）。

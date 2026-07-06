@@ -204,3 +204,21 @@ test("a shot block tie picks randomly among equal highest-cost defenders", () =>
   assert.equal(result.events[0].details?.blockerId, 4);
   assert.equal(ballHolder(result.game)?.id, 4);
 });
+
+test("a loose ball tie picks randomly among equal highest-cost pieces", () => {
+  const state = createInitialGameState("b", "loose-ball-tie-1");
+  state.pieces = [
+    piece({ id: 1, team: "b", posType: "mf", cost: 2, x: 0, y: 0, sx: 0, sy: 0 }),
+    piece({ id: 2, team: "r", posType: "mf", cost: 2, x: 0, y: 0, sx: 0, sy: 0 }),
+  ];
+  state.ball = { target: "cell", pieceId: null, x: 0, y: 0, lastTeam: "b" };
+
+  const result = resolveServerTurn(state, {});
+
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["looseball.picked", "turn.completed"],
+  );
+  assert.equal(result.events[0].pieceId, 2);
+  assert.equal(ballHolder(result.game)?.id, 2);
+});

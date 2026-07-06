@@ -1205,11 +1205,8 @@ function pickupLooseBall(state: FootballChessGameState, events: TurnEvent[], log
   const sourceTeam = state.ball.lastTeam;
   const pieces = piecesAt(state, ballX, ballY);
   if (pieces.length === 0) return;
-  const winner = pieces.slice().sort((a, b) => {
-    if (pieceCost(a) !== pieceCost(b)) return pieceCost(b) - pieceCost(a);
-    if (a.team !== b.team) return a.team === "b" ? -1 : 1;
-    return a.id - b.id;
-  })[0];
+  const winner = pickHighestCostPiece(state, pieces);
+  if (!winner) return;
   setBallToPiece(state, winner, true);
   pushEvent(events, {
     type: "looseball.picked",
