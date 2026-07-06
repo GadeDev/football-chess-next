@@ -2,5 +2,6 @@
 # *.json は素材ソースとして残す方針
 node_modules/
 .wrangler/
+.dev.vars
 *.tmp
 .DS_Store

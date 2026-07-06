@@ -9,7 +9,7 @@
     "head_sampling_rate": 1
   },
   "vars": {
-    "ENVIRONMENT": "development",
+    "ENVIRONMENT": "production",
     "CONTENT_SLUG": "universofutbol-football-chess",
     "PUBLIC_BASE_PATH": "/universofutbol/football-chess",
     "UNIVERSO_FUTBOL_URL": "https://universofutbol.com"
