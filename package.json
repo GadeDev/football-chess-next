@@ -6,8 +6,9 @@
   "type": "module",
   "scripts": {
     "check:worker": "tsc --noEmit",
-    "dev:worker": "wrangler dev --port 8787",
-    "deploy:worker": "wrangler deploy",
+    "build:assets": "mkdir -p public && cp football-chess-prototype.html public/index.html",
+    "dev:worker": "npm run build:assets && wrangler dev --port 8787",
+    "deploy:worker": "npm run build:assets && wrangler deploy",
     "cf:types": "wrangler types src/worker-configuration.d.ts"
   },
   "devDependencies": {

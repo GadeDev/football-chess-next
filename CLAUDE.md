@@ -61,7 +61,7 @@ Claude Code がこのリポジトリで作業する際の指針。詳細な背�
 - サーバー権威化の回帰テストを増やす。`src/game-core.ts` に対して、HTML版/Unity版から拾った固定盤面・固定乱数のケースをテスト化する。
 - オンライン再生の完全対応。現状は主要 `TurnEvent` を再生済みだが、全イベントをUnity風の正確な順序・間・カットイン・軌跡に寄せる。
 - 本番運用準備。UniversoFutbol配下の正式ルーティング、会員/サブスク導線、ROOM作成制限、レート制限、観戦共有UX、エラー復帰表示を詰める。
-- 公開URLでのプロトタイプHTML配信（static assets or Workerルート追加）は未実装。設計判断が必要なため別タスクとして実施（2026-07-06確認: Workerは `/` のJSON情報と `/api/...` のみ応答、HTMLは404）。
+- ~~公開URLでのプロトタイプHTML配信~~ → 2026-07-06 に static assets 方式で実装済み（下記デプロイ欄参照）。
 - PWA/スマホ仕上げ。横幅の狭い端末でのオンラインバー、長い表示名、リプレイ中のタップ抑制、効果音/触覚フィードバックの有無を実機寄りに確認する。
 
 ## 検証方法
@@ -82,4 +82,5 @@ Claude Code がこのリポジトリで作業する際の指針。詳細な背�
 - 内部ロジック（移動可否/パス範囲/確率/コマンド確定）の変更は慎重に。UI改修時は「表示のみ変更、ロジック不変」を原則とする。
 - Codexで継続する場合は、実装・検証・ローカルURL確認までこの単一HTML版で完結させる。演出移植はUnity C#を調べ、ボール軌跡・駒移動・カットインなど小さい単位で移す。
 - Git運用：remote は `origin https://github.com/GadeDev/football-chess-next.git`。最新作業は `origin/codex/prototype-throughpass-move-fix` にあり、ローカルにも同名の追跡ブランチを作成済み（2026-07-06。以前はローカル `master` が同リモートブランチを追跡していた）。`origin/main` は別履歴の古い系統なので、統合/上書きはユーザー確認なしに行わない。Pushはユーザーから明示依頼があった場合のみ行う。
-- デプロイ：Worker公開は `npm run check:worker` → `npx wrangler deploy --dry-run` → `npm run deploy:worker`（= `wrangler deploy`）の順で行う。公開URLは `https://universofutbol-football-chess.yanagiho.workers.dev`（デプロイ後の確認は `/api/universofutbol/football-chess/health` が `{"ok":true,...,"environment":"production"}` を返すこと）。ENVIRONMENTは2026-07-06からproduction。ローカル`wrangler dev`は`.dev.vars`（Git管理外）でdevelopment表示。
+- デプロイ：Worker公開は `npm run check:worker` → `npx wrangler deploy --dry-run` → `npm run deploy:worker`（= `build:assets` + `wrangler deploy`）の順で行う。公開URLは `https://universofutbol-football-chess.yanagiho.workers.dev`（デプロイ後の確認は `/api/universofutbol/football-chess/health` が `{"ok":true,...,"environment":"production"}` を返すこと）。ENVIRONMENTは2026-07-06からproduction。ローカル`wrangler dev`は`.dev.vars`（Git管理外）でdevelopment表示。
+- HTML配信：公開URLの `/` はゲームHTML本体を static assets で配信する（2026-07-06実装）。ソースはリポジトリ直下の `football-chess-prototype.html` が唯一の正で、`npm run build:assets` が `public/index.html` へコピーする（`public/` はGit管理外の生成物。直接編集しない）。同一オリジン配信なのでHTML内のオンラインAPIは自動で本番Workerへ向く。ROOM共有URLは `https://universofutbol-football-chess.yanagiho.workers.dev/?room=FC-XXXX-XXXX` 形式。
