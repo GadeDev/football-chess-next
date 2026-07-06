@@ -46,7 +46,8 @@ Claude Code がこのリポジトリで作業する際の指針。詳細な背�
 - **FOUL/パス確率**：FOUL演出/PK/FKはUnity `TackleAsync` 準拠で、ボール保持チームから見た攻撃側2列（GA/PA/VA/Cross）のみ。中盤などではファウル抽選に当たっても通常タックルへ落ちる。PASS確率表示はUnity `MoveRangeProvider.CalculatePassSuccessProbability` 準拠で、味方がいるマスのみ `経路上FlyingPass成功率の積 × 着地LandingPass成功率` を表示。空マス/相手だけのマスはスルーパス候補なのでPASS確率テキストを出さない。
 - **ゴール後リキックオフ**：Unity `ReKickoffSetup` / `GetReKickOffTeamType` 準拠で、得点後は失点側ボールのキックオフ配置へ戻す。PA/GAへドリブル到達しただけでは得点にせず、得点はシュート/PK/FKなどの解決からのみ発生させる。
 - **遅延行為/消極的戦術**：遅延行為はUnity条件に合わせ、「ターン開始時にボールを持っていたチームが、ターン終了時も同じチームとして自陣保持している場合のみ」カウントする。消極的戦術は「ボールが下2マス外、かつ対象チームの9コマ以上が下2マス」に合わせている。PassiveTacticsマスタJSONはUnityローカルに未同梱のため、PassCut/Tackleのデバフ量は現状-20%近似。
-- **シュート失敗後のCK/GK**：通常シュート失敗後のCK/GKリトライはUnity現行 `ShootAsync` に合わせ、初回CK後の追加CK判定が過剰連鎖しないようにしている。PK/FK失敗後のCKループはUnity現行のタックル/ファウル処理に近い既存ループを維持。
+- **シュート失敗後のCK/GK**：通常シュート失敗後のCK/GKリトライはUnity現行 `ShootAsync` に合わせ、初回CK後の追加CK判定が過剰連鎖しないようにしている。通常シュート失敗でCKにならずGKがゴールエリアにいる場合は `saving`、GKがゴールエリア外（同マス守備など）の場合は `failedShoot` として扱い、後者とファウル由来PK/FK→GKはUnity `OnGK` 同様にそのターンの後続コマンドを停止する。
+- **シュートブロック順/最高コスト抽選**：Unity `IsSuccessShootAvoidanceBlock` 準拠で、シュート元→ゴール手前までの `GetRoute(..., false, false)` を順に見て、GK以外の相手がいるマスは65%で回避抽選する。最初に回避失敗したマスのGK以外・最高コスト守備者がブロックし、最高コストが複数ならUnity `GetHighestCostModel()` と同じく抽選する（サーバー側はseeded RNG）。
 - **15ターン制**：前半15＋AT(0〜1)、後半15＋AT(1〜3)。ChessClockはAT中「45+N」「90+N」表記。
 - **ボール軌跡演出**：Unity版のTrailRenderer風に、パス/スルーパス/ドリブル/シュート/オンライン再生イベントで `animateBallFlight` を使う。オンラインでは `pass.cut` に `from` と `cutAt` を持たせ、カット地点までの軌跡とクリア移動を再生する。セットプレー由来の `shot.saved` / `shot.goal` には `details.kickLogs` が入り、CKカットイン再生に使う。
 - **選択UI（Unity風＋独自調整）**：マスタップ→**弧状ポップアップ**で駒/ボールを選択（`renderSelectFan`/`#selectFan`、-60°〜+60°の弧）。駒1体のみは1タップで即選択。項目2つ以上は「タップ→弧→項目タップ（ポップ演出）→選択確定→範囲表示」。**選択確定後にのみ**移動/パス範囲をハイライト（大きな脈動円）。範囲外タップでキャンセル。ボールは常に独立項目（保持球は保持駒の隣、こぼれ球は独立）。
@@ -61,12 +62,12 @@ Claude Code がこのリポジトリで作業する際の指針。詳細な背�
 
 ## 次の残作業
 - ~~オンライン対戦への編成反映~~ → 2026-07-07 に実装済み。ROOM参加時に `deck` を送り、サーバー側で11人/GK1人/自陣配置/1マス3体/コスト上限を検証する。既存デフォルト編成（合計18.5）は互換例外として許可。
-- Unity版との差異をさらに潰す。優先は `StateBattleCalculate` 周辺の同時解決エッジケース、PK/FK後のCK/GK連鎖、シュートブロック順、消極的戦術マスタの正式値確認。
-- サーバー権威化の回帰テストを増やす。`src/game-core.ts` に対して、HTML版/Unity版から拾った固定盤面・固定乱数のケースをテスト化する。
+- Unity版との差異をさらに潰す。優先は `StateBattleCalculate` 周辺の同時解決エッジケース、消極的戦術マスタの正式値確認。
+- サーバー権威化の回帰テストを増やす。`src/game-core.ts` に対して、HTML版/Unity版から拾った固定盤面・固定乱数のケースをテスト化する。2026-07-07時点で `npm test` に8ケース（スルーパス+通常移動、PASS表示、PA自動得点防止、得点後キックオフ、通常シュート失敗時のsaving/failedShoot分岐、ファウルPK→GKターン停止、シュートブロック同コスト抽選）を追加済み。
 - オンライン再生の完全対応。現状は主要 `TurnEvent` を再生済みだが、全イベントをUnity風の正確な順序・間・カットイン・軌跡に寄せる。
 - 本番運用準備の残り: 正式ルーティングは**universofutbol.comゾーンが別Cloudflareアカウントにあるため保留**（Worker側のベースパス配信は実装済み。詳細はAUTH_UNIVERSOFUTBOL.md）。観戦共有UX、エラー復帰表示。レート制限とROOM作成制限は2026-07-07実装済み。**wrangler.jsoncの`workers_dev: true`は消さないこと**（routes追加時にworkers.devが自動無効化されて公開URLが落ちた事故あり）。
 - ~~公開URLでのプロトタイプHTML配信~~ → 2026-07-06 に static assets 方式で実装済み（下記デプロイ欄参照）。
-- PWA/スマホ仕上げ。横幅の狭い端末でのオンラインバー、長い表示名、リプレイ中のタップ抑制、効果音/触覚フィードバックの有無を実機寄りに確認する。
+- PWA/スマホ仕上げの残り: 効果音/触覚フィードバック、狭い端末でのオンラインバー・長い表示名の調整。**2026-07-07実装済み**: Webマニフェスト+アイコン(`pwa/`→`build:assets`が`public/`へコピー。ホーム画面追加でスタンドアロン起動)、リプレイ中の盤面タップ抑制(`body.replaying`)。Service Workerは意図的に未導入(HTML更新がキャッシュ固定される事故防止。オフライン対応する際はバージョン付きキャッシュで設計すること)。
 
 ## 検証方法
 - **構文チェック**：`<script>`〜`</script>` を抽出して `node --check`。
@@ -78,6 +79,7 @@ Claude Code がこのリポジトリで作業する際の指針。詳細な背�
   ```
 - **ロジック検証**：DOMをスタブ化して `eval` し、対象関数を実行時テスト（このリポジトリでの標準手法）。
 - **Worker型チェック**：Cloudflare側を触ったら `npm run check:worker` を必ず実行する。
+- **ゲームコア回帰テスト**：`npm test`（`tsc -p tsconfig.test.json` で `.test-dist` にビルドし、Node標準 `node --test` で `tests/game-core.test.mjs` を実行）。
 - **Worker dry-run**：公開前やDurable Object変更後は `npx wrangler deploy --dry-run` でバンドル確認する。
 - **⚠ ブラウザ実描画の確認**：Claude Code のこの環境からは**ローカルの `prototype.html` を起動・スクリーンショットできない**（拡張機能のChromeがローカルファイル/サーバーに到達不可。2026-07-06 に `localhost:8000` / `127.0.0.1:8000` の両方で再確認済み）。見た目の最終確認はユーザーに `! open <path>` で依頼し、必要ならスクリーンショットを貼ってもらう。
 

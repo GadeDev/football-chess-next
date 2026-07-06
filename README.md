@@ -18,6 +18,7 @@ UniversoFutbol配下のコンテンツとして、Cloudflare Workers + Durable O
 ```bash
 npm install
 npm run cf:types
+npm test
 npm run dev:worker
 ```
 

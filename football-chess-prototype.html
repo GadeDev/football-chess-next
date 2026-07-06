@@ -3,6 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<!-- PWA（サーバー配信時のみ有効。file://直開きでは無視される） -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0b1b33">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Football Chess — 盤面プロトタイプ</title>
 <style>
   :root{
@@ -380,6 +387,10 @@
 </style>
 </head>
 <style id="ogCss2">
+/* リプレイ中の誤タップ抑制 */
+body.replaying .boardWrap{pointer-events:none;}
+body.replaying .boardWrap::after{content:"";position:absolute;inset:0;}
+
 /* ===== 会員/サブスク（UniversoFutbol暫定ログイン + Unity UISubscriptionPage 相当） ===== */
 #ogLogin{position:fixed;inset:0;z-index:5300;background:rgba(2,6,12,.72);display:flex;align-items:center;justify-content:center;}
 #ogLogin .panel{background:#0c1f36;border:1px solid #2d5a8c;border-radius:12px;padding:18px 20px;width:min(86vw,360px);}
@@ -1079,7 +1090,9 @@ function goalCellFor(team){ return team==='b'?{x:0,y:-3}:{x:0,y:4}; }
 function enemyGKFor(team){ return pieces.find(p=>p.team!==team && p.posType==='gk')||null; }
 function highestCostPiece(list){
   if(!list||list.length===0) return null;
-  return list.reduce((a,b)=>pieceCost(b)>pieceCost(a)?b:a);
+  const max=Math.max(...list.map(pieceCost));
+  const candidates=list.filter(p=>pieceCost(p)>=max);
+  return candidates[Math.floor(Math.random()*candidates.length)]||null;
 }
 function shootBlockAvoidanceProbability(shooter,x,y){
   return piecesAt(x,y).some(q=>q.team!==shooter.team && q.posType!=='gk') ? 65 : 100;
@@ -1771,6 +1784,8 @@ function cellAt(x,y){return BOARD.find(c=>c.x===x&&c.y===y);}
 function piecesAt(x,y){return pieces.filter(p=>p.x===x&&p.y===y);}
 
 function render(){
+  // リプレイ中は盤面タップを無効化（誤操作防止。CSSの .replaying と対）
+  document.body.classList.toggle('replaying', state.phase==='replay');
   boardEl.innerHTML='';
   const cw=100/COLS.length, ch=100/ROWS.length;
   BOARD.forEach(c=>{
@@ -2232,7 +2247,7 @@ function onlineLogEvent(event){
   else if(event.type==='shot.goal') log(`${t} ゴール`);
   else if(event.type==='shot.miss') log(`${t} シュート失敗`);
   else if(event.type==='shot.blocked') log(`${t} シュートブロック`);
-  else if(event.type==='shot.saved') log(`${t} GKセーブ`);
+  else if(event.type==='shot.saved') log(event.details?.saveType==='failedShoot'?`${t} シュート失敗→GK`:`${t} GKセーブ`);
   else if(event.type==='kickoff') log(`${t} キックオフ`);
   else if(event.type==='additional-time'){
     const half=event.details?.half==='second'?'後半':'前半';
@@ -2339,7 +2354,8 @@ async function playServerEvent(event){
   }else if(event?.type==='shot.saved'){
     await replayServerKickSequence(event,eventFrom);
     if(eventFrom&&event.to) await animateBallFlight(eventFrom,event.to,event.team,{kind:'shoot',duration:420,arc:30});
-    await showCutinAtPiece('saving',850,event.to?.x,event.to?.y);
+    const saveType=event.details?.saveType;
+    if(saveType!=='failedShoot') await showCutinAtPiece('saving',850,event.to?.x,event.to?.y);
   }else if(event?.type==='kickoff'){
     await showCutin('kickoff',700);
   }else if(event?.type==='additional-time'){

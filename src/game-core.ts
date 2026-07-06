@@ -762,7 +762,19 @@ export function calcShoot(state: FootballChessGameState, attackPiece: Piece): { 
 }
 
 export function highestCostPiece(list: Piece[]): Piece | undefined {
-  return list.reduce<Piece | undefined>((best, piece) => (!best || pieceCost(piece) > pieceCost(best) ? piece : best), undefined);
+  return highestCostPieces(list)[0];
+}
+
+function highestCostPieces(list: Piece[]): Piece[] {
+  if (list.length === 0) return [];
+  const highestCost = Math.max(...list.map(pieceCost));
+  return list.filter((piece) => pieceCost(piece) >= highestCost);
+}
+
+function pickHighestCostPiece(state: FootballChessGameState, list: Piece[]): Piece | undefined {
+  const candidates = highestCostPieces(list);
+  if (candidates.length <= 1) return candidates[0];
+  return candidates[rollIntInclusive(state, 0, candidates.length - 1)];
 }
 
 export function shootBlockAvoidanceProbability(state: FootballChessGameState, shooter: Piece, x: number, y: number): number {
@@ -1126,7 +1138,7 @@ function resolveFlyingPassPath(
     const passProbability = calcFlyingPass(state, passPiece, x, y);
     const cutProbability = clampProb(100 - passProbability);
     if (!rollPercent(state, cutProbability)) continue;
-    const cutter = highestCostPiece(enemies);
+    const cutter = pickHighestCostPiece(state, enemies);
     const loose = placeLooseBallDefensive(state, x, y, passPiece.team);
     pushEvent(events, {
       type: "pass.cut",
@@ -1220,6 +1232,8 @@ interface KickSequenceOutcome {
   logs: string[];
 }
 
+type ShotSaveType = "saving" | "failedShoot" | "gk";
+
 function resolveCKOrGKSequence(
   state: FootballChessGameState,
   kicker: Piece,
@@ -1282,6 +1296,7 @@ function resolveSetPieceOutcome(
   logs: string[],
   details: Record<string, unknown>,
   stopOnSave = false,
+  saveType: ShotSaveType = "gk",
 ): void {
   logs.push(...outcome.logs);
   const eventDetails = { ...details, kickLogs: outcome.logs };
@@ -1297,9 +1312,18 @@ function resolveSetPieceOutcome(
       team: kicker.team,
       pieceId: kicker.id,
       to: coordOf(outcome.gk),
-      details: { ...eventDetails, gkId: outcome.gk.id },
+      details: { ...eventDetails, gkId: outcome.gk.id, saveType },
     });
   }
+}
+
+function hasSetPieceKick(logs: string[]): boolean {
+  return logs.some((line) => line.includes("=> CK") || /^CK \d/.test(line));
+}
+
+function shotSaveType(state: FootballChessGameState, shooter: Piece, outcome: KickSequenceOutcome): ShotSaveType {
+  if (!outcome.gk || hasSetPieceKick(outcome.logs)) return "gk";
+  return isAttackGoalArea(shooter.team, outcome.gk.x, outcome.gk.y) ? "saving" : "failedShoot";
 }
 
 function runTackle(
@@ -1317,7 +1341,7 @@ function runTackle(
 
   if (foulIsPK || foulIsFK) {
     const kind: KickKind = foulIsPK ? "PK" : "FK";
-    const kicker = highestCostPiece(state.pieces.filter((piece) => piece.team === holder.team)) ?? holder;
+    const kicker = pickHighestCostPiece(state, state.pieces.filter((piece) => piece.team === holder.team)) ?? holder;
     const gk = enemyGKFor(state, holder.team) ?? tackler;
     const probability = kind === "PK" ? calcPK(kicker, gk) : calcFK(kicker, gk);
     const ok = rollPercent(state, probability);
@@ -1341,6 +1365,7 @@ function runTackle(
       logs,
       { source: kind, kickerId: kicker.id, tacklerId: tackler.id, from: coordOf(kicker) },
       true,
+      "gk",
     );
     return true;
   }
@@ -1403,7 +1428,10 @@ function resolveShoot(state: FootballChessGameState, shooter: Piece, events: Tur
     const avoidProbability = shootBlockAvoidanceProbability(state, shooter, x, y);
     const avoided = rollPercent(state, avoidProbability);
     if (avoidProbability >= 100 || avoided) continue;
-    const blocker = highestCostPiece(piecesAt(state, x, y).filter((piece) => piece.team !== shooter.team && piece.posType !== "gk"));
+    const blocker = pickHighestCostPiece(
+      state,
+      piecesAt(state, x, y).filter((piece) => piece.team !== shooter.team && piece.posType !== "gk"),
+    );
     if (blocker) setBallToPiece(state, blocker, true);
     else placeLooseBallDefensive(state, x, y, shooter.team);
     pushEvent(events, {
@@ -1444,13 +1472,17 @@ function resolveShoot(state: FootballChessGameState, shooter: Piece, events: Tur
   });
   logs.push(`${teamName(shooter.team)} shot missed ${shot.area} ${shot.prob}%`);
   const failedKind: KickKind = shot.area === "VA" ? "VitalAreaShoot" : "PenaltyAreaShoot";
+  const outcome = resolveCKOrGKSequence(state, shooter, enemyGKFor(state, shooter.team), failedKind, true);
+  const saveType = shotSaveType(state, shooter, outcome);
   resolveSetPieceOutcome(
     state,
     shooter,
-    resolveCKOrGKSequence(state, shooter, enemyGKFor(state, shooter.team), failedKind, true),
+    outcome,
     events,
     logs,
     { source: failedKind, shooterId: shooter.id, from },
+    saveType !== "saving",
+    saveType,
   );
 }
 
