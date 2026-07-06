@@ -874,49 +874,11 @@ export function validateCommandsForTeam(
 ): CommandValidationResult {
   const errors: string[] = [];
   const commands: GameCommand[] = [];
-  const movedIds = new Set<number>();
-  const holder = ballHolder(state);
-  const plannedPositions = new Map<number, { x: number; y: number }>();
-  let chainHolderId: number | null = holder?.team === team ? holder.id : null;
-  let ballMoveCount = 0;
-  let ballCanMove = true;
+  const commandIndexes = new Map<GameCommand, number>();
 
-  const plannedCoord = (piece: Piece) => plannedPositions.get(piece.id) ?? coordOf(piece);
-  const plannedPiecesAt = (x: number, y: number) =>
-    state.pieces.filter((piece) => {
-      const coord = plannedCoord(piece);
-      return coord.x === x && coord.y === y;
-    });
-  const canMoveInPlannedState = (piece: Piece, x: number, y: number) => {
-    if (movedIds.has(piece.id)) return false;
-    const cell = cellAt(x, y);
-    if (!cell || cell.t === "selfgoal" || cell.t === "oppgoal") return false;
-    const current = plannedCoord(piece);
-    if (current.x === x && current.y === y) return false;
-    const dx = x - piece.sx;
-    const dy = y - piece.sy;
-    if (!moveLimitList(piece.cost).some(([lx, ly]) => lx === dx && ly === dy)) return false;
-    if (plannedPiecesAt(x, y).length >= MAX_PER_CELL) return false;
-    if (plannedPiecesAt(x, y).filter((candidate) => candidate.team === piece.team).length >= MAX_PER_CELL) return false;
-    return true;
-  };
-  const isPassTargetInPlannedRange = (piece: Piece, x: number, y: number) => {
-    const from = plannedCoord(piece);
-    const dx = x - from.x;
-    const dy = y - from.y;
-    return BALL_LIMIT.some(([lx, ly]) => lx === dx && ly === dy);
-  };
-  const chainHolder = () => (chainHolderId == null ? undefined : pieceById(state, chainHolderId));
-  const canKickWithChainHolder = (piece: Piece) => {
-    const current = chainHolder();
-    if (!ballCanMove || !current || current.id !== piece.id) return false;
-    const currentCoord = plannedCoord(current);
-    const enemyCount = plannedPiecesAt(currentCoord.x, currentCoord.y).filter((candidate) => candidate.team !== team).length;
-    return enemyCount === 0 || ballMoveCount === 0;
-  };
-  const stopBallIfContested = (piece: Piece) => {
-    const coord = plannedCoord(piece);
-    if (plannedPiecesAt(coord.x, coord.y).some((candidate) => candidate.team !== team)) ballCanMove = false;
+  const pushCommand = (index: number, command: GameCommand) => {
+    commands.push(command);
+    commandIndexes.set(command, index);
   };
 
   if (!Array.isArray(input)) {
@@ -963,13 +925,7 @@ export function validateCommandsForTeam(
         errors.push(`commands[${index}].targetId does not belong to ${team}`);
         return;
       }
-      if (!canKickWithChainHolder(piece)) errors.push(`commands[${index}] pass requires current chain ball holder`);
-      const targetCoord = plannedCoord(target);
-      if (!isPassTargetInPlannedRange(piece, targetCoord.x, targetCoord.y)) errors.push(`commands[${index}] pass target is out of range`);
-      commands.push({ type, pieceId, targetId, tx: targetCoord.x, ty: targetCoord.y, team });
-      chainHolderId = target.id;
-      ballMoveCount += 1;
-      stopBallIfContested(target);
+      pushCommand(index, { type, pieceId, targetId, tx: target.x, ty: target.y, team });
       return;
     }
 
@@ -980,38 +936,105 @@ export function validateCommandsForTeam(
       return;
     }
 
-    if (type === "move" || type === "dribble") {
-      if (!canMoveInPlannedState(piece, tx, ty)) errors.push(`commands[${index}] move target is invalid`);
-      if (type === "dribble" && chainHolderId !== piece.id) errors.push(`commands[${index}] dribble requires current chain ball holder`);
-      movedIds.add(piece.id);
-      commands.push({ type, pieceId, tx, ty, team });
-      plannedPositions.set(piece.id, { x: tx, y: ty });
-      if (type === "dribble") {
-        chainHolderId = piece.id;
-        if (plannedPiecesAt(tx, ty).some((candidate) => candidate.team !== team)) ballCanMove = false;
-      }
-      return;
+    pushCommand(index, { type, pieceId, tx, ty, team } as GameCommand);
+  });
+
+  const movedIds = new Set<number>();
+  const holder = ballHolder(state);
+  const plannedPositions = new Map<number, { x: number; y: number }>();
+  let chainHolderId: number | null = holder?.team === team ? holder.id : null;
+  let ballMoveCount = 0;
+  let ballCanMove = true;
+
+  const plannedCoord = (piece: Piece) => plannedPositions.get(piece.id) ?? coordOf(piece);
+  const plannedPiecesAt = (x: number, y: number) =>
+    state.pieces.filter((piece) => {
+      const coord = plannedCoord(piece);
+      return coord.x === x && coord.y === y;
+    });
+  const canMoveInPlannedState = (piece: Piece, x: number, y: number) => {
+    if (movedIds.has(piece.id)) return false;
+    const cell = cellAt(x, y);
+    if (!cell || cell.t === "selfgoal" || cell.t === "oppgoal") return false;
+    const current = plannedCoord(piece);
+    if (current.x === x && current.y === y) return false;
+    const dx = x - piece.sx;
+    const dy = y - piece.sy;
+    if (!moveLimitList(piece.cost).some(([lx, ly]) => lx === dx && ly === dy)) return false;
+    if (plannedPiecesAt(x, y).length >= MAX_PER_CELL) return false;
+    if (plannedPiecesAt(x, y).filter((candidate) => candidate.team === piece.team).length >= MAX_PER_CELL) return false;
+    return true;
+  };
+  const isPassTargetInPlannedRange = (piece: Piece, x: number, y: number) => {
+    const from = plannedCoord(piece);
+    const dx = x - from.x;
+    const dy = y - from.y;
+    return BALL_LIMIT.some(([lx, ly]) => lx === dx && ly === dy);
+  };
+  const chainHolder = () => (chainHolderId == null ? undefined : pieceById(state, chainHolderId));
+  const canKickWithChainHolder = (piece: Piece) => {
+    const current = chainHolder();
+    if (!ballCanMove || !current || current.id !== piece.id) return false;
+    const currentCoord = plannedCoord(current);
+    const enemyCount = plannedPiecesAt(currentCoord.x, currentCoord.y).filter((candidate) => candidate.team !== team).length;
+    return enemyCount === 0 || ballMoveCount === 0;
+  };
+  const stopBallIfContested = (piece: Piece) => {
+    const coord = plannedCoord(piece);
+    if (plannedPiecesAt(coord.x, coord.y).some((candidate) => candidate.team !== team)) ballCanMove = false;
+  };
+
+  const validationIntents: Partial<Record<Team, GameCommand[]>> = {};
+  validationIntents[team] = commands;
+
+  for (const command of sortCommandsForResolution(validationIntents)) {
+    const index = commandIndexes.get(command) ?? 0;
+    const piece = pieceById(state, command.pieceId);
+    if (!piece || piece.team !== team) continue;
+
+    if (command.type === "pass") {
+      const target = pieceById(state, command.targetId);
+      if (!target || target.team !== team) continue;
+      if (!canKickWithChainHolder(piece)) errors.push(`commands[${index}] pass requires current chain ball holder`);
+      const targetCoord = plannedCoord(target);
+      if (!isPassTargetInPlannedRange(piece, targetCoord.x, targetCoord.y)) errors.push(`commands[${index}] pass target is out of range`);
+      command.tx = targetCoord.x;
+      command.ty = targetCoord.y;
+      chainHolderId = target.id;
+      ballMoveCount += 1;
+      stopBallIfContested(target);
+      continue;
     }
 
-    if (type === "throughpass") {
-      const targetCell = cellAt(tx, ty);
+    if (command.type === "move" || command.type === "dribble") {
+      if (!canMoveInPlannedState(piece, command.tx, command.ty)) errors.push(`commands[${index}] move target is invalid`);
+      if (command.type === "dribble" && chainHolderId !== piece.id) errors.push(`commands[${index}] dribble requires current chain ball holder`);
+      movedIds.add(piece.id);
+      plannedPositions.set(piece.id, { x: command.tx, y: command.ty });
+      if (command.type === "dribble") {
+        chainHolderId = piece.id;
+        if (plannedPiecesAt(command.tx, command.ty).some((candidate) => candidate.team !== team)) ballCanMove = false;
+      }
+      continue;
+    }
+
+    if (command.type === "throughpass") {
+      const targetCell = cellAt(command.tx, command.ty);
       if (!targetCell || targetCell.t === "selfgoal" || targetCell.t === "oppgoal") errors.push(`commands[${index}] target cell is invalid`);
       if (!canKickWithChainHolder(piece)) errors.push(`commands[${index}] throughpass requires current chain ball holder`);
-      if (!isPassTargetInPlannedRange(piece, tx, ty)) errors.push(`commands[${index}] throughpass target is out of range`);
-      commands.push({ type, pieceId, tx, ty, team });
+      if (!isPassTargetInPlannedRange(piece, command.tx, command.ty)) errors.push(`commands[${index}] throughpass target is out of range`);
       chainHolderId = null;
       ballMoveCount += 1;
       ballCanMove = false;
-      return;
+      continue;
     }
 
     const shoot = calcShoot(state, { ...piece, ...plannedCoord(piece) });
     if (shoot.area === "-") errors.push(`commands[${index}] shoot is outside shooting area`);
     if (!canKickWithChainHolder(piece)) errors.push(`commands[${index}] shoot requires current chain ball holder`);
-    commands.push({ type, pieceId, tx, ty, team });
     chainHolderId = null;
     ballCanMove = false;
-  });
+  }
 
   return { ok: errors.length === 0, commands, errors };
 }

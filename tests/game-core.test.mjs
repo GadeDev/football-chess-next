@@ -130,6 +130,23 @@ test("online command validation checks landing passes against a moved receiver c
   assert.deepEqual(validation.commands[1], { type: "pass", pieceId: 1, targetId: 2, tx: 0, ty: 2, team: "b" });
 });
 
+test("online command validation applies landing receiver moves even when the pass was queued first", () => {
+  const state = createInitialGameState("b", "landing-pass-validation-pass-first");
+  state.pieces = [
+    piece({ id: 1, team: "b", posType: "mf", cost: 3, x: -2, y: 0, sx: -2, sy: 0 }),
+    piece({ id: 2, team: "b", posType: "fw", cost: 3, x: 1, y: 3, sx: 1, sy: 3 }),
+  ];
+  state.ball = { target: "piece", pieceId: 1, x: null, y: null, lastTeam: "b" };
+
+  const validation = validateCommandsForTeam(state, "b", [
+    { type: "pass", pieceId: 1, targetId: 2, tx: 1, ty: 3, team: "b" },
+    { type: "move", pieceId: 2, tx: 0, ty: 2, team: "b" },
+  ]);
+
+  assert.equal(validation.ok, true, validation.errors.join("; "));
+  assert.deepEqual(validation.commands[0], { type: "pass", pieceId: 1, targetId: 2, tx: 0, ty: 2, team: "b" });
+});
+
 test("online command validation rejects landing passes if the moved receiver cell is out of range", () => {
   const state = createInitialGameState("b", "landing-pass-validation-out");
   state.pieces = [
