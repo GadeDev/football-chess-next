@@ -3,7 +3,9 @@ import assert from "node:assert/strict";
 
 import {
   ballHolder,
+  calcFlyingPass,
   calcPassDisplayProbability,
+  calcTackleSuccess,
   createInitialGameState,
   resolveServerTurn,
   validateCommandsForTeam,
@@ -567,4 +569,72 @@ test("same-team loose ball pickup uses turn-start position, not pickup cell, for
     ["looseball.picked", "turn.completed"],
   );
   assert.equal(ballHolder(result.game)?.id, 1);
+});
+
+test("passive tactics is flagged when nine pieces stay deep and the ball is outside that area", () => {
+  const state = createInitialGameState("b", "passive-tactics-flag");
+  state.pieces = [
+    piece({ id: 1, team: "b", posType: "fw", cost: 1, x: -2, y: 2, sx: -2, sy: 2 }),
+    piece({ id: 2, team: "b", posType: "fw", cost: 1, x: -1, y: 2, sx: -1, sy: 2 }),
+    piece({ id: 3, team: "b", posType: "mf", cost: 1, x: 0, y: 2, sx: 0, sy: 2 }),
+    piece({ id: 4, team: "b", posType: "mf", cost: 1, x: 1, y: 2, sx: 1, sy: 2 }),
+    piece({ id: 5, team: "b", posType: "mf", cost: 1, x: 2, y: 2, sx: 2, sy: 2 }),
+    piece({ id: 6, team: "b", posType: "df", cost: 1, x: -2, y: 3, sx: -2, sy: 3 }),
+    piece({ id: 7, team: "b", posType: "df", cost: 1, x: -1, y: 3, sx: -1, sy: 3 }),
+    piece({ id: 8, team: "b", posType: "df", cost: 1, x: 0, y: 3, sx: 0, sy: 3 }),
+    piece({ id: 9, team: "b", posType: "gk", cost: 1, x: 1, y: 3, sx: 1, sy: 3 }),
+  ];
+  state.ball = { target: "cell", pieceId: null, x: 0, y: 0, lastTeam: "r" };
+
+  const result = resolveServerTurn(state, {});
+
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["passive-tactics", "turn.completed"],
+  );
+  assert.deepEqual(result.game.passivePenaltyTeams, ["b"]);
+});
+
+test("passive tactics does not trigger while the ball is inside that team's deep area", () => {
+  const state = createInitialGameState("b", "passive-tactics-ball-deep");
+  state.pieces = [
+    piece({ id: 1, team: "b", posType: "fw", cost: 1, x: -2, y: 2, sx: -2, sy: 2 }),
+    piece({ id: 2, team: "b", posType: "fw", cost: 1, x: -1, y: 2, sx: -1, sy: 2 }),
+    piece({ id: 3, team: "b", posType: "mf", cost: 1, x: 0, y: 2, sx: 0, sy: 2 }),
+    piece({ id: 4, team: "b", posType: "mf", cost: 1, x: 1, y: 2, sx: 1, sy: 2 }),
+    piece({ id: 5, team: "b", posType: "mf", cost: 1, x: 2, y: 2, sx: 2, sy: 2 }),
+    piece({ id: 6, team: "b", posType: "df", cost: 1, x: -2, y: 3, sx: -2, sy: 3 }),
+    piece({ id: 7, team: "b", posType: "df", cost: 1, x: -1, y: 3, sx: -1, sy: 3 }),
+    piece({ id: 8, team: "b", posType: "df", cost: 1, x: 0, y: 3, sx: 0, sy: 3 }),
+    piece({ id: 9, team: "b", posType: "gk", cost: 1, x: 1, y: 3, sx: 1, sy: 3 }),
+  ];
+  state.ball = { target: "cell", pieceId: null, x: 0, y: 2, lastTeam: "b" };
+
+  const result = resolveServerTurn(state, {});
+
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["looseball.picked", "turn.completed"],
+  );
+  assert.deepEqual(result.game.passivePenaltyTeams, []);
+});
+
+test("passive tactics applies the pass-cut and tackle modifiers to the Unity-side team", () => {
+  const state = createInitialGameState("b", "passive-tactics-modifiers");
+  const passer = piece({ id: 1, team: "b", posType: "mf", cost: 1, x: 0, y: 1, sx: 0, sy: 1 });
+  const holder = piece({ id: 2, team: "b", posType: "mf", cost: 1, x: 0, y: 0, sx: 0, sy: 0 });
+  const tackler = piece({ id: 3, team: "r", posType: "df", cost: 1, x: 0, y: 0, sx: 0, sy: 0 });
+  state.pieces = [passer, holder, tackler];
+
+  state.passivePenaltyTeams = [];
+  assert.equal(calcFlyingPass(state, passer, 0, 0), 45);
+  assert.equal(calcTackleSuccess(state, holder, tackler), 55);
+
+  state.passivePenaltyTeams = ["b"];
+  assert.equal(calcFlyingPass(state, passer, 0, 0), 25);
+  assert.equal(calcTackleSuccess(state, holder, tackler), 55);
+
+  state.passivePenaltyTeams = ["r"];
+  assert.equal(calcFlyingPass(state, passer, 0, 0), 45);
+  assert.equal(calcTackleSuccess(state, holder, tackler), 75);
 });
