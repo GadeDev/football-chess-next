@@ -511,6 +511,8 @@ test("a foul set-piece that ends in GK stops later commands in the same turn", (
     result.events.map((event) => event.type),
     ["piece.moved", "tackle.foul", "shot.saved", "turn.completed"],
   );
+  assert.deepEqual(result.events[1].from, { x: 0, y: -2 });
+  assert.deepEqual(result.events[1].to, { x: 0, y: -2 });
   assert.deepEqual(
     result.game.pieces.find((candidate) => candidate.id === 2),
     piece({ id: 2, team: "b", posType: "mf", cost: 1, x: 1, y: 1, sx: 1, sy: 1 }),

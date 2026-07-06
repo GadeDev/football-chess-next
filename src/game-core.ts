@@ -1453,6 +1453,7 @@ function runTackle(
       type: "tackle.foul",
       team: tackler.team,
       pieceId: tackler.id,
+      from: coordOf(tackler),
       to: coordOf(holder),
       details: { defenderCount, foulProbability, kind, kickerId: kicker.id, kickerFrom: coordOf(kicker), probability, success: ok },
     });
@@ -1482,6 +1483,7 @@ function runTackle(
       type: "tackle.success",
       team: tackler.team,
       pieceId: tackler.id,
+      from: coordOf(tackler),
       to: coordOf(holder),
       details: { holderId: holder.id, probability },
     });
@@ -1493,6 +1495,7 @@ function runTackle(
     type: "tackle.failed",
     team: tackler.team,
     pieceId: tackler.id,
+    from: coordOf(tackler),
     to: coordOf(holder),
     details: { holderId: holder.id, probability },
   });
