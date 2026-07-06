@@ -113,6 +113,40 @@ test("online command validation stops kicks after a pass lands in a contested ce
   assert.equal(validation.errors.some((error) => error.includes("pass requires current chain ball holder")), true);
 });
 
+test("online command validation checks landing passes against a moved receiver cell", () => {
+  const state = createInitialGameState("b", "landing-pass-validation");
+  state.pieces = [
+    piece({ id: 1, team: "b", posType: "mf", cost: 3, x: -2, y: 0, sx: -2, sy: 0 }),
+    piece({ id: 2, team: "b", posType: "fw", cost: 3, x: 1, y: 3, sx: 1, sy: 3 }),
+  ];
+  state.ball = { target: "piece", pieceId: 1, x: null, y: null, lastTeam: "b" };
+
+  const validation = validateCommandsForTeam(state, "b", [
+    { type: "move", pieceId: 2, tx: 0, ty: 2, team: "b" },
+    { type: "pass", pieceId: 1, targetId: 2, tx: 0, ty: 2, team: "b" },
+  ]);
+
+  assert.equal(validation.ok, true, validation.errors.join("; "));
+  assert.deepEqual(validation.commands[1], { type: "pass", pieceId: 1, targetId: 2, tx: 0, ty: 2, team: "b" });
+});
+
+test("online command validation rejects landing passes if the moved receiver cell is out of range", () => {
+  const state = createInitialGameState("b", "landing-pass-validation-out");
+  state.pieces = [
+    piece({ id: 1, team: "b", posType: "mf", cost: 3, x: -2, y: 0, sx: -2, sy: 0 }),
+    piece({ id: 2, team: "b", posType: "fw", cost: 3, x: 0, y: 2, sx: 0, sy: 2 }),
+  ];
+  state.ball = { target: "piece", pieceId: 1, x: null, y: null, lastTeam: "b" };
+
+  const validation = validateCommandsForTeam(state, "b", [
+    { type: "move", pieceId: 2, tx: 1, ty: 3, team: "b" },
+    { type: "pass", pieceId: 1, targetId: 2, tx: 1, ty: 3, team: "b" },
+  ]);
+
+  assert.equal(validation.ok, false);
+  assert.equal(validation.errors.some((error) => error.includes("pass target is out of range")), true);
+});
+
 test("a completed pass into a contested cell skips end-of-turn stationary tackles", () => {
   const state = createInitialGameState("b", "contested-pass-0");
   state.pieces = [
