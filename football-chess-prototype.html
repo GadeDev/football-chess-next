@@ -1922,6 +1922,7 @@ function renderOnlineStatus(){
   renderOnlineRoster();
 }
 function isMoveCommand(c){ return c.type==='move'||c.type==='dribble'; }
+function isNormalMoveCommand(c){ return c.type==='move'; }
 function isBallCommand(c){ return c.type==='pass'||c.type==='throughpass'||c.type==='shoot'; }
 function clearMyCommands(pieceId, predicate){
   myCommands=myCommands.filter(c=>c.pieceId!==pieceId || !predicate(c));
@@ -3069,10 +3070,10 @@ async function resolveSimultaneousTurn(){
   await showCutin('start_turn',700);
 
   // Unity PrepareMoveOperations 準拠：
-  // パスを受ける予定の駒の通常移動 → 非移動(パス/スルーパス/シュート) → その他の移動。
+  // パスを受ける予定の駒の通常移動 → 非移動(パス/スルーパス/ドリブル/シュート) → その他の通常移動。
   const sortTeam=(cmds)=>{
-    const nonMove=cmds.filter(c=>!isMoveCommand(c));
-    const move=cmds.filter(c=>isMoveCommand(c));
+    const nonMove=cmds.filter(c=>!isNormalMoveCommand(c));
+    const move=cmds.filter(c=>isNormalMoveCommand(c));
     return [...nonMove, ...move];
   };
   const landingMoveRefs=new Set();
@@ -3088,8 +3089,8 @@ async function resolveSimultaneousTurn(){
   for(let i=0;i<maxI;i++){ if(h[i])merged.push(h[i]); if(g[i])merged.push(g[i]); }
   const ordered=[
     ...merged.filter(c=>landingMoveRefs.has(c)),
-    ...merged.filter(c=>!isMoveCommand(c)),
-    ...merged.filter(c=>isMoveCommand(c)&&!landingMoveRefs.has(c)),
+    ...merged.filter(c=>!isNormalMoveCommand(c)),
+    ...merged.filter(c=>isNormalMoveCommand(c)&&!landingMoveRefs.has(c)),
   ];
 
   // 順番に実行

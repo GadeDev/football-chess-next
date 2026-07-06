@@ -91,6 +91,32 @@ test("a completed pass into a contested cell skips end-of-turn stationary tackle
   assert.deepEqual(result.game.ball, { target: "piece", pieceId: 2, x: null, y: null, lastTeam: "b" });
 });
 
+test("dribbles resolve before ordinary moves like Unity PrepareMoveOperations", () => {
+  const state = createInitialGameState("b", "dribble-before-move");
+  state.pieces = [
+    piece({ id: 1, team: "b", posType: "mf", cost: 1, x: 0, y: 1, sx: 0, sy: 1 }),
+    piece({ id: 2, team: "b", posType: "df", cost: 1, x: 1, y: 1, sx: 1, sy: 1 }),
+  ];
+  state.ball = { target: "piece", pieceId: 1, x: null, y: null, lastTeam: "b" };
+
+  const result = resolveServerTurn(state, {
+    b: [
+      { type: "move", pieceId: 2, tx: 2, ty: 1, team: "b" },
+      { type: "dribble", pieceId: 1, tx: 0, ty: 0, team: "b" },
+    ],
+  });
+
+  const movedEvents = result.events.filter((event) => event.type === "piece.moved");
+  assert.deepEqual(
+    movedEvents.map((event) => [event.pieceId, event.details?.carryBall]),
+    [
+      [1, true],
+      [2, false],
+    ],
+  );
+  assert.equal(ballHolder(result.game)?.id, 1);
+});
+
 test("a route pass cut gives possession directly to the cutter", () => {
   const state = createInitialGameState("b", "pass-cut-held-0");
   state.pieces = [

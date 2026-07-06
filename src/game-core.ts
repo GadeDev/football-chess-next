@@ -822,6 +822,10 @@ export function isMoveCommand(command: Pick<GameCommand, "type">): boolean {
   return command.type === "move" || command.type === "dribble";
 }
 
+function isNormalMoveCommand(command: Pick<GameCommand, "type">): boolean {
+  return command.type === "move";
+}
+
 export function isBallCommand(command: Pick<GameCommand, "type">): boolean {
   return command.type === "pass" || command.type === "throughpass" || command.type === "shoot";
 }
@@ -1109,8 +1113,8 @@ function sortCommandsForResolution(intents: Partial<Record<Team, GameCommand[]>>
       .forEach((command) => landingMoveRefs.add(command));
   };
   const sortTeam = (commands: GameCommand[]) => [
-    ...commands.filter((command) => !isMoveCommand(command)),
-    ...commands.filter((command) => isMoveCommand(command)),
+    ...commands.filter((command) => !isNormalMoveCommand(command)),
+    ...commands.filter((command) => isNormalMoveCommand(command)),
   ];
 
   collectLandingMoves(blue);
@@ -1125,8 +1129,8 @@ function sortCommandsForResolution(intents: Partial<Record<Team, GameCommand[]>>
   }
   return [
     ...merged.filter((command) => landingMoveRefs.has(command)),
-    ...merged.filter((command) => !isMoveCommand(command)),
-    ...merged.filter((command) => isMoveCommand(command) && !landingMoveRefs.has(command)),
+    ...merged.filter((command) => !isNormalMoveCommand(command)),
+    ...merged.filter((command) => isNormalMoveCommand(command) && !landingMoveRefs.has(command)),
   ];
 }
 
