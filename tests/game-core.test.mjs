@@ -70,6 +70,27 @@ test("pass probability display is hidden for an enemy-only target cell", () => {
   assert.equal(calcPassDisplayProbability(state, passer, 1, 1), 100);
 });
 
+test("a completed pass into a contested cell skips end-of-turn stationary tackles", () => {
+  const state = createInitialGameState("b", "contested-pass-0");
+  state.pieces = [
+    piece({ id: 1, team: "b", posType: "mf", cost: 3, x: 0, y: 1, sx: 0, sy: 1 }),
+    piece({ id: 2, team: "b", posType: "fw", cost: 3, x: 0, y: 0, sx: 0, sy: 0 }),
+    piece({ id: 3, team: "r", posType: "df", cost: 1, x: 0, y: 0, sx: 0, sy: 0 }),
+  ];
+  state.ball = { target: "piece", pieceId: 1, x: null, y: null, lastTeam: "b" };
+
+  const result = resolveServerTurn(state, {
+    b: [{ type: "pass", pieceId: 1, targetId: 2, tx: 0, ty: 0, team: "b" }],
+  });
+
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["pass.completed", "turn.completed"],
+  );
+  assert.equal(ballHolder(result.game)?.id, 2);
+  assert.deepEqual(result.game.ball, { target: "piece", pieceId: 2, x: null, y: null, lastTeam: "b" });
+});
+
 test("a route pass cut gives possession directly to the cutter", () => {
   const state = createInitialGameState("b", "pass-cut-held-0");
   state.pieces = [
