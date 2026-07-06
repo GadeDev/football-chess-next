@@ -30,6 +30,8 @@ git branch -M main
 git push -u origin main
 ```
 
+現在の移行中リポジトリでは、最新作業ブランチは `codex/prototype-throughpass-move-fix` です。`main` が別履歴の場合は、先にGitHubのdefault branchを最新作業ブランチへ切り替えるか、明示確認のうえで `main` を置き換えます。
+
 実行すると GitHub のユーザー名と**Personal Access Token**（パスワードの代わり）を聞かれます。
 トークンは GitHub の Settings → Developer settings → Personal access tokens で発行できます。
 
