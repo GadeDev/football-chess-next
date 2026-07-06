@@ -24,7 +24,7 @@ Claude Code がこのリポジトリで作業する際の指針。詳細な背�
 - `MatchRoom` は片側が `match.intent` を送った時点で3分の入力期限を設定する。期限までに相手が送らなければ、未送信側は空コマンドとしてサーバーでターン解決する。
 - `MatchRoom` は `cleanupAt` を持つ。作成後未接続/全員退出のROOMは30分後、終了済みROOMは全員退出後6時間で `room_state` / `room_events` を削除する。WebSocket接続がある間は掃除予約を消し、観戦者の退出/切断でも `room.presence` を再配信する。
 - オンライン時もサーバー側で15ターンハーフ、seeded AT（現HTML準拠: 前半0〜1/後半1〜3）、ハーフタイム後半キックオフ、フルタイム終了を処理する。`turn.additionalTurns` がスナップショットに含まれ、ブラウザ側はAT/ハーフタイム/フルタイムのイベントをログとカットインで再生する。
-- ブラウザ側は `match.turn.resolved` を受けて `TurnEvent` を再生し、最終盤面はサーバースナップショットで同期する。通常移動/ドリブルの駒移動、シュートゴール/ブロック/ミス/GKセーブ、パス/スルーパス/パス失敗、パスカット、こぼれ球確保、オフサイド、PK/FK、CK/GK系の代表カットインとボール軌跡はオンライン再生にも反映済み。
+- ブラウザ側は `match.turn.resolved` を受けて `TurnEvent` を再生し、最終盤面はサーバースナップショットで同期する。通常移動/ドリブルの駒移動、シュートゴール/ブロック/ミス/GKセーブ、パス/スルーパス/パス失敗、パスカット、こぼれ球確保、オフサイド、PK/FK、CK/GK、遅延行為/消極的戦術系の代表カットインとボール軌跡はオンライン再生にも反映済み。タックル成功/シュートブロック/GKセーブ後のボール保持はリプレイ中にも即時同期する。
 - `MatchRoom` は `match.leave` / `match.resign` / `match.rematch.request` も受ける。明示退出は席と保留入力を解放、投了は即 `finished`、再戦は両者同意でサーバースナップショットを初期化する。
 
 ## 単一HTML内
@@ -42,14 +42,14 @@ Claude Code がこのリポジトリで作業する際の指針。詳細な背�
 - **シュート判定フロー**（`resolveShootCommand`）：①経路上の敵DFで確定ブロック ②PA/VAテーブルでDFブロック抽選（唯一の確率ゲート）③GK位置判定（コース差±1でキャッチ）。PK75%/FK50%固定。下部固定ボタンは廃止済み。ボール選択時の弧ポップアップ内に、シュート可能エリアにいる場合のみ「SHOOT」項目が現れ、そこから`tryShoot`を呼ぶ（`buildSelectItems`/`renderSelectFan`）。
 - **こぼれ球共通処理**：`placeLooseBall`/`pickupLooseBall`（コスト最高で確保、最高コスト複数ならUnity `GetHighestCostModel()` 準拠で抽選。サーバー側はseeded RNG）。**クリア処理**（自陣PA/GAでの守備成功時は中盤方向へ1マス押し出し `clearPushCell`）。こぼれ球アイコン(`.ballfree`)は駒(`.piece`)と同じ「セル幅%＋max-width上限」方式でサイズ指定（固定pxではない。画面幅変化に連動）。
 - **オフサイド**：方向補正済み `calcOffside`（`attackDir`でチーム別）＋成立後処理 `handleOffside`（位置戻し＋こぼれ球）。通常パス着地で自動判定。
-- **Unity Calculateフェーズ寄せ**：`PrepareMoveOperations`準拠で「着地パス受け手の通常移動→非移動→その他移動」にソート。`mIsMoveBall`相当の `turnBallMoved` で、ドリブル接触時とボール未移動ターン末のタックルを通常処理に統合。フリーボール確保時は `lastHadBallTeam` を見て、同チーム回収ならターン開始位置ベースのオフサイドも判定する。
-- **FOUL/パス確率**：FOUL演出/PK/FKはUnity `TackleAsync` 準拠で、ボール保持チームから見た攻撃側2列（GA/PA/VA/Cross）のみ。中盤などではファウル抽選に当たっても通常タックルへ落ちる。PASS確率表示はUnity `MoveRangeProvider.CalculatePassSuccessProbability` 準拠で、味方がいるマスのみ `経路上FlyingPass成功率の積 × 着地LandingPass成功率` を表示。空マス/相手だけのマスはスルーパス候補なのでPASS確率テキストを出さない。
+- **Unity Calculateフェーズ寄せ**：`PrepareMoveOperations`準拠で「着地パス受け手の通常移動→非移動→その他移動」にソート。`mIsMoveBall`相当の `turnBallMoved` で、ドリブル接触時とボール未移動ターン末のタックルを通常処理に統合。Unity `IsChangedHasBallTeam()` 準拠で、ターン開始時からボール保持チームが変わった後のパス/スルーパス/シュートは後続コマンドでも中止する。フリーボール確保時は `lastHadBallTeam` を見て、同チーム回収ならターン開始位置ベースのオフサイドも判定する。
+- **FOUL/パス確率**：FOUL演出/PK/FKはUnity `TackleAsync` 準拠で、ボール保持チームから見た攻撃側2列（GA/PA/VA/Cross）のみ。中盤などではファウル抽選に当たっても通常タックルへ落ちる。PASS確率表示はUnity `MoveRangeProvider.CalculatePassSuccessProbability` 準拠で、味方がいるマスのみ `経路上FlyingPass成功率の積 × 着地LandingPass成功率` を表示。空マス/相手だけのマスはスルーパス候補なのでPASS確率テキストを出さない。攻撃先GAに相手GKがいる場合はUnityのGK分岐に合わせ、通常パス/スルーパスともGKが100%カットして直接保持する。
 - **ゴール後リキックオフ**：Unity `ReKickoffSetup` / `GetReKickOffTeamType` 準拠で、得点後は失点側ボールのキックオフ配置へ戻す。PA/GAへドリブル到達しただけでは得点にせず、得点はシュート/PK/FKなどの解決からのみ発生させる。
 - **遅延行為/消極的戦術**：遅延行為はUnity条件に合わせ、「ターン開始時にボールを持っていたチームが、ターン終了時も同じチームとして自陣保持している場合のみ」カウントする。消極的戦術は「ボールが下2マス外、かつ対象チームの9コマ以上が下2マス」に合わせている。PassiveTacticsマスタJSONはUnityローカル/`GadeDev/football-chess-app` origin/masterともに未同梱（Entry/enum/Repository参照のみ）のため、PassCut/Tackleのデバフ量は現状-20%近似。
 - **シュート失敗後のCK/GK**：通常シュート失敗後のCK/GKリトライはUnity現行 `ShootAsync` に合わせ、初回CK後の追加CK判定が過剰連鎖しないようにしている。通常シュート失敗でCKにならずGKがゴールエリアにいる場合は `saving`、GKがゴールエリア外（同マス守備など）の場合は `failedShoot` として扱い、後者とファウル由来PK/FK→GKはUnity `OnGK` 同様にそのターンの後続コマンドを停止する。
 - **シュートブロック順/最高コスト抽選**：Unity `IsSuccessShootAvoidanceBlock` 準拠で、シュート元→ゴール手前までの `GetRoute(..., false, false)` を順に見て、GK以外の相手がいるマスは65%で回避抽選する。最初に回避失敗したマスのGK以外・最高コスト守備者がブロックし、最高コストが複数ならUnity `GetHighestCostModel()` と同じく抽選する（サーバー側はseeded RNG）。
 - **15ターン制**：前半15＋AT(0〜1)、後半15＋AT(1〜3)。ChessClockはAT中「45+N」「90+N」表記。
-- **ボール軌跡演出**：Unity版のTrailRenderer風に、パス/スルーパス/ドリブル/シュート/オンライン再生イベントで `animateBallFlight` を使う。オンラインでは `pass.cut` に `from` と `cutAt` を持たせ、カット地点までの軌跡とクリア移動を再生する。セットプレー由来の `shot.saved` / `shot.goal` には `details.kickLogs` が入り、CKカットイン再生に使う。
+- **ボール軌跡演出**：Unity版のTrailRenderer風に、パス/スルーパス/ドリブル/シュート/オンライン再生イベントで `animateBallFlight` を使う。オンラインでは `pass.cut` に `from` と `cutAt` を持たせ、経路上/着地マスのカット地点までの軌跡を再生し、Unity `OnPassCutAsync` 準拠でカットした駒が直接保持する。セットプレー由来の `shot.saved` / `shot.goal` には `details.kickLogs` が入り、CKカットイン再生に使う。
 - **選択UI（Unity風＋独自調整）**：マスタップ→**弧状ポップアップ**で駒/ボールを選択（`renderSelectFan`/`#selectFan`、-60°〜+60°の弧）。駒1体のみは1タップで即選択。項目2つ以上は「タップ→弧→項目タップ（ポップ演出）→選択確定→範囲表示」。**選択確定後にのみ**移動/パス範囲をハイライト（大きな脈動円）。範囲外タップでキャンセル。ボールは常に独立項目（保持球は保持駒の隣、こぼれ球は独立）。
   - `onPieceClick`は、駒選択中に「有効な移動先/パス先として、相手駒や別の自駒が乗っているマス」をタップした場合、`onCellClick`と同じ判定（`isMovable`/`isPassable`）を先に行ってから通す。個別駒のクリックハンドラが`stopPropagation`でマスのクリックを奪うため、この処理がないと「相手駒のいるマスへ移動/パスできない」バグになる。
 - **移動先/パス先ゴースト**：自分の予約コマンドの移動先/パス先に半透明プレビュー（`.ghost`、input時のみ・自分のみ）。既存駒より手前(z-index高め)・点線の丸枠＋点滅・セル中心から少しオフセットして描画し、既存駒と重なっても視認できるようにしている。
@@ -63,7 +63,7 @@ Claude Code がこのリポジトリで作業する際の指針。詳細な背�
 ## 次の残作業
 - ~~オンライン対戦への編成反映~~ → 2026-07-07 に実装済み。ROOM参加時に `deck` を送り、サーバー側で11人/GK1人/自陣配置/1マス3体/コスト上限を検証する。既存デフォルト編成（合計18.5）は互換例外として許可。
 - Unity版との差異をさらに潰す。優先は `StateBattleCalculate` 周辺の同時解決エッジケース、オンライン再生イベントの細部、消極的戦術マスタ正式値（Unityソース外からの入手が必要）。
-- サーバー権威化の回帰テストを増やす。`src/game-core.ts` に対して、HTML版/Unity版から拾った固定盤面・固定乱数のケースをテスト化する。2026-07-07時点で `npm test` に9ケース（スルーパス+通常移動、PASS表示、PA自動得点防止、得点後キックオフ、通常シュート失敗時のsaving/failedShoot分岐、ファウルPK→GKターン停止、シュートブロック同コスト抽選、こぼれ球同コスト抽選）を追加済み。
+- サーバー権威化の回帰テストを増やす。`src/game-core.ts` に対して、HTML版/Unity版から拾った固定盤面・固定乱数のケースをテスト化する。2026-07-07時点で `npm test` に15ケース（スルーパス+通常移動、PASS表示、経路/着地/到達マスのパスカット直接保持、保持チーム変更後のキック系中止、GA上GKの100%パスカット、PA自動得点防止、得点後キックオフ、通常シュート失敗時のsaving/failedShoot分岐、ファウルPK→GKターン停止、シュートブロック同コスト抽選、こぼれ球同コスト抽選）を追加済み。
 - オンライン再生の完全対応。現状は主要 `TurnEvent` を再生済みだが、全イベントをUnity風の正確な順序・間・カットイン・軌跡に寄せる。
 - 本番運用準備の残り: 正式ルーティングは**universofutbol.comゾーンが別Cloudflareアカウントにあるため保留**（Worker側のベースパス配信は実装済み。詳細はAUTH_UNIVERSOFUTBOL.md）。観戦共有UX、エラー復帰表示。レート制限とROOM作成制限は2026-07-07実装済み。**wrangler.jsoncの`workers_dev: true`は消さないこと**（routes追加時にworkers.devが自動無効化されて公開URLが落ちた事故あり）。
 - ~~公開URLでのプロトタイプHTML配信~~ → 2026-07-06 に static assets 方式で実装済み（下記デプロイ欄参照）。

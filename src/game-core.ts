@@ -724,6 +724,11 @@ export function enemyGKFor(state: FootballChessGameState, team: Team): Piece | u
   return state.pieces.find((piece) => piece.team !== team && piece.posType === "gk");
 }
 
+function goalAreaPassCutGK(state: FootballChessGameState, passTeam: Team, x: number, y: number): Piece | undefined {
+  if (!isAttackGoalArea(passTeam, x, y)) return undefined;
+  return state.pieces.find((piece) => piece.team !== passTeam && piece.posType === "gk" && piece.x === x && piece.y === y);
+}
+
 export function isGKGuardingShot(attackPiece: Piece, enemyGK: Piece | undefined): boolean {
   if (!enemyGK) return false;
   return (
@@ -1139,18 +1144,21 @@ function resolveFlyingPassPath(
     const cutProbability = clampProb(100 - passProbability);
     if (!rollPercent(state, cutProbability)) continue;
     const cutter = pickHighestCostPiece(state, enemies);
-    const loose = placeLooseBallDefensive(state, x, y, passPiece.team);
+    if (cutter) {
+      setBallToPiece(state, cutter, true);
+    } else {
+      setBallToCell(state, x, y, opponentTeam(passPiece.team), true);
+    }
     pushEvent(events, {
       type: "pass.cut",
       team: passPiece.team,
       pieceId: passPiece.id,
       from: coordOf(passPiece),
-      to: { x: loose.x, y: loose.y },
+      to: cutter ? coordOf(cutter) : { x, y },
       details: {
         cutAt: { x, y },
         cutterId: cutter?.id ?? null,
         cutProbability,
-        cleared: loose.cleared,
       },
     });
     return true;
@@ -1558,11 +1566,20 @@ function resolveCommand(
   movedIds: Set<number>,
   events: TurnEvent[],
   logs: string[],
+  turnStartHasBallTeam: Team | null,
 ): void {
   const piece = pieceById(state, command.pieceId);
   if (!piece || piece.team !== command.team) {
     skipCommand(events, command, "piece is unavailable");
     return;
+  }
+
+  if (isBallCommand(command)) {
+    const currentHasBallTeam = ballHolder(state)?.team ?? null;
+    if (currentHasBallTeam !== turnStartHasBallTeam) {
+      skipCommand(events, command, "ball possession team changed earlier this turn");
+      return;
+    }
   }
 
   if (isBallCommand(command) || command.type === "dribble") {
@@ -1625,16 +1642,32 @@ function resolveCommand(
       if (isOffsidePass(state, piece, receiver)) handleOffside(state, receiver, receiver.x, receiver.y, piece.team, events, logs);
       return;
     }
-    const loose = placeLooseBallDefensive(state, receiver.x, receiver.y, piece.team);
+    const cutter =
+      goalAreaPassCutGK(state, piece.team, receiver.x, receiver.y) ??
+      pickHighestCostPiece(
+        state,
+        piecesAt(state, receiver.x, receiver.y).filter((candidate) => candidate.team !== piece.team),
+      );
+    if (cutter) {
+      setBallToPiece(state, cutter, true);
+    } else {
+      setBallToCell(state, receiver.x, receiver.y, opponentTeam(piece.team), true);
+    }
     pushEvent(events, {
-      type: "pass.failed",
+      type: "pass.cut",
       team: piece.team,
       pieceId: piece.id,
       from: coordOf(piece),
-      to: { x: loose.x, y: loose.y },
-      details: { receiverId: receiver.id, probability, cleared: loose.cleared },
+      to: cutter ? coordOf(cutter) : coordOf(receiver),
+      details: {
+        receiverId: receiver.id,
+        probability,
+        cutAt: coordOf(receiver),
+        cutterId: cutter?.id ?? null,
+        cutProbability: clampProb(100 - probability),
+      },
     });
-    logs.push(`${teamName(piece.team)} pass failed ${probability}%`);
+    logs.push(`${teamName(piece.team)} pass cut ${probability}%`);
     return;
   }
 
@@ -1649,6 +1682,27 @@ function resolveCommand(
       return;
     }
     if (resolveFlyingPassPath(state, piece, command.tx, command.ty, events)) return;
+    const goalAreaGK = goalAreaPassCutGK(state, piece.team, command.tx, command.ty);
+    if (goalAreaGK) {
+      setBallToPiece(state, goalAreaGK, true);
+      pushEvent(events, {
+        type: "pass.cut",
+        team: piece.team,
+        pieceId: piece.id,
+        from: coordOf(piece),
+        to: coordOf(goalAreaGK),
+        details: {
+          commandType: "throughpass",
+          probability: 0,
+          cutAt: { x: command.tx, y: command.ty },
+          cutterId: goalAreaGK.id,
+          cutProbability: 100,
+          reason: "goalAreaGK",
+        },
+      });
+      logs.push(`${teamName(piece.team)} throughpass cut by goal-area GK`);
+      return;
+    }
     const probability = calcFlyingPass(state, piece, command.tx, command.ty);
     const ok = rollPercent(state, probability);
     if (ok) {
@@ -1664,16 +1718,30 @@ function resolveCommand(
       logs.push(`${teamName(piece.team)} throughpass completed ${probability}%`);
       return;
     }
-    const loose = placeLooseBallDefensive(state, command.tx, command.ty, piece.team);
+    const cutter = pickHighestCostPiece(
+      state,
+      piecesAt(state, command.tx, command.ty).filter((candidate) => candidate.team !== piece.team),
+    );
+    if (cutter) {
+      setBallToPiece(state, cutter, true);
+    } else {
+      setBallToCell(state, command.tx, command.ty, opponentTeam(piece.team), true);
+    }
     pushEvent(events, {
-      type: "pass.failed",
+      type: "pass.cut",
       team: piece.team,
       pieceId: piece.id,
       from: coordOf(piece),
-      to: { x: loose.x, y: loose.y },
-      details: { commandType: "throughpass", probability, cleared: loose.cleared },
+      to: cutter ? coordOf(cutter) : { x: command.tx, y: command.ty },
+      details: {
+        commandType: "throughpass",
+        probability,
+        cutAt: { x: command.tx, y: command.ty },
+        cutterId: cutter?.id ?? null,
+        cutProbability: clampProb(100 - probability),
+      },
     });
-    logs.push(`${teamName(piece.team)} throughpass failed ${probability}%`);
+    logs.push(`${teamName(piece.team)} throughpass cut ${probability}%`);
     return;
   }
 
@@ -1694,7 +1762,7 @@ export function resolveServerTurn(
 
   for (const command of sortCommandsForResolution(intents)) {
     if (game.turnStopped) break;
-    resolveCommand(game, command, movedIds, events, logs);
+    resolveCommand(game, command, movedIds, events, logs, turnStartHasBallTeam);
   }
 
   if (!game.turnStopped) resolveStationaryTackles(game, events, logs);

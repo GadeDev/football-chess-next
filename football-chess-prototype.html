@@ -960,6 +960,12 @@ function calcFlyingPass(passPiece, targetX, targetY){
   if(passivePenaltyTeams.has(passPiece.team)) buff+=PASSIVE_TACTICS_DEBUFF.PassCut;
   return clampProb(base+buff);
 }
+function goalAreaPassCutGK(passTeam,x,y){
+  const c=cellAt(x,y);
+  const isGoalArea=passTeam==='b' ? c?.t==='oppga' : c?.t==='selfga';
+  if(!isGoalArea) return null;
+  return piecesAt(x,y).find(q=>q.team!==passTeam && q.posType==='gk')||null;
+}
 /* Unity MoveRangeProvider.CalculatePassSuccessProbability 準拠。
    表示用PASS確率は「経路上の通過成功率の積 × 着地成功率」。
    味方がいないセル（空マス/相手だけのマス）はスルーパス扱いなので、PASS確率は表示しない。 */
@@ -1008,7 +1014,7 @@ function resolveFlyingPassPath(passPiece, ex, ey){
     const passProb=calcFlyingPass(passPiece, x, y);
     const cutProb=clampProb(100-passProb);
     if(rollPercent(cutProb)){
-      const cutter=enemies.reduce((a,b)=>pieceCost(b)>pieceCost(a)?b:a);
+      const cutter=highestCostPiece(enemies);
       return {cut:true, cutAt:{x,y}, cutter, cutProb};
     }
   }
@@ -2231,14 +2237,24 @@ function applySnapshotToLocal(snapshot){
   resetChain();
 }
 function eventTeamName(team){ return team==='b'?'青':(team==='r'?'赤':''); }
+function commandTypeLabel(type){
+  return ({move:'移動',dribble:'ドリブル',pass:'パス',throughpass:'スルーパス',shoot:'シュート'}[type])||type||'操作';
+}
 function onlineLogEvent(event){
   if(!event) return;
   const t=eventTeamName(event.team);
   if(event.type==='piece.moved') log(`${t} ${event.pieceId} → (${event.to?.x},${event.to?.y})${event.details?.carryBall?' ドリブル':' 移動'}`);
   else if(event.type==='ball.moved') log(`${t} スルーパス → (${event.to?.x},${event.to?.y})`);
   else if(event.type==='pass.completed') log(`${t} パス成功 → ${event.details?.receiverId||''}`);
-  else if(event.type==='pass.cut') log(`${t} パスカット発生`);
+  else if(event.type==='pass.cut'){
+    const cutAt=event.details?.cutAt||event.to;
+    const cutter=pieceById(event.details?.cutterId);
+    const reason=event.details?.reason==='goalAreaGK'?'（GAのGK）':'';
+    const at=cutAt?`(${cutAt.x},${cutAt.y}) `:'';
+    log(`${t} パスカット ${at}${reason}${cutter?`→ ${label(cutter)} が保持`:''}`);
+  }
   else if(event.type==='pass.failed') log(`${t} パス失敗`);
+  else if(event.type==='command.skipped') log(`${t} ${commandTypeLabel(event.details?.commandType)}中止：${event.details?.reason||'実行条件なし'}`);
   else if(event.type==='looseball.picked') log(`${eventTeamName(event.team)} ${event.pieceId} がこぼれ球を確保`);
   else if(event.type==='offside') log(`${t} オフサイド`);
   else if(event.type==='tackle.success') log(`${t} タックル成功`);
@@ -2249,6 +2265,8 @@ function onlineLogEvent(event){
   else if(event.type==='shot.blocked') log(`${t} シュートブロック`);
   else if(event.type==='shot.saved') log(event.details?.saveType==='failedShoot'?`${t} シュート失敗→GK`:`${t} GKセーブ`);
   else if(event.type==='kickoff') log(`${t} キックオフ`);
+  else if(event.type==='battle-delay') log(`${t} 遅延行為：キックオフに戻ります`);
+  else if(event.type==='passive-tactics') log(`${t} 消極的戦術：パスカット/タックル補正`);
   else if(event.type==='additional-time'){
     const half=event.details?.half==='second'?'後半':'前半';
     log(`⏱ ${half}アディショナルタイム ${event.details?.turns??0}ターン`);
@@ -2274,13 +2292,36 @@ function syncBallAfterServerEvent(event){
     if(receiver) setBallToPiece(receiver,true);
     return;
   }
-  if((event.type==='ball.moved'||event.type==='pass.failed'||event.type==='pass.cut') && event.to){
+  if((event.type==='ball.moved'||event.type==='pass.failed') && event.to){
     setBallToCell(event.to.x,event.to.y,event.team,true);
+    return;
+  }
+  if(event.type==='pass.cut'){
+    const cutter=pieceById(event.details?.cutterId);
+    if(cutter) setBallToPiece(cutter,true);
+    else if(event.to) setBallToCell(event.to.x,event.to.y,opponentTeam(event.team),true);
     return;
   }
   if(event.type==='looseball.picked'){
     const picker=pieceById(event.pieceId);
     if(picker) setBallToPiece(picker,true);
+    return;
+  }
+  if(event.type==='tackle.success'){
+    const tackler=pieceById(event.pieceId);
+    if(tackler) setBallToPiece(tackler,true);
+    return;
+  }
+  if(event.type==='shot.blocked'){
+    const blocker=pieceById(event.details?.blockerId);
+    if(blocker) setBallToPiece(blocker,true);
+    else if(event.to) setBallToCell(event.to.x,event.to.y,event.team,true);
+    return;
+  }
+  if(event.type==='shot.saved'){
+    const gk=pieceById(event.details?.gkId);
+    if(gk) setBallToPiece(gk,true);
+    else if(event.to) setBallToCell(event.to.x,event.to.y,opponentTeam(event.team),true);
     return;
   }
   if(event.type==='offside' && event.to){
@@ -2342,6 +2383,8 @@ async function playServerEvent(event){
     render();
   }else if(event?.type==='tackle.success'){
     await showCutinAtPiece('tackleSuccess',850,event.to?.x,event.to?.y);
+    syncBallAfterServerEvent(event);
+    render();
   }else if(event?.type==='tackle.foul'){
     await showCutinAtPiece('foul',850,event.to?.x,event.to?.y);
     if(event.details?.kind==='PK') await showCutinAtPiece('pk',850,event.to?.x,event.to?.y);
@@ -2349,6 +2392,8 @@ async function playServerEvent(event){
   }else if(event?.type==='shot.blocked'){
     if(event.from&&event.to) await animateBallFlight(event.from,event.to,event.team,{kind:'shoot',duration:360,arc:30});
     await showCutinAtPiece('shootStop',850,event.to?.x,event.to?.y);
+    syncBallAfterServerEvent(event);
+    render();
   }else if(event?.type==='shot.miss'){
     await showCutinAtPiece('failedShoot',850,eventFrom?.x,eventFrom?.y);
   }else if(event?.type==='shot.saved'){
@@ -2356,8 +2401,14 @@ async function playServerEvent(event){
     if(eventFrom&&event.to) await animateBallFlight(eventFrom,event.to,event.team,{kind:'shoot',duration:420,arc:30});
     const saveType=event.details?.saveType;
     if(saveType!=='failedShoot') await showCutinAtPiece('saving',850,event.to?.x,event.to?.y);
+    syncBallAfterServerEvent(event);
+    render();
   }else if(event?.type==='kickoff'){
     await showCutin('kickoff',700);
+  }else if(event?.type==='battle-delay'){
+    await showCutin('battleDelay',850);
+  }else if(event?.type==='passive-tactics'){
+    await showCutin('passiveTactics',850);
   }else if(event?.type==='additional-time'){
     await showCutin('additional-time',700);
   }else if(event?.type==='halftime'){
@@ -2766,7 +2817,7 @@ async function resolveSimultaneousTurn(){
 
   // 順番に実行
   for(const cmd of ordered){
-    await execCommand(cmd);
+    await execCommand(cmd,turnStartHasBallTeam);
     render();
     if(turnStopped) break;
   }
@@ -2838,9 +2889,16 @@ async function advanceMatchClock(){
   }
 }
 
-async function execCommand(cmd){
+async function execCommand(cmd,turnStartHasBallTeam=ballHolder()?.team||null){
   const p=pieceById(cmd.pieceId);
   if(!p)return; // 既に奪われた等
+  if(isBallCommand(cmd)){
+    const currentHasBallTeam=ballHolder()?.team||null;
+    if(currentHasBallTeam!==turnStartHasBallTeam){
+      log(`${p.team==='b'?'青':'赤'} ${label(p)} はターン中に保持チームが変わったため ${cmd.type} を中止`);
+      return;
+    }
+  }
   if(isBallCommand(cmd)||cmd.type==='dribble'){
     const holder=ballHolder();
     if(!holder||holder.id!==p.id){
@@ -2877,7 +2935,8 @@ async function execCommand(cmd){
       await animateBallFlight({x:p.x,y:p.y},path.cutAt,p.team,{kind:'pass'});
       await showCutinAtPiece('passCut',950,path.cutAt.x,path.cutAt.y);
       log(`${p.team==='b'?'青':'赤'}パス → (${path.cutAt.x},${path.cutAt.y}) で${path.cutter.posType.toUpperCase()}にカット！（カット率${path.cutProb}%）`);
-      placeLooseBallDefensive(path.cutAt.x,path.cutAt.y,'→ こぼれ球',p.team); // 守備成功→ボックスならクリア
+      setBallToPiece(path.cutter,true);
+      log(`→ ${label(path.cutter)} が保持`);
       render(); return;
     }
     // 2. 着地マスでの着地パスカット判定
@@ -2890,7 +2949,13 @@ async function execCommand(cmd){
       if(isOffsidePass(p,to)){ await handleOffside(to,to.x,to.y,p.team); render(); return; }
       setBallToPiece(to,true);
     }
-    else { await showCutinAtPiece('passCut',950,to.x,to.y); log('→ 着地マスでパスカット'); placeLooseBallDefensive(to.x,to.y,'→ こぼれ球',p.team); }
+    else {
+      await showCutinAtPiece('passCut',950,to.x,to.y);
+      const cutter=goalAreaPassCutGK(p.team,to.x,to.y)||highestCostPiece(piecesAt(to.x,to.y).filter(q=>q.team!==p.team));
+      log('→ 着地マスでパスカット');
+      if(cutter){ setBallToPiece(cutter,true); log(`→ ${label(cutter)} が保持`); }
+      else placeLooseBallDefensive(to.x,to.y,'→ こぼれ球',p.team);
+    }
     render();
   }else if(cmd.type==='throughpass'){
     // 演出は経路上／着地マスに敵駒がいて奪取判定（チェック）が起こり得る場合のみ。素通りでは出さない。
@@ -2902,7 +2967,17 @@ async function execCommand(cmd){
       await animateBallFlight({x:p.x,y:p.y},path.cutAt,p.team,{kind:'pass'});
       await showCutinAtPiece('passCut',950,path.cutAt.x,path.cutAt.y);
       log(`${p.team==='b'?'青':'赤'}スルーパス → (${path.cutAt.x},${path.cutAt.y}) で${path.cutter.posType.toUpperCase()}にカット！（カット率${path.cutProb}%）`);
-      placeLooseBallDefensive(path.cutAt.x,path.cutAt.y,'→ こぼれ球',p.team); // 守備成功→ボックスならクリア
+      setBallToPiece(path.cutter,true);
+      log(`→ ${label(path.cutter)} が保持`);
+      render(); return;
+    }
+    const goalAreaGK=goalAreaPassCutGK(p.team,cmd.tx,cmd.ty);
+    if(goalAreaGK){
+      await animateBallFlight({x:p.x,y:p.y},{x:cmd.tx,y:cmd.ty},p.team,{kind:'pass'});
+      await showCutinAtPiece('passCut',950,cmd.tx,cmd.ty);
+      log(`${p.team==='b'?'青':'赤'}スルーパス → ゴールエリアのGKにカット！`);
+      setBallToPiece(goalAreaGK,true);
+      log(`→ ${label(goalAreaGK)} が保持`);
       render(); return;
     }
     // 2. 着地マス（空マス）の通過成功率で判定
@@ -2911,7 +2986,13 @@ async function execCommand(cmd){
     log(`${p.team==='b'?'青':'赤'}スルーパス ${p.posType.toUpperCase()}→(${cmd.tx},${cmd.ty})（着地${prob}%）${ok?'成功':'失敗'}`);
     await animateBallFlight({x:p.x,y:p.y},{x:cmd.tx,y:cmd.ty},p.team,{kind:'pass'});
     if(ok){ setBallToCell(cmd.tx,cmd.ty,p.team,true); }
-    else { await showCutinAtPiece('passCut',950,cmd.tx,cmd.ty); log('→ 着地マスでカット'); placeLooseBallDefensive(cmd.tx,cmd.ty,'→ こぼれ球',p.team); }
+    else {
+      await showCutinAtPiece('passCut',950,cmd.tx,cmd.ty);
+      const cutter=goalAreaPassCutGK(p.team,cmd.tx,cmd.ty)||highestCostPiece(piecesAt(cmd.tx,cmd.ty).filter(q=>q.team!==p.team));
+      log('→ 着地マスでカット');
+      if(cutter){ setBallToPiece(cutter,true); log(`→ ${label(cutter)} が保持`); }
+      else placeLooseBallDefensive(cmd.tx,cmd.ty,'→ こぼれ球',p.team);
+    }
     render();
   }else if(cmd.type==='shoot'){
     // ステップ1〜3の統一フロー（calcShootは両チーム対応済み）

@@ -70,6 +70,149 @@ test("pass probability display is hidden for an enemy-only target cell", () => {
   assert.equal(calcPassDisplayProbability(state, passer, 1, 1), 100);
 });
 
+test("a route pass cut gives possession directly to the cutter", () => {
+  const state = createInitialGameState("b", "pass-cut-held-0");
+  state.pieces = [
+    piece({ id: 1, team: "b", posType: "mf", cost: 1, x: 0, y: 1, sx: 0, sy: 1 }),
+    piece({ id: 2, team: "b", posType: "fw", cost: 1, x: 0, y: -1, sx: 0, sy: -1 }),
+    piece({ id: 3, team: "r", posType: "df", cost: 3, x: 0, y: 0, sx: 0, sy: 0 }),
+  ];
+  state.ball = { target: "piece", pieceId: 1, x: null, y: null, lastTeam: "b" };
+
+  const result = resolveServerTurn(state, {
+    b: [{ type: "pass", pieceId: 1, targetId: 2, tx: 0, ty: -1, team: "b" }],
+  });
+
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["pass.cut", "turn.completed"],
+  );
+  assert.equal(result.events[0].details?.cutterId, 3);
+  assert.deepEqual(result.events[0].details?.cutAt, { x: 0, y: 0 });
+  assert.equal(ballHolder(result.game)?.id, 3);
+  assert.deepEqual(result.game.ball, { target: "piece", pieceId: 3, x: null, y: null, lastTeam: "r" });
+});
+
+test("a landing pass cut gives possession directly to the defender on the target cell", () => {
+  const state = createInitialGameState("b", "landing-pass-cut-held-0");
+  state.pieces = [
+    piece({ id: 1, team: "b", posType: "mf", cost: 1, x: 0, y: 1, sx: 0, sy: 1 }),
+    piece({ id: 2, team: "b", posType: "fw", cost: 1, x: 0, y: 0, sx: 0, sy: 0 }),
+    piece({ id: 3, team: "r", posType: "df", cost: 3, x: 0, y: 0, sx: 0, sy: 0 }),
+  ];
+  state.ball = { target: "piece", pieceId: 1, x: null, y: null, lastTeam: "b" };
+
+  const result = resolveServerTurn(state, {
+    b: [{ type: "pass", pieceId: 1, targetId: 2, tx: 0, ty: 0, team: "b" }],
+  });
+
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["pass.cut", "turn.completed"],
+  );
+  assert.equal(result.events[0].details?.receiverId, 2);
+  assert.equal(result.events[0].details?.cutterId, 3);
+  assert.deepEqual(result.events[0].details?.cutAt, { x: 0, y: 0 });
+  assert.equal(ballHolder(result.game)?.id, 3);
+  assert.deepEqual(result.game.ball, { target: "piece", pieceId: 3, x: null, y: null, lastTeam: "r" });
+});
+
+test("a through pass cut on the target cell gives possession directly to the defender", () => {
+  const state = createInitialGameState("b", "throughpass-target-cut-held-0");
+  state.pieces = [
+    piece({ id: 1, team: "b", posType: "fw", cost: 1, x: 0, y: 1, sx: 0, sy: 1 }),
+    piece({ id: 2, team: "r", posType: "df", cost: 3, x: 0, y: 0, sx: 0, sy: 0 }),
+  ];
+  state.ball = { target: "piece", pieceId: 1, x: null, y: null, lastTeam: "b" };
+
+  const result = resolveServerTurn(state, {
+    b: [{ type: "throughpass", pieceId: 1, tx: 0, ty: 0, team: "b" }],
+  });
+
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["pass.cut", "turn.completed"],
+  );
+  assert.equal(result.events[0].details?.commandType, "throughpass");
+  assert.equal(result.events[0].details?.cutterId, 2);
+  assert.deepEqual(result.events[0].details?.cutAt, { x: 0, y: 0 });
+  assert.equal(ballHolder(result.game)?.id, 2);
+  assert.deepEqual(result.game.ball, { target: "piece", pieceId: 2, x: null, y: null, lastTeam: "r" });
+});
+
+test("ball commands after a same-turn possession-team change are skipped like Unity", () => {
+  const state = createInitialGameState("b", "changed-team-pass-cut-0");
+  state.pieces = [
+    piece({ id: 1, team: "b", posType: "mf", cost: 1, x: 0, y: 3, sx: 0, sy: 3 }),
+    piece({ id: 2, team: "b", posType: "fw", cost: 1, x: 0, y: 1, sx: 0, sy: 1 }),
+    piece({ id: 3, team: "r", posType: "df", cost: 3, x: 0, y: 2, sx: 0, sy: 2 }),
+    piece({ id: 4, team: "b", posType: "gk", cost: 3, x: 0, y: 3, sx: 0, sy: 3 }),
+  ];
+  state.ball = { target: "piece", pieceId: 1, x: null, y: null, lastTeam: "b" };
+
+  const result = resolveServerTurn(state, {
+    b: [{ type: "pass", pieceId: 1, targetId: 2, tx: 0, ty: 1, team: "b" }],
+    r: [{ type: "shoot", pieceId: 3, tx: 0, ty: 4, team: "r" }],
+  });
+
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["pass.cut", "command.skipped", "turn.completed"],
+  );
+  assert.equal(result.events[0].details?.cutterId, 3);
+  assert.equal(result.events[1].pieceId, 3);
+  assert.equal(result.events[1].details?.commandType, "shoot");
+  assert.equal(result.events[1].details?.reason, "ball possession team changed earlier this turn");
+  assert.equal(ballHolder(result.game)?.id, 3);
+  assert.deepEqual(result.game.ball, { target: "piece", pieceId: 3, x: null, y: null, lastTeam: "r" });
+});
+
+test("a goal-area GK always cuts a landing pass and takes possession", () => {
+  const state = createInitialGameState("b", "goal-area-gk-landing-cut");
+  state.pieces = [
+    piece({ id: 1, team: "b", posType: "mf", cost: 1, x: 0, y: -1, sx: 0, sy: -1 }),
+    piece({ id: 2, team: "b", posType: "fw", cost: 1, x: 0, y: -2, sx: 0, sy: -2 }),
+    piece({ id: 3, team: "r", posType: "gk", cost: 3, x: 0, y: -2, sx: 0, sy: -2 }),
+    piece({ id: 4, team: "r", posType: "df", cost: 3, x: 0, y: -2, sx: 0, sy: -2 }),
+  ];
+  state.ball = { target: "piece", pieceId: 1, x: null, y: null, lastTeam: "b" };
+
+  const result = resolveServerTurn(state, {
+    b: [{ type: "pass", pieceId: 1, targetId: 2, tx: 0, ty: -2, team: "b" }],
+  });
+
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["pass.cut", "turn.completed"],
+  );
+  assert.equal(result.events[0].details?.cutterId, 3);
+  assert.equal(result.events[0].details?.cutProbability, 100);
+  assert.equal(ballHolder(result.game)?.id, 3);
+});
+
+test("a goal-area GK always cuts a through pass target and takes possession", () => {
+  const state = createInitialGameState("b", "goal-area-gk-through-cut");
+  state.pieces = [
+    piece({ id: 1, team: "b", posType: "mf", cost: 1, x: 0, y: -1, sx: 0, sy: -1 }),
+    piece({ id: 2, team: "r", posType: "gk", cost: 3, x: 0, y: -2, sx: 0, sy: -2 }),
+  ];
+  state.ball = { target: "piece", pieceId: 1, x: null, y: null, lastTeam: "b" };
+
+  const result = resolveServerTurn(state, {
+    b: [{ type: "throughpass", pieceId: 1, tx: 0, ty: -2, team: "b" }],
+  });
+
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["pass.cut", "turn.completed"],
+  );
+  assert.equal(result.events[0].details?.commandType, "throughpass");
+  assert.equal(result.events[0].details?.cutterId, 2);
+  assert.equal(result.events[0].details?.cutProbability, 100);
+  assert.equal(result.events[0].details?.reason, "goalAreaGK");
+  assert.equal(ballHolder(result.game)?.id, 2);
+});
+
 test("standing in the attacking penalty area does not score without a shot", () => {
   const state = minimalState("penalty-area-no-auto-goal");
   state.pieces[0].x = 0;
