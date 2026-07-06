@@ -82,4 +82,4 @@ Claude Code がこのリポジトリで作業する際の指針。詳細な背�
 - 内部ロジック（移動可否/パス範囲/確率/コマンド確定）の変更は慎重に。UI改修時は「表示のみ変更、ロジック不変」を原則とする。
 - Codexで継続する場合は、実装・検証・ローカルURL確認までこの単一HTML版で完結させる。演出移植はUnity C#を調べ、ボール軌跡・駒移動・カットインなど小さい単位で移す。
 - Git運用：remote は `origin https://github.com/GadeDev/football-chess-next.git`。最新作業は `origin/codex/prototype-throughpass-move-fix` にあり、ローカルにも同名の追跡ブランチを作成済み（2026-07-06。以前はローカル `master` が同リモートブランチを追跡していた）。`origin/main` は別履歴の古い系統なので、統合/上書きはユーザー確認なしに行わない。Pushはユーザーから明示依頼があった場合のみ行う。
-- デプロイ：Worker公開は `npm run check:worker` → `npx wrangler deploy --dry-run` → `npm run deploy:worker`（= `wrangler deploy`）の順で行う。
+- デプロイ：Worker公開は `npm run check:worker` → `npx wrangler deploy --dry-run` → `npm run deploy:worker`（= `wrangler deploy`）の順で行う。公開URLは `https://universofutbol-football-chess.yanagiho.workers.dev`（デプロイ後の確認は `/api/universofutbol/football-chess/health` が `{"ok":true,...,"environment":"production"}` を返すこと）。ENVIRONMENTは2026-07-06からproduction。ローカル`wrangler dev`は`.dev.vars`（Git管理外）でdevelopment表示。
