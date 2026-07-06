@@ -1,4 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
+import { AccountStore } from "./accounts";
+export { AccountStore };
 import {
   REGULAR_TURNS,
   createInitialGameState,
@@ -119,7 +121,7 @@ function json(data: unknown, init: ResponseInit = {}): Response {
     headers: {
       "access-control-allow-origin": "*",
       "access-control-allow-methods": "GET,POST,OPTIONS",
-      "access-control-allow-headers": "content-type",
+      "access-control-allow-headers": "content-type,authorization",
       ...init.headers,
     },
   });
@@ -186,6 +188,102 @@ function roomStub(env: Env, roomCode: string): DurableObjectStub<MatchRoom> {
   return env.MATCH_ROOM.getByName(roomCode);
 }
 
+/* ===== UniversoFutbol 会員/サブスク（暫定: Worker内アカウント。AUTH_UNIVERSOFUTBOL.md 参照） ===== */
+
+function accountStub(env: Env): DurableObjectStub<AccountStore> {
+  return env.ACCOUNTS.getByName("global");
+}
+
+function bearerToken(request: Request): string {
+  const header = request.headers.get("Authorization") ?? "";
+  return header.startsWith("Bearer ") ? header.slice(7).trim() : "";
+}
+
+function base64UrlToBytes(value: string): Uint8Array | null {
+  try {
+    const pad = "=".repeat((4 - (value.length % 4)) % 4);
+    const bin = atob(value.replace(/-/g, "+").replace(/_/g, "/") + pad);
+    return Uint8Array.from(bin, (c) => c.charCodeAt(0));
+  } catch {
+    return null;
+  }
+}
+
+/* WordPress(UniversoFutbol) 発行の SSO トークンを検証する。
+   形式: HS256 JWT / claims: sub(会員ID), name(表示名), subscribed(bool), exp(unix秒) */
+async function verifySsoToken(
+  token: string,
+  secret: string,
+): Promise<{ externalId: string; name: string; subscribed: boolean } | null> {
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
+  const signature = base64UrlToBytes(parts[2]);
+  const payloadBytes = base64UrlToBytes(parts[1]);
+  if (!signature || !payloadBytes) return null;
+
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["verify"],
+  );
+  const dataBytes = enc.encode(`${parts[0]}.${parts[1]}`);
+  const valid = await crypto.subtle.verify(
+    "HMAC",
+    key,
+    signature as unknown as ArrayBuffer,
+    dataBytes as unknown as ArrayBuffer,
+  );
+  if (!valid) return null;
+
+  const payload = parseJsonObject(new TextDecoder().decode(payloadBytes));
+  if (!payload) return null;
+  const exp = typeof payload.exp === "number" ? payload.exp : 0;
+  if (exp * 1000 < Date.now()) return null;
+  const externalId =
+    typeof payload.sub === "string" || typeof payload.sub === "number" ? String(payload.sub) : "";
+  if (!externalId) return null;
+  return {
+    externalId,
+    name: stringField(payload.name, `UF-${externalId}`, 16),
+    subscribed: payload.subscribed === true,
+  };
+}
+
+async function handleAuthApi(request: Request, env: Env, pathname: string): Promise<Response> {
+  const accounts = accountStub(env);
+  const route = `${request.method} ${pathname.slice(API_PREFIX.length)}`;
+  const body =
+    request.method === "POST" ? (parseJsonObject(await request.text()) ?? {}) : ({} as Record<string, unknown>);
+
+  switch (route) {
+    case "POST /auth/register":
+      return json(await accounts.register(body.name, body.password));
+    case "POST /auth/login":
+      return json(await accounts.login(body.name, body.password));
+    case "POST /auth/logout":
+      return json(await accounts.logout(bearerToken(request)));
+    case "GET /auth/me":
+      return json(await accounts.me(bearerToken(request)));
+    case "POST /auth/sso": {
+      const secret = (env as { SSO_SECRET?: string }).SSO_SECRET;
+      if (!secret) return problem(501, "SSO is not configured (set SSO_SECRET)");
+      const token = typeof body.token === "string" ? body.token : "";
+      const profile = await verifySsoToken(token, secret);
+      if (!profile) return problem(401, "Invalid SSO token");
+      return json(await accounts.ssoLogin(profile));
+    }
+    case "POST /billing/subscribe":
+      return json(await accounts.subscribe(bearerToken(request)));
+    case "POST /billing/cancel":
+      return json(await accounts.cancelSubscription(bearerToken(request)));
+    default:
+      return problem(404, "Not found");
+  }
+}
+
 async function handleApi(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
 
@@ -197,6 +295,13 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
       content: contentInfo(env),
       environment: env.ENVIRONMENT,
     });
+  }
+
+  if (
+    url.pathname.startsWith(`${API_PREFIX}/auth/`) ||
+    url.pathname.startsWith(`${API_PREFIX}/billing/`)
+  ) {
+    return handleAuthApi(request, env, url.pathname);
   }
 
   if (url.pathname === `${API_PREFIX}/matches` && request.method === "POST") {

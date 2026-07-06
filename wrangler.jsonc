@@ -22,6 +22,10 @@
       {
         "name": "MATCH_ROOM",
         "class_name": "MatchRoom"
+      },
+      {
+        "name": "ACCOUNTS",
+        "class_name": "AccountStore"
       }
     ]
   },
@@ -29,6 +33,10 @@
     {
       "tag": "v1",
       "new_sqlite_classes": ["MatchRoom"]
+    },
+    {
+      "tag": "v2",
+      "new_sqlite_classes": ["AccountStore"]
     }
   ]
 }
