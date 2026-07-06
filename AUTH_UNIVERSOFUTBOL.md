@@ -69,7 +69,11 @@ wp_redirect('https://universofutbol.com/universofutbol/football-chess?sso=' . $j
 - 途中解約の即時反映が必要になったら、WordPress → Worker への Webhook（`POST /auth/sso` と同じシークレットで署名）を追加する
 - ゲーム内の「デモ加入」ボタンは本番SSO運用開始時に非表示にする（`ogAuth.user.subscription.demo` で判別可能）
 
+## 進捗（2026-07-07更新）
+- ✅ `SSO_SECRET` 設定済み（`/auth/sso` 稼働中。正当JWTログイン・改ざん拒否をE2E確認済み）。シークレット値はローカルの `.sso-secret.txt`（Git管理外）— WordPress の `UF_FC_SSO_SECRET` に同じ値を設定すること
+- ✅ WordPressプラグイン同梱: `wordpress/universofutbol-football-chess-sso.php`（`/?uf_fc_play=1` でSSOリダイレクト、ショートコード `[football_chess_button]`）。サブスク判定は `uf_fc_user_subscribed` フィルタで会員プラグインに接続する
+- ✅ レート制限: 認証系10回/10分/IP、課金系30回/時/IP、ROOM作成12回/時/IP（`AccountStore.checkRateLimit`、超過は429）
+
 ## 残課題
-- 正式ルーティング: universofutbol.com 配下への配置（リバースプロキシ or Workers Routes）。現状は workers.dev 直配信
-- レート制限: `/auth/*` への総当たり対策（Cloudflare WAF / Turnstile）
+- **正式ルーティング（要・別アカウント作業）**: universofutbol.com のCloudflareゾーンは**このWorkerのアカウント（yanagiho@gade.jp / b38024ba…）には存在しない**（別アカウント管理）。ルート追加を試行したが「Could not find zone」で失敗し、ロールバック済み。選択肢: ①ゾーンがあるアカウントへこのWorkerを移す ②ゾーンをこのアカウントへ移管 ③ゾーン側アカウントで `universofutbol.com/universofutbol/football-chess*` と `/api/universofutbol/football-chess*` の2ルートをこのWorkerに向ける（Workerのベースパス配信コードは実装済みで、ルートを張るだけで動く）
 - パスワードリセット: デモアカウントには未実装（本番はWordPress側の機能を使うため不要になる想定）

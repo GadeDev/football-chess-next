@@ -252,9 +252,35 @@ async function verifySsoToken(
   };
 }
 
+function clientIp(request: Request): string {
+  return request.headers.get("CF-Connecting-IP") ?? "unknown";
+}
+
+/* レート制限。超過時は 429 を返す。認証系は総当たり対策、ROOM作成は乱造対策 */
+const RATE_LIMITS: Record<string, { limit: number; windowMs: number }> = {
+  auth: { limit: 10, windowMs: 10 * 60 * 1000 }, // login/register/sso: 10回/10分/IP
+  billing: { limit: 30, windowMs: 60 * 60 * 1000 },
+  room: { limit: 12, windowMs: 60 * 60 * 1000 }, // ROOM作成: 12回/時/IP
+};
+
+async function rateLimited(env: Env, bucket: keyof typeof RATE_LIMITS, request: Request): Promise<boolean> {
+  const conf = RATE_LIMITS[bucket];
+  const ok = await accountStub(env).checkRateLimit(`${bucket}:${clientIp(request)}`, conf.limit, conf.windowMs);
+  return !ok;
+}
+
 async function handleAuthApi(request: Request, env: Env, pathname: string): Promise<Response> {
   const accounts = accountStub(env);
   const route = `${request.method} ${pathname.slice(API_PREFIX.length)}`;
+
+  const isAuthAttempt =
+    route === "POST /auth/register" || route === "POST /auth/login" || route === "POST /auth/sso";
+  if (isAuthAttempt && (await rateLimited(env, "auth", request))) {
+    return problem(429, "試行回数が多すぎます。しばらく待ってから再試行してください");
+  }
+  if (route.startsWith("POST /billing/") && (await rateLimited(env, "billing", request))) {
+    return problem(429, "試行回数が多すぎます。しばらく待ってから再試行してください");
+  }
   const body =
     request.method === "POST" ? (parseJsonObject(await request.text()) ?? {}) : ({} as Record<string, unknown>);
 
@@ -305,6 +331,9 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
   }
 
   if (url.pathname === `${API_PREFIX}/matches` && request.method === "POST") {
+    if (await rateLimited(env, "room", request)) {
+      return problem(429, "ROOM作成が多すぎます。しばらく待ってから再試行してください");
+    }
     const roomCode = createRoomCode();
     const snapshot = await roomStub(env, roomCode).getSnapshot(roomCode, contentInfo(env));
     return json({ roomCode, joinUrl: joinUrl(env, roomCode), snapshot }, { status: 201 });
@@ -1075,6 +1104,15 @@ export default {
     const url = new URL(request.url);
 
     try {
+      // universofutbol.com 配下の正式パス（PUBLIC_BASE_PATH）ではゲームHTMLを配信する。
+      // workers.dev では静的アセット（/ → index.html）がWorker より先に配信されるため、ここには来ない。
+      const basePath = env.PUBLIC_BASE_PATH;
+      if (url.pathname === basePath || url.pathname === `${basePath}/`) {
+        const assetUrl = new URL(url);
+        assetUrl.pathname = "/";
+        return env.ASSETS.fetch(new Request(assetUrl.toString(), request));
+      }
+
       if (url.pathname === "/") {
         return json({
           name: "UniversoFutbol Football Chess",

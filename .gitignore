@@ -3,6 +3,7 @@
 node_modules/
 .wrangler/
 .dev.vars
+.sso-secret.txt
 public/
 *.tmp
 .DS_Store
