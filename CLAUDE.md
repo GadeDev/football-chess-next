@@ -80,4 +80,4 @@ Claude Code がこのリポジトリで作業する際の指針。詳細な背�
 - 画像base64を含む巨大な行があるため、`Read` は範囲指定で。`cat`/`sed` での全文出力は避ける。
 - 内部ロジック（移動可否/パス範囲/確率/コマンド確定）の変更は慎重に。UI改修時は「表示のみ変更、ロジック不変」を原則とする。
 - Codexで継続する場合は、実装・検証・ローカルURL確認までこの単一HTML版で完結させる。演出移植はUnity C#を調べ、ボール軌跡・駒移動・カットインなど小さい単位で移す。
-- Git運用：現在 `master` ブランチ、remote は `origin https://github.com/yanagiho/football-chess-next.git`。Pushはユーザーから明示依頼があった場合のみ行う。
+- Git運用：remote は `origin https://github.com/GadeDev/football-chess-next.git`。最新の正ブランチは `main` に揃える方針。古い `master` / `codex/prototype-throughpass-move-fix` は移行履歴として残る場合がある。Pushはユーザーから明示依頼があった場合のみ行う。

@@ -21,10 +21,10 @@ GitHub上で「New repository」から空のリポジトリを作成します（
 
 ```bash
 # HTTPSの場合（URLは自分のものに置き換え）
-git remote add origin https://github.com/＜あなたのユーザー名＞/football-chess-web.git
+git remote add origin https://github.com/GadeDev/football-chess-next.git
 
-# 既存リポジトリ(yanagiho/football-chess-next)へ別ブランチで入れる場合は
-# git remote add origin https://github.com/yanagiho/football-chess-next.git
+# 既存の origin が別URLを向いている場合は
+git remote set-url origin https://github.com/GadeDev/football-chess-next.git
 
 git branch -M main
 git push -u origin main
