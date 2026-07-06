@@ -1509,7 +1509,13 @@ function resolveStationaryTackles(state: FootballChessGameState, events: TurnEve
   resolveTacklesAgainstHolder(state, holder, tacklers, events, logs);
 }
 
-function resolveShoot(state: FootballChessGameState, shooter: Piece, events: TurnEvent[], logs: string[]): void {
+function resolveShoot(
+  state: FootballChessGameState,
+  shooter: Piece,
+  command: Extract<GameCommand, { type: "shoot" }>,
+  events: TurnEvent[],
+  logs: string[],
+): void {
   const from = coordOf(shooter);
   const goal = goalCellFor(shooter.team);
   for (const [x, y] of getRoute(shooter.x, shooter.y, goal.x, goal.y)) {
@@ -1540,7 +1546,8 @@ function resolveShoot(state: FootballChessGameState, shooter: Piece, events: Tur
       type: "command.skipped",
       team: shooter.team,
       pieceId: shooter.id,
-      details: { reason: "shoot outside shooting area" },
+      from,
+      details: { commandType: "shoot", reason: "shoot outside shooting area", target: commandTarget(command) },
     });
     return;
   }
@@ -1634,12 +1641,17 @@ function resolveTurnEndRules(
   });
 }
 
-function skipCommand(events: TurnEvent[], command: GameCommand, reason: string): void {
+function commandTarget(command: GameCommand): { x: number; y: number } {
+  return { x: command.tx, y: command.ty };
+}
+
+function skipCommand(events: TurnEvent[], command: GameCommand, reason: string, piece?: Piece): void {
   pushEvent(events, {
     type: "command.skipped",
     team: command.team,
     pieceId: command.pieceId,
-    details: { commandType: command.type, reason },
+    from: piece ? coordOf(piece) : undefined,
+    details: { commandType: command.type, reason, target: commandTarget(command) },
   });
 }
 
@@ -1660,7 +1672,7 @@ function resolveCommand(
   if (isBallCommand(command)) {
     const currentHasBallTeam = ballHolder(state)?.team ?? null;
     if (currentHasBallTeam !== turnStartHasBallTeam) {
-      skipCommand(events, command, "ball possession team changed earlier this turn");
+      skipCommand(events, command, "ball possession team changed earlier this turn", piece);
       return;
     }
   }
@@ -1668,14 +1680,14 @@ function resolveCommand(
   if (isBallCommand(command) || command.type === "dribble") {
     const holder = ballHolder(state);
     if (!holder || holder.id !== piece.id) {
-      skipCommand(events, command, "piece no longer has the ball");
+      skipCommand(events, command, "piece no longer has the ball", piece);
       return;
     }
   }
 
   if (command.type === "move" || command.type === "dribble") {
     if (!isMovable(state, piece, command.tx, command.ty, movedIds)) {
-      skipCommand(events, command, "move target is invalid at resolution time");
+      skipCommand(events, command, "move target is invalid at resolution time", piece);
       return;
     }
     const from = coordOf(piece);
@@ -1701,11 +1713,11 @@ function resolveCommand(
   if (command.type === "pass") {
     const receiver = pieceById(state, command.targetId);
     if (!receiver || receiver.team !== piece.team) {
-      skipCommand(events, command, "pass receiver is unavailable");
+      skipCommand(events, command, "pass receiver is unavailable", piece);
       return;
     }
     if (!isPassTargetInRange(piece, receiver.x, receiver.y)) {
-      skipCommand(events, command, "pass receiver is out of range at resolution time");
+      skipCommand(events, command, "pass receiver is out of range at resolution time", piece);
       return;
     }
     if (resolveFlyingPassPath(state, piece, receiver.x, receiver.y, events)) return;
@@ -1757,11 +1769,11 @@ function resolveCommand(
   if (command.type === "throughpass") {
     const targetCell = cellAt(command.tx, command.ty);
     if (!targetCell || targetCell.t === "selfgoal" || targetCell.t === "oppgoal") {
-      skipCommand(events, command, "throughpass target cell is invalid");
+      skipCommand(events, command, "throughpass target cell is invalid", piece);
       return;
     }
     if (!isPassTargetInRange(piece, command.tx, command.ty)) {
-      skipCommand(events, command, "throughpass target is out of range at resolution time");
+      skipCommand(events, command, "throughpass target is out of range at resolution time", piece);
       return;
     }
     if (resolveFlyingPassPath(state, piece, command.tx, command.ty, events)) return;
@@ -1828,7 +1840,7 @@ function resolveCommand(
     return;
   }
 
-  resolveShoot(state, piece, events, logs);
+  resolveShoot(state, piece, command, events, logs);
 }
 
 export function resolveServerTurn(

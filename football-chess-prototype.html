@@ -2549,6 +2549,9 @@ function revealResolutionSnapshot(snapshot){
 }
 function eventPieceCell(event){
   if(event?.to) return event.to;
+  if(event?.from) return event.from;
+  const target=event?.details?.target;
+  if(target&&Number.isFinite(target.x)&&Number.isFinite(target.y)) return target;
   const piece=pieceById(event?.pieceId);
   return piece ? {x:piece.x,y:piece.y} : null;
 }

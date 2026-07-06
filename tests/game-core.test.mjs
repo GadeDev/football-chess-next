@@ -304,10 +304,31 @@ test("ball commands after a same-turn possession-team change are skipped like Un
   );
   assert.equal(result.events[0].details?.cutterId, 3);
   assert.equal(result.events[1].pieceId, 3);
+  assert.deepEqual(result.events[1].from, { x: 0, y: 2 });
   assert.equal(result.events[1].details?.commandType, "shoot");
   assert.equal(result.events[1].details?.reason, "ball possession team changed earlier this turn");
+  assert.deepEqual(result.events[1].details?.target, { x: 0, y: 4 });
   assert.equal(ballHolder(result.game)?.id, 3);
   assert.deepEqual(result.game.ball, { target: "piece", pieceId: 3, x: null, y: null, lastTeam: "r" });
+});
+
+test("a skipped shot outside the shooting area reports replay coordinates", () => {
+  const state = minimalState("shoot-outside-skip");
+
+  const result = resolveServerTurn(state, {
+    b: [{ type: "shoot", pieceId: 1, tx: 0, ty: -3, team: "b" }],
+  });
+
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["command.skipped", "turn.completed"],
+  );
+  assert.equal(result.events[0].pieceId, 1);
+  assert.deepEqual(result.events[0].from, { x: 0, y: 1 });
+  assert.equal(result.events[0].details?.commandType, "shoot");
+  assert.equal(result.events[0].details?.reason, "shoot outside shooting area");
+  assert.deepEqual(result.events[0].details?.target, { x: 0, y: -3 });
+  assert.equal(ballHolder(result.game)?.id, 1);
 });
 
 test("a goal-area GK always cuts a landing pass and takes possession", () => {
