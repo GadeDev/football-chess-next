@@ -1704,7 +1704,8 @@ function renderOnlineRoster(){
     if(!connected) classes.push('off');
     if(pending.has(team)) classes.push('pending');
     if(isMe) classes.push('me');
-    const title=escapeOnlineText(`${label}: ${seat?.displayName||'空席'}${connected?'':' / 未接続'}`);
+    const cost=Number.isFinite(seat?.teamCost) ? ` / COST ${Number(seat.teamCost).toFixed(1)}` : '';
+    const title=escapeOnlineText(`${label}: ${seat?.displayName||'空席'}${cost}${connected?'':' / 未接続'}`);
     return `<div class="${classes.join(' ')}" title="${title}"><span class="onlineDot"></span><span>${escapeOnlineText(label)} ${escapeOnlineText(name)}${mark}</span></div>`;
   };
   const spectators=Number.isFinite(presence.spectators) ? presence.spectators : 0;
@@ -2399,6 +2400,8 @@ function onlineSocketUrl(roomCode,role){
   url.searchParams.set('clientId',online.clientId);
   url.searchParams.set('role',role||'auto');
   url.searchParams.set('name',online.displayName);
+  const deck=onlineDeckPayload();
+  if(deck) url.searchParams.set('deck',deck);
   return url.toString();
 }
 function closeOnlineSocket(){
@@ -3035,8 +3038,8 @@ function resetChain(){
 /* ===== アウトゲーム（タイトル→ホーム→試合）Unity Title/Home/DeckEdit 移植 =====
    - Unity TeamDef.MaxTeamCost=16 / NumberOfPeople=11 / CellDef.MaxMyTeamPieceNum=3 準拠。
    - TeamFormationMaster はローカル未同梱のため6種を近似定義（#1はDefaultTeamMaster準拠）。
-   - 編成は localStorage に保存し、オフライン試合の青チームにのみ反映する。
-     オンラインはサーバー権威（src/game-core.ts のDEFAULT_TEAM）のため未反映。 */
+   - 編成は localStorage に保存し、オフライン試合の青チームに反映する。
+     オンラインはWebSocket参加時にサーバーへ送り、MatchRoom側で検証して初期盤面へ反映する。 */
 const OG_MAX_TEAM_COST=16;            // Unity TeamDef.MaxTeamCost
 const OG_DECK_KEY='fcPrimaryDeck';    // Unity PlayerPrefs PrimaryDeck 相当
 const OG_SLOT_KEY='fcDeckSlot';       // Unity SavedDeck0-5 相当（+0..5）
@@ -3076,6 +3079,10 @@ function ogMasterPieceId(pt,cost){ const base={fw:0,mf:5,df:10,gk:15}[pt]; retur
 function playerTeamDef(){
   const f=ogFormation(ogDeck.formationId);
   return f.pos.map((p,i)=>({id:ogMasterPieceId(p[0],ogDeck.costs[i]),x:p[1],y:p[2]}));
+}
+function onlineDeckPayload(){
+  try{ return JSON.stringify(playerTeamDef()); }
+  catch{ return ''; }
 }
 
 /* ---- 画面制御 ---- */

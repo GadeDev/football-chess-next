@@ -9,10 +9,13 @@ import {
   rollIntInclusive,
   resolveServerTurn,
   setupKickoffForTeam,
+  teamDefinitionCost,
+  validateTeamDefinition,
   validateCommandsForTeam,
   type FootballChessGameState,
   type GameCommand,
   type Team,
+  type TeamPieceDefinition,
   type TurnEvent,
   type TurnResolution,
 } from "./game-core";
@@ -31,6 +34,7 @@ interface ContentInfo {
 interface PlayerSeat {
   clientId: string;
   displayName: string;
+  teamCost?: number;
   connected: boolean;
   joinedAt: string;
   lastSeenAt: string;
@@ -62,6 +66,7 @@ interface MatchSnapshot {
   updatedAt: string;
   cleanupAt: string | null;
   players: Partial<Record<Team, PlayerSeat>>;
+  teamDefinitions: Partial<Record<Team, TeamPieceDefinition[]>>;
   spectatorCount: number;
   turn: TurnInfo;
   game: FootballChessGameState;
@@ -101,6 +106,7 @@ interface PresenceInfo {
       Team,
       {
         displayName: string;
+        teamCost?: number;
         connected: boolean;
         lastSeenAt: string;
       }
@@ -182,6 +188,18 @@ function roleField(value: unknown): SeatRole | "auto" {
 
 function teamField(value: unknown): Team | null {
   return value === "b" || value === "r" ? value : null;
+}
+
+function teamDefinitionField(value: string | null): { definition?: TeamPieceDefinition[]; error?: string } {
+  if (!value) return {};
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    const validation = validateTeamDefinition(parsed);
+    if (!validation.ok) return { error: validation.errors.join("; ") };
+    return { definition: validation.definition };
+  } catch {
+    return { error: "Invalid team definition JSON" };
+  }
 }
 
 function roomStub(env: Env, roomCode: string): DurableObjectStub<MatchRoom> {
@@ -388,7 +406,15 @@ export class MatchRoom extends DurableObject<Env> {
     const clientId = stringField(url.searchParams.get("clientId"), crypto.randomUUID(), 64);
     const displayName = stringField(url.searchParams.get("name"), "Player");
     const requestedRole = roleField(url.searchParams.get("role"));
-    const assigned = await this.assignSeat(roomCode, clientId, displayName, requestedRole);
+    const requestedTeamDefinition = teamDefinitionField(url.searchParams.get("deck"));
+    if (requestedTeamDefinition.error) return problem(400, requestedTeamDefinition.error);
+    const assigned = await this.assignSeat(
+      roomCode,
+      clientId,
+      displayName,
+      requestedRole,
+      requestedTeamDefinition.definition,
+    );
 
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair);
@@ -473,6 +499,7 @@ export class MatchRoom extends DurableObject<Env> {
       updatedAt: now,
       cleanupAt: new Date(Date.now() + ROOM_IDLE_CLEANUP_MS).toISOString(),
       players: {},
+      teamDefinitions: {},
       spectatorCount: 0,
       turn: { half: "first", index: 1, inputDeadlineAt: null, additionalTurns: { first: null, second: null } },
       game: createInitialGameState("b", `match:${roomCode}`),
@@ -497,8 +524,10 @@ export class MatchRoom extends DurableObject<Env> {
       .toArray()[0];
     if (!row) return null;
     const snapshot = JSON.parse(row.value) as MatchSnapshot;
-    snapshot.game = normalizeGameState(snapshot.game, "b", `match:${snapshot.roomCode}`);
     snapshot.players ??= {};
+    snapshot.teamDefinitions ??= {};
+    snapshot.game = normalizeGameState(snapshot.game, "b", `match:${snapshot.roomCode}`, snapshot.teamDefinitions);
+    snapshot.teamDefinitions = snapshot.game.teamDefinitions;
     snapshot.pendingIntents ??= {};
     snapshot.rematchRequests ??= {};
     snapshot.cleanupAt ??= null;
@@ -661,11 +690,31 @@ export class MatchRoom extends DurableObject<Env> {
     snapshot.status = bothConnected ? "ready" : "waiting";
   }
 
+  private isPregame(snapshot: MatchSnapshot): boolean {
+    return (
+      snapshot.status !== "playing" &&
+      snapshot.status !== "finished" &&
+      snapshot.turn.half === "first" &&
+      snapshot.turn.index === 1 &&
+      !snapshot.lastResolution &&
+      !snapshot.pendingIntents.b &&
+      !snapshot.pendingIntents.r
+    );
+  }
+
+  private rebuildPregameGame(snapshot: MatchSnapshot): void {
+    if (!this.isPregame(snapshot)) return;
+    const seed = snapshot.game?.rng?.seed || `match:${snapshot.roomCode}`;
+    snapshot.game = createInitialGameState("b", seed, snapshot.teamDefinitions);
+    snapshot.teamDefinitions = snapshot.game.teamDefinitions;
+  }
+
   private async assignSeat(
     roomCode: string,
     clientId: string,
     displayName: string,
     requestedRole: SeatRole | "auto",
+    teamDefinition?: TeamPieceDefinition[],
   ): Promise<{ role: SeatRole; snapshot: MatchSnapshot }> {
     const snapshot = await this.getSnapshot(roomCode, contentInfo(this.env));
     const now = new Date().toISOString();
@@ -691,10 +740,17 @@ export class MatchRoom extends DurableObject<Env> {
         snapshot.players[role] = {
           clientId,
           displayName,
+          teamCost: teamDefinition ? teamDefinitionCost(teamDefinition) : occupied?.teamCost,
           connected: true,
           joinedAt: occupied?.clientId === clientId ? occupied.joinedAt : now,
           lastSeenAt: now,
         };
+        if (teamDefinition) {
+          snapshot.teamDefinitions[role] = teamDefinition;
+        } else if (!occupied || occupied.clientId !== clientId) {
+          delete snapshot.teamDefinitions[role];
+        }
+        this.rebuildPregameGame(snapshot);
         assignedRole = role;
         break;
       }
@@ -814,10 +870,12 @@ export class MatchRoom extends DurableObject<Env> {
       const seat = snapshot.players[session.role];
       if (seat?.clientId === session.clientId) {
         delete snapshot.players[session.role];
+        delete snapshot.teamDefinitions[session.role];
         delete snapshot.rematchRequests[session.role];
         snapshot.pendingIntents = {};
         snapshot.turn.inputDeadlineAt = null;
         await this.ctx.storage.deleteAlarm();
+        this.rebuildPregameGame(snapshot);
         this.updateRoomStatus(snapshot);
       }
     }
@@ -912,7 +970,8 @@ export class MatchRoom extends DurableObject<Env> {
       inputDeadlineAt: null,
       additionalTurns: { first: null, second: null },
     };
-    snapshot.game = createInitialGameState("b", nextSeed);
+    snapshot.game = createInitialGameState("b", nextSeed, snapshot.teamDefinitions);
+    snapshot.teamDefinitions = snapshot.game.teamDefinitions;
     snapshot.pendingIntents = {};
     snapshot.rematchRequests = {};
     delete snapshot.lastResolution;
@@ -1054,6 +1113,7 @@ export class MatchRoom extends DurableObject<Env> {
     if (snapshot?.players.b) {
       players.b = {
         displayName: snapshot.players.b.displayName,
+        teamCost: snapshot.players.b.teamCost,
         connected: snapshot.players.b.connected,
         lastSeenAt: snapshot.players.b.lastSeenAt,
       };
@@ -1061,6 +1121,7 @@ export class MatchRoom extends DurableObject<Env> {
     if (snapshot?.players.r) {
       players.r = {
         displayName: snapshot.players.r.displayName,
+        teamCost: snapshot.players.r.teamCost,
         connected: snapshot.players.r.connected,
         lastSeenAt: snapshot.players.r.lastSeenAt,
       };

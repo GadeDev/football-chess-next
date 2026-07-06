@@ -6,6 +6,8 @@
   "type": "module",
   "scripts": {
     "check:worker": "tsc --noEmit",
+    "test": "npm run test:core",
+    "test:core": "rm -rf .test-dist && tsc -p tsconfig.test.json && node --test tests/game-core.test.mjs",
     "build:assets": "mkdir -p public && cp football-chess-prototype.html public/index.html",
     "dev:worker": "npm run build:assets && wrangler dev --port 8787",
     "deploy:worker": "npm run build:assets && wrangler deploy",

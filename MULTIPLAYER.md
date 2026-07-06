@@ -65,6 +65,9 @@ This is still intentionally incremental. The current HTML remains playable and c
   - Spectator clients stay in read-only replay phase after snapshots/resolutions, and their TURN END button is disabled.
 - Display name
   - The browser stores a local display name, sends it on WebSocket join, and can update it with `client.hello` while connected.
+- Online deck
+  - The browser sends the current deck on WebSocket join. The Durable Object validates 11 pieces, one GK, own-half placement, max three pieces per cell, and team cost.
+  - Valid blue/red decks rebuild the authoritative pregame board and persist through kickoff resets and rematches.
 - Online `TURN END`
   - Sends the local command queue as `match.intent`.
   - Waits for the opponent instead of running the local AI flow.

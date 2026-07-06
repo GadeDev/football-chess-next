@@ -29,6 +29,14 @@ export interface Piece {
   moved: boolean;
 }
 
+export interface TeamPieceDefinition {
+  id: number;
+  x: number;
+  y: number;
+}
+
+export type TeamDefinitions = Partial<Record<Team, TeamPieceDefinition[]>>;
+
 export type BallState =
   | { target: "piece"; pieceId: number; x: null; y: null; lastTeam: Team | null }
   | { target: "cell"; pieceId: null; x: number; y: number; lastTeam: Team | null };
@@ -36,6 +44,7 @@ export type BallState =
 export interface FootballChessGameState {
   schemaVersion: 1;
   pieces: Piece[];
+  teamDefinitions: Record<Team, TeamPieceDefinition[]>;
   ball: BallState;
   score: Record<Team, number>;
   rng: {
@@ -114,6 +123,8 @@ const COSTS = [1, 1.5, 2, 2.5, 3] as const;
 export const COLS = [-2, -1, 0, 1, 2] as const;
 export const ROWS = [-3, -2, -1, 0, 1, 2, 3, 4] as const;
 export const MAX_PER_CELL = 3;
+export const TEAM_MEMBER_COUNT = 11;
+export const MAX_TEAM_COST = 16;
 export const REGULAR_TURNS = 15;
 export const MAX_CK_NUM = 3;
 export const BATTLE_DELAY_COUNT = 3;
@@ -308,6 +319,99 @@ export function pieceCost(piece: Pick<Piece, "cost">): number {
   return piece.cost || 1;
 }
 
+function cloneTeamDefinition(definition: readonly TeamPieceDefinition[]): TeamPieceDefinition[] {
+  return definition.map((piece) => ({ id: piece.id, x: piece.x, y: piece.y }));
+}
+
+export function defaultTeamDefinition(): TeamPieceDefinition[] {
+  return cloneTeamDefinition(DEFAULT_TEAM);
+}
+
+export function teamDefinitionCost(definition: readonly TeamPieceDefinition[]): number {
+  return definition.reduce((total, piece) => total + costOfMasterId(piece.id), 0);
+}
+
+function sameTeamDefinition(a: readonly TeamPieceDefinition[], b: readonly TeamPieceDefinition[]): boolean {
+  return (
+    a.length === b.length &&
+    a.every((piece, index) => {
+      const other = b[index];
+      return piece.id === other.id && piece.x === other.x && piece.y === other.y;
+    })
+  );
+}
+
+export function validateTeamDefinition(value: unknown): {
+  ok: boolean;
+  definition: TeamPieceDefinition[];
+  teamCost: number;
+  errors: string[];
+} {
+  const errors: string[] = [];
+  if (!Array.isArray(value)) {
+    return { ok: false, definition: [], teamCost: 0, errors: ["Team definition must be an array"] };
+  }
+
+  const definition: TeamPieceDefinition[] = [];
+  const cellCounts = new Map<string, number>();
+  let gkCount = 0;
+
+  value.forEach((raw, index) => {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+      errors.push(`Piece ${index + 1} must be an object`);
+      return;
+    }
+    const item = raw as Record<string, unknown>;
+    const id = item.id;
+    const x = item.x;
+    const y = item.y;
+    const validId = typeof id === "number" && Number.isInteger(id) && id >= 1 && id <= 20;
+    const validX = typeof x === "number" && Number.isInteger(x) && (COLS as readonly number[]).includes(x);
+    const validY = typeof y === "number" && Number.isInteger(y) && [-2, -1, 0].includes(y);
+    if (!validId) errors.push(`Piece ${index + 1} has invalid id`);
+    if (!validX) {
+      errors.push(`Piece ${index + 1} has invalid x`);
+    }
+    if (!validY) {
+      errors.push(`Piece ${index + 1} has invalid y`);
+    }
+    if (!validId || !validX || !validY) return;
+
+    const piece = { id, x, y };
+    definition.push(piece);
+    if (positionFromMasterId(id) === "gk") gkCount += 1;
+    const key = `${x},${y}`;
+    const nextCount = (cellCounts.get(key) ?? 0) + 1;
+    cellCounts.set(key, nextCount);
+    if (nextCount > MAX_PER_CELL) errors.push(`Cell ${key} has too many pieces`);
+  });
+
+  if (definition.length !== TEAM_MEMBER_COUNT) {
+    errors.push(`Team must have ${TEAM_MEMBER_COUNT} pieces`);
+  }
+  if (gkCount !== 1) errors.push("Team must have exactly one GK");
+
+  const teamCost = teamDefinitionCost(definition);
+  const isLegacyDefault = sameTeamDefinition(definition, DEFAULT_TEAM);
+  if (teamCost > MAX_TEAM_COST && !isLegacyDefault) {
+    errors.push(`Team cost must be ${MAX_TEAM_COST} or less`);
+  }
+
+  return { ok: errors.length === 0, definition, teamCost, errors };
+}
+
+export function normalizeTeamDefinitions(definitions?: TeamDefinitions): Record<Team, TeamPieceDefinition[]> {
+  const normalized: Record<Team, TeamPieceDefinition[]> = {
+    b: defaultTeamDefinition(),
+    r: defaultTeamDefinition(),
+  };
+  for (const team of ["b", "r"] as Team[]) {
+    const validation = validateTeamDefinition(definitions?.[team]);
+    if (validation.ok) normalized[team] = validation.definition;
+  }
+  return normalized;
+}
+
 export function cellAt(x: number, y: number): BoardCell | undefined {
   return BOARD.find((cell) => cell.x === x && cell.y === y);
 }
@@ -333,7 +437,7 @@ export function goalCellFor(team: Team): { x: number; y: number } {
 }
 
 export function makeDefaultPiece(
-  masterPiece: (typeof DEFAULT_TEAM)[number],
+  masterPiece: TeamPieceDefinition,
   team: Team,
   nextId: number,
 ): Piece {
@@ -364,11 +468,12 @@ export function makeDefaultPiece(
   };
 }
 
-export function createDefaultPieces(): Piece[] {
+export function createDefaultPieces(teamDefinitions?: TeamDefinitions): Piece[] {
+  const definitions = normalizeTeamDefinitions(teamDefinitions);
   const pieces: Piece[] = [];
   let pieceSeq = 0;
-  for (const piece of DEFAULT_TEAM) pieces.push(makeDefaultPiece(piece, "b", ++pieceSeq));
-  for (const piece of DEFAULT_TEAM) pieces.push(makeDefaultPiece(piece, "r", ++pieceSeq));
+  for (const piece of definitions.b) pieces.push(makeDefaultPiece(piece, "b", ++pieceSeq));
+  for (const piece of definitions.r) pieces.push(makeDefaultPiece(piece, "r", ++pieceSeq));
   return pieces;
 }
 
@@ -382,13 +487,19 @@ export function kickoffPieceForTeam(pieces: Piece[], team: Team): Piece {
   return fallback;
 }
 
-export function createInitialGameState(kickoffTeam: Team = "b", seed = `football-chess:${kickoffTeam}`): FootballChessGameState {
-  const pieces = createDefaultPieces();
+export function createInitialGameState(
+  kickoffTeam: Team = "b",
+  seed = `football-chess:${kickoffTeam}`,
+  teamDefinitions?: TeamDefinitions,
+): FootballChessGameState {
+  const normalizedTeamDefinitions = normalizeTeamDefinitions(teamDefinitions);
+  const pieces = createDefaultPieces(normalizedTeamDefinitions);
   const kickoffPiece = kickoffPieceForTeam(pieces, kickoffTeam);
   const rng = createSeededRng(seed);
   return {
     schemaVersion: 1,
     pieces,
+    teamDefinitions: normalizedTeamDefinitions,
     ball: { target: "piece", pieceId: kickoffPiece.id, x: null, y: null, lastTeam: kickoffTeam },
     score: { b: 0, r: 0 },
     rng: { seed, state: rng.state },
@@ -404,11 +515,13 @@ export function normalizeGameState(
   state: Partial<FootballChessGameState> | null | undefined,
   kickoffTeam: Team = "b",
   seed = `football-chess:${kickoffTeam}`,
+  teamDefinitions?: TeamDefinitions,
 ): FootballChessGameState {
-  if (!state) return createInitialGameState(kickoffTeam, seed);
+  if (!state) return createInitialGameState(kickoffTeam, seed, teamDefinitions);
   const game = state as FootballChessGameState;
   game.schemaVersion = 1;
-  game.pieces ??= createDefaultPieces();
+  game.teamDefinitions = normalizeTeamDefinitions(game.teamDefinitions ?? teamDefinitions);
+  game.pieces ??= createDefaultPieces(game.teamDefinitions);
   game.score ??= { b: 0, r: 0 };
   game.rng ??= { seed, state: createSeededRng(seed).state };
   game.firstKickTeam ??= kickoffTeam;
@@ -906,7 +1019,8 @@ function resetBattleDelayCount(state: FootballChessGameState): void {
 }
 
 export function setupKickoffForTeam(state: FootballChessGameState, team: Team, keepTurnStopped = false): void {
-  state.pieces = createDefaultPieces();
+  state.teamDefinitions = normalizeTeamDefinitions(state.teamDefinitions);
+  state.pieces = createDefaultPieces(state.teamDefinitions);
   const kickoffPiece = kickoffPieceForTeam(state.pieces, team);
   state.ball = { target: "piece", pieceId: kickoffPiece.id, x: null, y: null, lastTeam: team };
   state.turnBallMoved = false;
@@ -1167,6 +1281,7 @@ function resolveSetPieceOutcome(
   events: TurnEvent[],
   logs: string[],
   details: Record<string, unknown>,
+  stopOnSave = false,
 ): void {
   logs.push(...outcome.logs);
   const eventDetails = { ...details, kickLogs: outcome.logs };
@@ -1176,6 +1291,7 @@ function resolveSetPieceOutcome(
   }
   if (outcome.gk) {
     setBallToPiece(state, outcome.gk, true);
+    if (stopOnSave) state.turnStopped = true;
     pushEvent(events, {
       type: "shot.saved",
       team: kicker.team,
@@ -1224,6 +1340,7 @@ function runTackle(
       events,
       logs,
       { source: kind, kickerId: kicker.id, tacklerId: tackler.id, from: coordOf(kicker) },
+      true,
     );
     return true;
   }
