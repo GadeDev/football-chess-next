@@ -2512,7 +2512,9 @@ function syncBallAfterServerEvent(event){
   }
   if(event.type==='offside' && event.to){
     const receiver=pieceById(event.pieceId);
-    if(receiver && receiver.sx!=null && receiver.sy!=null){ receiver.x=receiver.sx; receiver.y=receiver.sy; }
+    const resetTo=eventCoord(event.details?.resetTo);
+    if(receiver && resetTo){ receiver.x=resetTo.x; receiver.y=resetTo.y; }
+    else if(receiver && receiver.sx!=null && receiver.sy!=null){ receiver.x=receiver.sx; receiver.y=receiver.sy; }
     setBallToCell(event.to.x,event.to.y,event.details?.sourceTeam||event.team,true);
   }
 }
@@ -2547,13 +2549,32 @@ function revealResolutionSnapshot(snapshot){
   render();
   return true;
 }
+function eventCoord(value){
+  return value&&Number.isFinite(value.x)&&Number.isFinite(value.y) ? value : null;
+}
 function eventPieceCell(event){
-  if(event?.to) return event.to;
-  if(event?.from) return event.from;
-  const target=event?.details?.target;
-  if(target&&Number.isFinite(target.x)&&Number.isFinite(target.y)) return target;
+  const to=eventCoord(event?.to);
+  if(to) return to;
+  const from=eventCoord(event?.from);
+  if(from) return from;
+  const target=eventCoord(event?.details?.target);
+  if(target) return target;
   const piece=pieceById(event?.pieceId);
   return piece ? {x:piece.x,y:piece.y} : null;
+}
+async function replayServerOffsideReset(event){
+  const piece=pieceById(event?.pieceId);
+  const from=eventCoord(event?.from);
+  const resetTo=eventCoord(event?.details?.resetTo);
+  if(!piece||!from||!resetTo||(from.x===resetTo.x&&from.y===resetTo.y)) return false;
+  replayHiddenPieceIds.add(piece.id);
+  render();
+  await animatePieceMove(piece,from,resetTo,{duration:280});
+  replayHiddenPieceIds.delete(piece.id);
+  piece.x=resetTo.x;
+  piece.y=resetTo.y;
+  render();
+  return true;
 }
 async function replayServerShootStart(event){
   const source=event?.details?.source;
@@ -2585,7 +2606,9 @@ async function playServerEvent(event){
     syncBallAfterServerEvent(event);
     render();
   }else if(event?.type==='offside'){
-    await showCutinAtPiece('offside',850,event.to?.x,event.to?.y);
+    const at=eventPieceCell(event);
+    await showCutinAtPiece('offside',850,at?.x,at?.y);
+    await replayServerOffsideReset(event);
     syncBallAfterServerEvent(event);
     render();
   }else if(event?.type==='looseball.picked'){

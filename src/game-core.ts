@@ -1282,6 +1282,8 @@ function handleOffside(
   events: TurnEvent[],
   logs: string[],
 ): void {
+  const from = coordOf(receiver);
+  const resetTo = { x: receiver.sx, y: receiver.sy };
   receiver.x = receiver.sx;
   receiver.y = receiver.sy;
   setBallToCell(state, x, y, sourceTeam, true);
@@ -1289,8 +1291,9 @@ function handleOffside(
     type: "offside",
     team: receiver.team,
     pieceId: receiver.id,
+    from,
     to: { x, y },
-    details: { sourceTeam },
+    details: { sourceTeam, resetTo },
   });
   logs.push(`${teamName(receiver.team)} offside at (${x},${y})`);
 }
@@ -1318,6 +1321,7 @@ function pickupLooseBall(state: FootballChessGameState, events: TurnEvent[], log
     type: "looseball.picked",
     team: winner.team,
     pieceId: winner.id,
+    from: { x: ballX, y: ballY },
     to: { x: ballX, y: ballY },
     details: { sourceTeam, cost: winner.cost },
   });

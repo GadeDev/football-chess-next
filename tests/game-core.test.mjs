@@ -557,13 +557,15 @@ test("a loose ball tie picks randomly among equal highest-cost pieces", () => {
     ["looseball.picked", "turn.completed"],
   );
   assert.equal(result.events[0].pieceId, 2);
+  assert.deepEqual(result.events[0].from, { x: 0, y: 0 });
+  assert.deepEqual(result.events[0].to, { x: 0, y: 0 });
   assert.equal(ballHolder(result.game)?.id, 2);
 });
 
 test("same-team loose ball pickup is offside from the turn-start line like Unity", () => {
   const state = createInitialGameState("b", "loose-ball-offside");
   state.pieces = [
-    piece({ id: 1, team: "b", posType: "fw", cost: 2, x: 0, y: -1, sx: 0, sy: -1 }),
+    piece({ id: 1, team: "b", posType: "fw", cost: 2, x: 0, y: -1, sx: 1, sy: -1 }),
     piece({ id: 2, team: "r", posType: "gk", cost: 3, x: 0, y: -2, sx: 0, sy: -2 }),
     piece({ id: 3, team: "r", posType: "df", cost: 1, x: 1, y: 0, sx: 1, sy: 0 }),
   ];
@@ -577,6 +579,13 @@ test("same-team loose ball pickup is offside from the turn-start line like Unity
   );
   assert.equal(result.events[0].pieceId, 1);
   assert.equal(result.events[1].pieceId, 1);
+  assert.deepEqual(result.events[1].from, { x: 0, y: -1 });
+  assert.deepEqual(result.events[1].to, { x: 0, y: -1 });
+  assert.deepEqual(result.events[1].details?.resetTo, { x: 1, y: -1 });
+  assert.deepEqual(
+    result.game.pieces.find((candidate) => candidate.id === 1),
+    piece({ id: 1, team: "b", posType: "fw", cost: 2, x: 1, y: -1, sx: 1, sy: -1 }),
+  );
   assert.deepEqual(result.game.ball, { target: "cell", pieceId: null, x: 0, y: -1, lastTeam: "b" });
 });
 
