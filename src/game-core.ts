@@ -1735,7 +1735,7 @@ function resolveCommand(
     }
   }
 
-  if (isBallCommand(command) || command.type === "dribble") {
+  if (isBallCommand(command)) {
     const holder = ballHolder(state);
     if (!holder || holder.id !== piece.id) {
       skipCommand(events, command, "piece no longer has the ball", piece);
@@ -1749,22 +1749,36 @@ function resolveCommand(
       return;
     }
     const from = coordOf(piece);
-    const tacklers = command.type === "dribble" ? piecesAt(state, command.tx, command.ty).filter((target) => target.team !== piece.team) : [];
+    const holderBeforeMove = ballHolder(state);
+    const carriesBall = command.type === "dribble" && holderBeforeMove?.id === piece.id;
+    const tacklers = carriesBall ? piecesAt(state, command.tx, command.ty).filter((target) => target.team !== piece.team) : [];
     piece.x = command.tx;
     piece.y = command.ty;
     piece.moved = true;
     movedIds.add(piece.id);
-    if (command.type === "dribble") setBallToPiece(state, piece, true);
+    if (command.type === "dribble") state.turnBallMoved = true;
+    if (carriesBall) setBallToPiece(state, piece, true);
     pushEvent(events, {
       type: "piece.moved",
       team: piece.team,
       pieceId: piece.id,
       from,
       to: coordOf(piece),
-      details: { carryBall: command.type === "dribble" },
+      details: { carryBall: carriesBall, commandType: command.type },
     });
     logs.push(`${teamName(piece.team)} piece ${piece.id} ${command.type} to (${piece.x},${piece.y})`);
-    if (command.type === "dribble" && tacklers.length > 0) resolveTacklesAgainstHolder(state, piece, tacklers, events, logs);
+    if (carriesBall && tacklers.length > 0) {
+      resolveTacklesAgainstHolder(state, piece, tacklers, events, logs);
+    } else if (
+      command.type === "dribble" &&
+      holderBeforeMove &&
+      holderBeforeMove.id !== piece.id &&
+      holderBeforeMove.team !== piece.team &&
+      holderBeforeMove.x === piece.x &&
+      holderBeforeMove.y === piece.y
+    ) {
+      runTackle(state, holderBeforeMove, piece, events, logs);
+    }
     return;
   }
 

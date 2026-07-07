@@ -216,6 +216,34 @@ test("dribbles resolve before ordinary moves like Unity PrepareMoveOperations", 
   assert.equal(ballHolder(result.game)?.id, 1);
 });
 
+test("a dribble command still moves the piece after an earlier same-turn pass cut", () => {
+  const state = createInitialGameState("b", "dribble-after-pass-cut");
+  state.pieces = [
+    piece({ id: 1, team: "b", posType: "mf", cost: 1, x: 0, y: -1, sx: 0, sy: -1 }),
+    piece({ id: 2, team: "b", posType: "fw", cost: 1, x: 0, y: -2, sx: 0, sy: -2 }),
+    piece({ id: 3, team: "r", posType: "gk", cost: 3, x: 0, y: -2, sx: 0, sy: -2 }),
+  ];
+  state.ball = { target: "piece", pieceId: 1, x: null, y: null, lastTeam: "b" };
+
+  const result = resolveServerTurn(state, {
+    b: [
+      { type: "pass", pieceId: 1, targetId: 2, tx: 0, ty: -2, team: "b" },
+      { type: "dribble", pieceId: 1, tx: 1, ty: -1, team: "b" },
+    ],
+  });
+
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["pass.cut", "piece.moved", "turn.completed"],
+  );
+  assert.equal(result.events[0].details?.cutterId, 3);
+  assert.deepEqual(result.events[1].from, { x: 0, y: -1 });
+  assert.deepEqual(result.events[1].to, { x: 1, y: -1 });
+  assert.equal(result.events[1].details?.carryBall, false);
+  assert.equal(result.events[1].details?.commandType, "dribble");
+  assert.equal(ballHolder(result.game)?.id, 3);
+});
+
 test("a route pass cut gives possession directly to the cutter", () => {
   const state = createInitialGameState("b", "pass-cut-held-0");
   state.pieces = [
