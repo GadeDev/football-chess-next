@@ -1271,6 +1271,15 @@ function resolveCKOrGKSequence(kicker,gk,firstKind,out,options={}){
   out.push(`CK上限（${maxAttempts}）到達 → GK`);
   return {goal:false,gk,log:out};
 }
+function kickSequenceReachedCK(logs){
+  return Array.isArray(logs) && logs.some(m=>typeof m==='string' && (m.endsWith('→ CK') || m.startsWith('CK ')));
+}
+function shouldStopAfterKickGK(kicker,gk,result,options={}){
+  if(options.stopOnGk) return true;
+  if(!options.shoot) return true;
+  if(kickSequenceReachedCK(result?.log)) return true;
+  return !isAttackGoalArea(kicker.team,gk.x,gk.y);
+}
 async function applyCKOrGKFromKick(kicker,gk,firstKind,x,y,options={}){
   const out=[];
   const result=resolveCKOrGKSequence(kicker,gk,firstKind,out,options);
@@ -1291,6 +1300,7 @@ async function applyCKOrGKFromKick(kicker,gk,firstKind,x,y,options={}){
     await showCutinAtPiece('saving',900,result.gk.x,result.gk.y);
     setBallToPiece(result.gk,true);
     log(`→ ${label(result.gk)} が保持（GK）`);
+    if(shouldStopAfterKickGK(kicker,result.gk,result,options)) turnStopped=true;
     return true;
   }
   return false;
@@ -1410,6 +1420,7 @@ async function applyTackleResult(holder,tackler,result,hx,hy){
     await showCutinAtPiece('saving',900,result.gk.x,result.gk.y);
     setBallToPiece(result.gk,true);
     log(`→ ${label(result.gk)} が保持（GK）`);
+    turnStopped=true;
     return true;
   }
   if(!result.turnover) return false;
