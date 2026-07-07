@@ -2482,6 +2482,12 @@ async function replayServerKickSequence(event,eventFrom){
     }
   }
 }
+function serverEventHasCkKick(event){
+  const steps=Array.isArray(event?.details?.kickSteps) ? event.details.kickSteps : [];
+  if(steps.some(step=>step?.type==='ck-kick')) return true;
+  const logs=event?.details?.kickLogs;
+  return Array.isArray(logs) && logs.some(line=>typeof line==='string' && /^CK \d+% =>/.test(line));
+}
 function syncBallAfterServerEvent(event){
   if(!event) return;
   if(event.type==='pass.completed'){
@@ -2654,8 +2660,9 @@ async function playServerEvent(event){
   }else if(event?.type==='shot.saved'){
     await replayServerKickSequence(event,eventFrom);
     const saveType=event.details?.saveType;
-    const saveFrom=saveType==='failedShoot' ? goalCellFor(event.team) : eventFrom;
-    if(saveFrom&&event.to) await animateBallFlight(saveFrom,event.to,event.team,{kind:saveType==='failedShoot'?'pass':'shoot',duration:saveType==='failedShoot'?280:420,arc:saveType==='failedShoot'?18:30});
+    const fromGoal=saveType==='failedShoot'||serverEventHasCkKick(event);
+    const saveFrom=fromGoal ? goalCellFor(event.team) : eventFrom;
+    if(saveFrom&&event.to) await animateBallFlight(saveFrom,event.to,event.team,{kind:fromGoal?'pass':'shoot',duration:fromGoal?280:420,arc:fromGoal?18:30});
     if(saveType!=='failedShoot') await showCutinAtPiece('saving',850,event.to?.x,event.to?.y);
     syncBallAfterServerEvent(event);
     render();
