@@ -2426,6 +2426,12 @@ function eventTeamName(team){ return team==='b'?'青':(team==='r'?'赤':''); }
 function commandTypeLabel(type){
   return ({move:'移動',dribble:'ドリブル',pass:'パス',throughpass:'スルーパス',shoot:'シュート'}[type])||type||'操作';
 }
+function kickKindReplayLabel(kind){
+  return ({shoot:'シュート',PenaltyAreaShoot:'PAシュート',VitalAreaShoot:'VAシュート',PK:'PK',FK:'FK',CK:'CK'}[kind])||'';
+}
+function replayKickLabel(event){
+  return kickKindReplayLabel(event?.details?.finalKickKind||event?.details?.source);
+}
 function onlineLogEvent(event){
   if(!event) return;
   const t=eventTeamName(event.team);
@@ -2446,10 +2452,17 @@ function onlineLogEvent(event){
   else if(event.type==='tackle.success') log(`${t} タックル成功`);
   else if(event.type==='tackle.failed') log(`${t} タックル失敗`);
   else if(event.type==='tackle.foul') log(`${t} ファウル`);
-  else if(event.type==='shot.goal') log(`${t} ゴール`);
+  else if(event.type==='shot.goal'){
+    const kick=replayKickLabel(event);
+    log(`${t} ${kick?`${kick} `:''}ゴール`);
+  }
   else if(event.type==='shot.miss') log(`${t} シュート失敗`);
   else if(event.type==='shot.blocked') log(`${t} シュートブロック`);
-  else if(event.type==='shot.saved') log(event.details?.saveType==='failedShoot'?`${t} シュート失敗→GK`:`${t} GKセーブ`);
+  else if(event.type==='shot.saved'){
+    const kick=replayKickLabel(event);
+    const prefix=kick?`${kick} `:'';
+    log(event.details?.saveType==='failedShoot'?`${t} ${prefix}失敗→GK`:`${t} ${prefix}GKセーブ`);
+  }
   else if(event.type==='kickoff') log(`${t} キックオフ`);
   else if(event.type==='battle-delay') log(`${t} 遅延行為：キックオフに戻ります`);
   else if(event.type==='passive-tactics') log(`${t} 消極的戦術：パスカット/タックル補正`);
