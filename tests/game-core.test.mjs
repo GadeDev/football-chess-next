@@ -449,6 +449,7 @@ test("standing in the attacking penalty area does not score without a shot", () 
 
 test("a successful shot scores and returns kickoff possession to the conceding team", () => {
   const state = minimalState("shot-goal-kickoff");
+  state.pieces.push(piece({ id: 2, team: "b", posType: "mf", cost: 1, x: 1, y: 1, sx: 1, sy: 1 }));
   state.pieces[0].posType = "fw";
   state.pieces[0].x = 0;
   state.pieces[0].y = -2;
@@ -456,14 +457,22 @@ test("a successful shot scores and returns kickoff possession to the conceding t
   state.pieces[0].sy = -2;
 
   const result = resolveServerTurn(state, {
-    b: [{ type: "shoot", pieceId: 1, tx: 0, ty: -3, team: "b" }],
+    b: [
+      { type: "shoot", pieceId: 1, tx: 0, ty: -3, team: "b" },
+      { type: "move", pieceId: 2, tx: 2, ty: 1, team: "b" },
+    ],
   });
 
   const goal = result.events.find((event) => event.type === "shot.goal");
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["shot.goal", "kickoff", "turn.completed"],
+  );
   assert.equal(result.game.score.b, 1);
   assert.equal(Boolean(goal), true);
   assert.equal(goal.pieceId, 1);
   assert.deepEqual(goal.from, { x: 0, y: -2 });
+  assert.equal(goal.details?.finalKickKind, "shoot");
   assert.equal(result.events.some((event) => event.type === "kickoff" && event.team === "r"), true);
   assert.equal(ballHolder(result.game)?.team, "r");
 });
@@ -633,6 +642,33 @@ test("a foul set-piece that ends in GK stops later commands in the same turn", (
     piece({ id: 2, team: "b", posType: "mf", cost: 1, x: 1, y: 1, sx: 1, sy: 1 }),
   );
   assert.equal(ballHolder(result.game)?.team, "r");
+});
+
+test("a foul PK goal stops later commands and records the final kick kind", () => {
+  const state = createInitialGameState("b", "foul-goal-stop-8");
+  state.pieces = [
+    piece({ id: 1, team: "b", posType: "fw", cost: 3, x: 0, y: -1, sx: 0, sy: -1 }),
+    piece({ id: 2, team: "b", posType: "mf", cost: 1, x: 1, y: 1, sx: 1, sy: 1 }),
+    piece({ id: 3, team: "r", posType: "df", cost: 1, x: 0, y: -2, sx: 0, sy: -2 }),
+    piece({ id: 4, team: "r", posType: "gk", cost: 1, x: 2, y: -1, sx: 2, sy: -1 }),
+  ];
+  state.ball = { target: "piece", pieceId: 1, x: null, y: null, lastTeam: "b" };
+
+  const result = resolveServerTurn(state, {
+    b: [
+      { type: "dribble", pieceId: 1, tx: 0, ty: -2, team: "b" },
+      { type: "move", pieceId: 2, tx: 2, ty: 1, team: "b" },
+    ],
+  });
+
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["piece.moved", "tackle.foul", "shot.goal", "kickoff", "turn.completed"],
+  );
+  const goal = result.events.find((event) => event.type === "shot.goal");
+  assert.equal(goal.details?.source, "PK");
+  assert.equal(goal.details?.finalKickKind, "PK");
+  assert.equal(result.events.some((event) => event.type === "piece.moved" && event.pieceId === 2), false);
 });
 
 test("a shot block tie picks randomly among equal highest-cost defenders", () => {

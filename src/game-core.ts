@@ -1184,12 +1184,16 @@ function scoreGoal(
 ): void {
   state.score[team] = (state.score[team] ?? 0) + 1;
   const kickoffTeam = opponentTeam(team);
+  const eventDetails = { ...details };
+  if (typeof eventDetails.finalKickKind !== "string" && typeof eventDetails.source === "string") {
+    eventDetails.finalKickKind = eventDetails.source;
+  }
   pushEvent(events, {
     type: "shot.goal",
     team,
-    pieceId: replayPieceIdFromDetails(details),
-    from: replayCoordFromDetails(details),
-    details: { ...details, score: { ...state.score }, kickoffTeam },
+    pieceId: replayPieceIdFromDetails(eventDetails),
+    from: replayCoordFromDetails(eventDetails),
+    details: { ...eventDetails, score: { ...state.score }, kickoffTeam },
   });
   logs.push(`${teamName(team)} goal; kickoff returns to ${teamName(kickoffTeam)}`);
   setupKickoffForTeam(state, kickoffTeam, true);
