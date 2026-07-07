@@ -2587,6 +2587,9 @@ async function playServerEvent(event){
   if(event?.from && event?.to && event.type==='piece.moved'){
     await replayServerPieceMove(event);
   }else if(event?.from && event?.to && (event.type==='ball.moved'||event.type==='pass.completed'||event.type==='pass.failed')){
+    if(event.details?.defensiveContact){
+      await showCutinAtPiece(event.details?.commandType==='throughpass'?'thruPass':'pass',650,event.from.x,event.from.y);
+    }
     await animateBallFlight(event.from,event.to,event.team,{kind:'pass'});
     syncBallAfterServerEvent(event);
     render();

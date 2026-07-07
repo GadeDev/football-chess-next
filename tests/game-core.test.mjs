@@ -93,6 +93,8 @@ test("online command validation follows chain ball holder for chained passes", (
     result.events.map((event) => event.type),
     ["pass.completed", "pass.completed", "turn.completed"],
   );
+  assert.equal(result.events[0].details?.defensiveContact, false);
+  assert.equal(result.events[1].details?.defensiveContact, false);
   assert.equal(ballHolder(result.game)?.id, 3);
 });
 
@@ -183,6 +185,7 @@ test("a completed pass into a contested cell skips end-of-turn stationary tackle
     result.events.map((event) => event.type),
     ["pass.completed", "turn.completed"],
   );
+  assert.equal(result.events[0].details?.defensiveContact, true);
   assert.equal(ballHolder(result.game)?.id, 2);
   assert.deepEqual(result.game.ball, { target: "piece", pieceId: 2, x: null, y: null, lastTeam: "b" });
 });

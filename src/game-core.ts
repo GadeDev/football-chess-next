@@ -1264,6 +1264,14 @@ function resolveFlyingPassPath(
   return false;
 }
 
+function hasPassDefensiveContact(state: FootballChessGameState, passPiece: Piece, targetX: number, targetY: number): boolean {
+  return (
+    getRoute(passPiece.x, passPiece.y, targetX, targetY).some(([x, y]) =>
+      piecesAt(state, x, y).some((piece) => piece.team !== passPiece.team),
+    ) || piecesAt(state, targetX, targetY).some((piece) => piece.team !== passPiece.team)
+  );
+}
+
 function isOffsidePass(state: FootballChessGameState, passer: Piece, receiver: Piece): boolean {
   const dir = attackDir(passer.team);
   const inOpponentHalf = dir < 0 ? receiver.y < 0 : receiver.y > 0;
@@ -1745,6 +1753,7 @@ function resolveCommand(
     }
     if (resolveFlyingPassPath(state, piece, receiver.x, receiver.y, events)) return;
     const probability = calcLandingPass(state, piece, receiver, receiver.x, receiver.y);
+    const defensiveContact = hasPassDefensiveContact(state, piece, receiver.x, receiver.y);
     const ok = rollPercent(state, probability);
     if (ok) {
       setBallToPiece(state, receiver, true);
@@ -1754,7 +1763,7 @@ function resolveCommand(
         pieceId: piece.id,
         from: coordOf(piece),
         to: coordOf(receiver),
-        details: { receiverId: receiver.id, probability },
+        details: { receiverId: receiver.id, probability, defensiveContact },
       });
       logs.push(`${teamName(piece.team)} pass completed ${probability}%`);
       if (isOffsidePass(state, piece, receiver)) handleOffside(state, receiver, receiver.x, receiver.y, piece.team, events, logs);
@@ -1822,6 +1831,7 @@ function resolveCommand(
       return;
     }
     const probability = calcFlyingPass(state, piece, command.tx, command.ty);
+    const defensiveContact = hasPassDefensiveContact(state, piece, command.tx, command.ty);
     const ok = rollPercent(state, probability);
     if (ok) {
       setBallToCell(state, command.tx, command.ty, piece.team, true);
@@ -1831,7 +1841,7 @@ function resolveCommand(
         pieceId: piece.id,
         from: coordOf(piece),
         to: { x: command.tx, y: command.ty },
-        details: { commandType: "throughpass", probability },
+        details: { commandType: "throughpass", probability, defensiveContact },
       });
       logs.push(`${teamName(piece.team)} throughpass completed ${probability}%`);
       return;
