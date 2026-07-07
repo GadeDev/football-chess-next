@@ -496,6 +496,35 @@ test("a normal shot miss keeps replay metadata for the GK follow-up", () => {
   assert.equal(saved.details?.saveType, "failedShoot");
 });
 
+test("a normal shot miss exposes structured CK replay steps", () => {
+  const state = createInitialGameState("b", "ck-steps-35");
+  state.pieces = [
+    piece({ id: 1, team: "b", posType: "fw", cost: 1, x: -1, y: -1, sx: -1, sy: -1 }),
+    piece({ id: 3, team: "r", posType: "gk", cost: 3, x: -1, y: -1, sx: -1, sy: -1 }),
+  ];
+  state.ball = { target: "piece", pieceId: 1, x: null, y: null, lastTeam: "b" };
+
+  const result = resolveServerTurn(state, {
+    b: [{ type: "shoot", pieceId: 1, tx: 0, ty: -3, team: "b" }],
+  });
+  const saved = result.events.find((event) => event.type === "shot.saved");
+
+  assert.equal(Boolean(saved), true);
+  assert.deepEqual(saved.details?.kickLogs, [
+    "VitalAreaShoot failed-to-CK 5% => CK",
+    "CK 75% => miss",
+    "CK failed-to-CK 75% => CK",
+    "CK 75% => miss",
+  ]);
+  assert.deepEqual(saved.details?.kickSteps, [
+    { type: "failed-to-ck", kind: "VitalAreaShoot", probability: 5, result: "CK" },
+    { type: "ck-kick", kind: "CK", probability: 75, result: "miss" },
+    { type: "failed-to-ck", kind: "CK", probability: 75, result: "CK" },
+    { type: "ck-kick", kind: "CK", probability: 75, result: "miss" },
+  ]);
+  assert.equal(saved.details?.saveType, "gk");
+});
+
 test("a foul set-piece that ends in GK stops later commands in the same turn", () => {
   const state = createInitialGameState("b", "setpiece-stop-unique-1");
   state.pieces = [
