@@ -1276,7 +1276,10 @@ async function applyCKOrGKFromKick(kicker,gk,firstKind,x,y,options={}){
   const result=resolveCKOrGKSequence(kicker,gk,firstKind,out,options);
   for(const m of result.log){
     log('・'+m);
-    if(m.startsWith('CK ') || m.endsWith('→ CK')) await showCutinAtPiece('ck',850,x,y);
+    if(m.endsWith('→ CK')){
+      await showCutinAtPiece('saving',650,x,y);
+      await showCutinAtPiece('ck',850,x,y);
+    }
   }
   if(result.goal){
     await animateBallFlight({x,y}, goalCellFor(kicker.team), kicker.team, {kind:'shoot', duration:520, arc:58});
@@ -1391,7 +1394,10 @@ async function applyTackleResult(holder,tackler,result,hx,hy){
     if(m.includes('ファウル発生')) await showCutinAtPiece('foul',950,hx,hy);
     else if(m.startsWith('PK')) await showCutinAtPiece('pk',900,hx,hy);
     else if(m.startsWith('FK')) await showCutinAtPiece('fk',900,hx,hy);
-    else if(m.startsWith('CK ') || m.endsWith('→ CK')) await showCutinAtPiece('ck',850,hx,hy);
+    else if(m.endsWith('→ CK')){
+      await showCutinAtPiece('saving',650,hx,hy);
+      await showCutinAtPiece('ck',850,hx,hy);
+    }
     else if(m.includes('タックル成功')) await showCutinAtPiece('tackleSuccess',900,hx,hy);
   }
   if(result.goal){
