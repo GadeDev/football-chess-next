@@ -2485,8 +2485,7 @@ async function replayServerKickSequence(event,eventFrom){
   if(steps&&steps.length){
     for(const step of steps){
       if(step?.type==='failed-to-ck' && step.result==='CK'){
-        await showCutinAtPiece('ck',720,x,y);
-      }else if(step?.type==='ck-kick'){
+        await showCutinAtPiece('saving',520,x,y);
         await showCutinAtPiece('ck',720,x,y);
       }
     }
