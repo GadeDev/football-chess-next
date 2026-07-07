@@ -244,6 +244,32 @@ test("a dribble command still moves the piece after an earlier same-turn pass cu
   assert.equal(ballHolder(result.game)?.id, 3);
 });
 
+test("a non-carrying dribble into the new enemy holder tackles like Unity", () => {
+  const state = createInitialGameState("b", "dribble-counter-tackle-1");
+  state.pieces = [
+    piece({ id: 1, team: "b", posType: "mf", cost: 3, x: 0, y: -1, sx: 0, sy: -1 }),
+    piece({ id: 2, team: "r", posType: "gk", cost: 1, x: 0, y: -2, sx: 0, sy: -2 }),
+  ];
+  state.ball = { target: "piece", pieceId: 1, x: null, y: null, lastTeam: "b" };
+
+  const result = resolveServerTurn(state, {
+    b: [
+      { type: "throughpass", pieceId: 1, tx: 0, ty: -2, team: "b" },
+      { type: "dribble", pieceId: 1, tx: 0, ty: -2, team: "b" },
+    ],
+  });
+
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["pass.cut", "piece.moved", "tackle.success", "turn.completed"],
+  );
+  assert.equal(result.events[0].details?.reason, "goalAreaGK");
+  assert.equal(result.events[1].details?.carryBall, false);
+  assert.equal(result.events[2].pieceId, 1);
+  assert.equal(result.events[2].details?.holderId, 2);
+  assert.equal(ballHolder(result.game)?.id, 1);
+});
+
 test("a route pass cut gives possession directly to the cutter", () => {
   const state = createInitialGameState("b", "pass-cut-held-0");
   state.pieces = [
