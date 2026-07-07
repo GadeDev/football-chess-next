@@ -959,9 +959,9 @@ function pos(id){ // id→ポジション文字
 // PieceMaster.json のコスト：各ポジション内 id順に 1,1.5,2,2.5,3
 function costOf(id){ const base=((id-1)%5); return [1,1.5,2,2.5,3][base]; }
 const DEFAULT_TEAM=[
-  {id:5,x:-1,y:0},{id:1,x:1,y:0},
-  {id:6,x:-2,y:-1},{id:8,x:-1,y:-1},{id:6,x:1,y:-1},{id:10,x:2,y:-1},
-  {id:12,x:-2,y:-2},{id:13,x:-1,y:-2},{id:18,x:0,y:-2},{id:11,x:1,y:-2},{id:11,x:2,y:-2},
+  {id:4,x:-1,y:0},{id:1,x:1,y:0},
+  {id:6,x:-2,y:-1},{id:8,x:-1,y:-1},{id:6,x:1,y:-1},{id:6,x:2,y:-1},
+  {id:12,x:-2,y:-2},{id:13,x:-1,y:-2},{id:11,x:1,y:-2},{id:11,x:2,y:-2},{id:18,x:0,y:-2},
 ];
 // Unity BoardDef.KickOffCellPosition と Flip() に合わせたキックオフ候補。
 // このHTMLの青配置は反転側(y=1)、赤配置は生座標側(y=0)に置いている。
@@ -1026,9 +1026,9 @@ const T_FAILED={
 // オフサイドになる確率テーブル DrawingOffsideMaster（before×after の相対位置）
 // 行=before(Up/Side/Down) 列=after(Up/Side/Down)
 const T_OFFSIDE=[[100,100,100],[100,50,0],[100,50,0]];
-// ファウル発生率（守備側の同マス人数→%）※Unityのマスタ値が手元に無いため代表値で近似
-const T_FOUL={1:10,2:20,3:30};
-// 消極的戦術のマスタJSONはUnityローカルに未同梱のため、既存Buff系と同じ-20%で近似。
+// ファウル発生率（守備側の同マス人数→%）: Unity DrawingFoulProbabilityMaster
+const T_FOUL={1:10,2:35,3:60};
+// 消極的戦術: Unity DrawingPassiveTacticsMaster
 const PASSIVE_TACTICS_DEBUFF={PassCut:-20,Tackle:-20};
 
 // Buffマスタ（BuffMaster.json）から必要値
@@ -3523,7 +3523,7 @@ function resetChain(){
 
 /* ===== アウトゲーム（タイトル→ホーム→試合）Unity Title/Home/DeckEdit 移植 =====
    - Unity TeamDef.MaxTeamCost=16 / NumberOfPeople=11 / CellDef.MaxMyTeamPieceNum=3 準拠。
-   - TeamFormationMaster はローカル未同梱のため6種を近似定義（#1はDefaultTeamMaster準拠）。
+   - TeamFormationNormalMaster はUnity配信マスタの正式配置を使用。
    - 編成は localStorage に保存し、オフライン試合の青チームに反映する。
      オンラインはWebSocket参加時にサーバーへ送り、MatchRoom側で検証して初期盤面へ反映する。 */
 const OG_MAX_TEAM_COST=16;            // Unity TeamDef.MaxTeamCost
@@ -3532,24 +3532,24 @@ const OG_SLOT_KEY='fcDeckSlot';       // Unity SavedDeck0-5 相当（+0..5）
 const OG_CLUB_KEY='fcClubName';
 const OG_COST_LEVELS=[1,1.5,2,2.5,3];
 const OG_FORMATIONS=[
-  {id:1,name:'4-4-2',sub:'スタンダード',pos:[['fw',-1,0],['fw',1,0],['mf',-2,-1],['mf',-1,-1],['mf',1,-1],['mf',2,-1],['df',-2,-2],['df',-1,-2],['gk',0,-2],['df',1,-2],['df',2,-2]],
-   costs:[3,1,1,2,1,3,1.5,2,2,1,1]},  // DefaultTeamMaster準拠（現行の既定編成）
-  {id:2,name:'4-3-3',sub:'アタッキング',pos:[['fw',-1,0],['fw',0,0],['fw',1,0],['mf',-1,-1],['mf',0,-1],['mf',1,-1],['df',-2,-2],['df',-1,-2],['gk',0,-2],['df',1,-2],['df',2,-2]],
-   costs:[2,2,2,1,1.5,1,1,1,2,1,1]},
-  {id:3,name:'3-5-2',sub:'ポゼッション',pos:[['fw',-1,0],['fw',1,0],['mf',-2,-1],['mf',-1,-1],['mf',0,-1],['mf',1,-1],['mf',2,-1],['df',-1,-2],['gk',0,-2],['df',0,-2],['df',1,-2]],
-   costs:[2,2,1,1.5,2,1.5,1,1,2,1,1]},
-  {id:4,name:'5-3-2',sub:'カテナチオ',pos:[['fw',-1,0],['fw',1,0],['mf',-1,-1],['mf',0,-1],['mf',1,-1],['df',-2,-2],['df',-1,-2],['gk',0,-2],['df',0,-2],['df',1,-2],['df',2,-2]],
-   costs:[2,1,1,1.5,1,1.5,1.5,2,1.5,1.5,1.5]},
-  {id:5,name:'4-2-4',sub:'超攻撃',pos:[['fw',-2,0],['fw',-1,0],['fw',1,0],['fw',2,0],['mf',-1,-1],['mf',1,-1],['df',-2,-2],['df',-1,-2],['gk',0,-2],['df',1,-2],['df',2,-2]],
-   costs:[1.5,2,2,1.5,1.5,1.5,1,1,1.5,1,1]},
-  {id:6,name:'4-5-1',sub:'ワントップ',pos:[['fw',0,0],['mf',-2,-1],['mf',-1,-1],['mf',0,-1],['mf',1,-1],['mf',2,-1],['df',-2,-2],['df',-1,-2],['gk',0,-2],['df',1,-2],['df',2,-2]],
-   costs:[3,1,1.5,1.5,1.5,1,1,1,2,1,1]},
+  {id:1,name:'4-4-2',sub:'スタンダード',pos:[['fw',-1,0],['fw',1,0],['mf',-2,-1],['mf',-1,-1],['mf',1,-1],['mf',2,-1],['df',-2,-2],['df',-1,-2],['df',1,-2],['df',2,-2],['gk',0,-2]],
+   costs:[2.5,1,1,2,1,1,1.5,2,1,1,2]},
+  {id:2,name:'4-5-1',sub:'ワントップ',pos:[['fw',0,0],['mf',-2,0],['mf',2,0],['mf',-1,-1],['mf',0,-1],['mf',1,-1],['df',-2,-2],['df',-1,-2],['df',1,-2],['df',2,-2],['gk',0,-2]],
+   costs:[2.5,1,1,2,1.5,1,1.5,2,1,1,1.5]},
+  {id:3,name:'4-3-3',sub:'アタッキング',pos:[['fw',-2,0],['fw',0,0],['fw',2,0],['mf',-1,-1],['mf',0,-1],['mf',1,-1],['df',-2,-2],['df',-1,-2],['df',1,-2],['df',2,-2],['gk',0,-2]],
+   costs:[1,2.5,1,2,1.5,1,1.5,2,1,1,1.5]},
+  {id:4,name:'3-6-1',sub:'ポゼッション',pos:[['fw',0,0],['mf',-1,0],['mf',1,0],['mf',-2,-1],['mf',-1,-1],['mf',1,-1],['mf',2,-1],['df',-1,-2],['df',0,-2],['df',1,-2],['gk',0,-2]],
+   costs:[2.5,1.5,1,1,2,1,1,1.5,2,1,1.5]},
+  {id:5,name:'3-5-2',sub:'バランス',pos:[['fw',-1,0],['fw',1,0],['mf',-2,-1],['mf',-1,-1],['mf',0,-1],['mf',1,-1],['mf',2,-1],['df',-1,-2],['df',0,-2],['df',1,-2],['gk',0,-2]],
+   costs:[2.5,1,1,2,1.5,1,1,1.5,2,1,1.5]},
+  {id:6,name:'3-4-3',sub:'超攻撃',pos:[['fw',-2,0],['fw',0,0],['fw',2,0],['mf',-2,-1],['mf',0,-1],['mf',0,-1],['mf',2,-1],['df',-1,-2],['df',0,-2],['df',1,-2],['gk',0,-2]],
+   costs:[1.5,2.5,1,1,2,1,1,1.5,2,1,1.5]},
 ];
 function ogFormation(id){ return OG_FORMATIONS.find(f=>f.id===id)||OG_FORMATIONS[0]; }
 function ogDefaultDeck(){ const f=OG_FORMATIONS[0]; return {formationId:f.id,costs:f.costs.slice()}; }
 function ogValidDeck(d){
   return d && typeof d==='object' && ogFormation(d.formationId) && Array.isArray(d.costs) && d.costs.length===11 &&
-    d.costs.every(c=>OG_COST_LEVELS.includes(c));
+    d.costs.every(c=>OG_COST_LEVELS.includes(c)) && ogDeckCost(d)<=OG_MAX_TEAM_COST;
 }
 function ogLoadDeck(){
   try{ const d=JSON.parse(localStorage.getItem(OG_DECK_KEY)||'null'); if(ogValidDeck(d)) return d; }catch{}

@@ -165,17 +165,17 @@ export const BOARD: BoardCell[] = [
 ];
 
 export const DEFAULT_TEAM = [
-  { id: 5, x: -1, y: 0 },
+  { id: 4, x: -1, y: 0 },
   { id: 1, x: 1, y: 0 },
   { id: 6, x: -2, y: -1 },
   { id: 8, x: -1, y: -1 },
   { id: 6, x: 1, y: -1 },
-  { id: 10, x: 2, y: -1 },
+  { id: 6, x: 2, y: -1 },
   { id: 12, x: -2, y: -2 },
   { id: 13, x: -1, y: -2 },
-  { id: 18, x: 0, y: -2 },
   { id: 11, x: 1, y: -2 },
   { id: 11, x: 2, y: -2 },
+  { id: 18, x: 0, y: -2 },
 ] as const;
 
 export const KICKOFF_CELLS: Record<Team, Array<{ x: number; y: number }>> = {
@@ -286,7 +286,7 @@ const T_OFFSIDE = [
   [100, 50, 0],
   [100, 50, 0],
 ];
-const T_FOUL: Record<number, number> = { 1: 10, 2: 20, 3: 30 };
+const T_FOUL: Record<number, number> = { 1: 10, 2: 35, 3: 60 };
 const PASSIVE_TACTICS_DEBUFF = { PassCut: -20, Tackle: -20 };
 const BUFF = {
   PenaltyAreaShoot: { OwnFW: 10, OwnBuff: 10, EnemyDebuff: -20 },
@@ -329,16 +329,6 @@ export function defaultTeamDefinition(): TeamPieceDefinition[] {
 
 export function teamDefinitionCost(definition: readonly TeamPieceDefinition[]): number {
   return definition.reduce((total, piece) => total + costOfMasterId(piece.id), 0);
-}
-
-function sameTeamDefinition(a: readonly TeamPieceDefinition[], b: readonly TeamPieceDefinition[]): boolean {
-  return (
-    a.length === b.length &&
-    a.every((piece, index) => {
-      const other = b[index];
-      return piece.id === other.id && piece.x === other.x && piece.y === other.y;
-    })
-  );
 }
 
 export function validateTeamDefinition(value: unknown): {
@@ -392,8 +382,7 @@ export function validateTeamDefinition(value: unknown): {
   if (gkCount !== 1) errors.push("Team must have exactly one GK");
 
   const teamCost = teamDefinitionCost(definition);
-  const isLegacyDefault = sameTeamDefinition(definition, DEFAULT_TEAM);
-  if (teamCost > MAX_TEAM_COST && !isLegacyDefault) {
+  if (teamCost > MAX_TEAM_COST) {
     errors.push(`Team cost must be ${MAX_TEAM_COST} or less`);
   }
 
