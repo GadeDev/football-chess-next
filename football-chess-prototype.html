@@ -1299,6 +1299,7 @@ async function applyCKOrGKFromKick(kicker,gk,firstKind,x,y,options={}){
     await animateBallFlight({x,y}, {x:result.gk.x,y:result.gk.y}, kicker.team, {kind:'pass', duration:360, arc:28});
     await showCutinAtPiece('saving',900,result.gk.x,result.gk.y);
     setBallToPiece(result.gk,true);
+    resetBattleDelayCount();
     log(`→ ${label(result.gk)} が保持（GK）`);
     if(shouldStopAfterKickGK(kicker,result.gk,result,options)) turnStopped=true;
     return true;
@@ -1401,7 +1402,10 @@ function resolveTackle(hasBallPiece, tackler){
 async function applyTackleResult(holder,tackler,result,hx,hy){
   for(const m of result.log){
     log('・'+m);
-    if(m.includes('ファウル発生')) await showCutinAtPiece('foul',950,hx,hy);
+    if(m.includes('ファウル発生')){
+      resetBattleDelayCount();
+      await showCutinAtPiece('foul',950,hx,hy);
+    }
     else if(m.startsWith('PK')) await showCutinAtPiece('pk',900,hx,hy);
     else if(m.startsWith('FK')) await showCutinAtPiece('fk',900,hx,hy);
     else if(m.endsWith('→ CK')){
@@ -1419,6 +1423,7 @@ async function applyTackleResult(holder,tackler,result,hx,hy){
     await animateBallFlight({x:hx,y:hy}, {x:result.gk.x,y:result.gk.y}, holder.team, {kind:'pass', duration:360, arc:28});
     await showCutinAtPiece('saving',900,result.gk.x,result.gk.y);
     setBallToPiece(result.gk,true);
+    resetBattleDelayCount();
     log(`→ ${label(result.gk)} が保持（GK）`);
     turnStopped=true;
     return true;
@@ -1426,15 +1431,17 @@ async function applyTackleResult(holder,tackler,result,hx,hy){
   if(!result.turnover) return false;
   if(result.restart){
     const gk=pieces.find(pp=>pp.team===tackler.team&&pp.posType==='gk');
-    if(gk){ setBallToPiece(gk,true); log('→ GKがキャッチ、リスタート'); }
-    else { placeLooseBall(hx,hy,'→ ボールがこぼれました',holder.team); }
+    if(gk){ setBallToPiece(gk,true); resetBattleDelayCount(); log('→ GKがキャッチ、リスタート'); }
+    else { placeLooseBall(hx,hy,'→ ボールがこぼれました',holder.team); resetBattleDelayCount(); }
     return true;
   }
   if(result.rebound){
     placeLooseBall(result.rebound.x,result.rebound.y,'→ こぼれ球',holder.team);
+    resetBattleDelayCount();
     return true;
   }
   setBallToPiece(tackler,true);
+  resetBattleDelayCount();
   log(`→ ${label(tackler)} がボールを奪取`);
   return true;
 }
@@ -3307,6 +3314,7 @@ async function execCommand(cmd,turnStartHasBallTeam=ballHolder()?.team||null){
       await showCutinAtPiece('passCut',950,path.cutAt.x,path.cutAt.y);
       log(`${p.team==='b'?'青':'赤'}パス → (${path.cutAt.x},${path.cutAt.y}) で${path.cutter.posType.toUpperCase()}にカット！（カット率${path.cutProb}%）`);
       setBallToPiece(path.cutter,true);
+      resetBattleDelayCount();
       log(`→ ${label(path.cutter)} が保持`);
       render(); return;
     }
@@ -3326,6 +3334,7 @@ async function execCommand(cmd,turnStartHasBallTeam=ballHolder()?.team||null){
       log('→ 着地マスでパスカット');
       if(cutter){ setBallToPiece(cutter,true); log(`→ ${label(cutter)} が保持`); }
       else placeLooseBallDefensive(to.x,to.y,'→ こぼれ球',p.team);
+      resetBattleDelayCount();
     }
     render();
   }else if(cmd.type==='throughpass'){
@@ -3339,6 +3348,7 @@ async function execCommand(cmd,turnStartHasBallTeam=ballHolder()?.team||null){
       await showCutinAtPiece('passCut',950,path.cutAt.x,path.cutAt.y);
       log(`${p.team==='b'?'青':'赤'}スルーパス → (${path.cutAt.x},${path.cutAt.y}) で${path.cutter.posType.toUpperCase()}にカット！（カット率${path.cutProb}%）`);
       setBallToPiece(path.cutter,true);
+      resetBattleDelayCount();
       log(`→ ${label(path.cutter)} が保持`);
       render(); return;
     }
@@ -3348,6 +3358,7 @@ async function execCommand(cmd,turnStartHasBallTeam=ballHolder()?.team||null){
       await showCutinAtPiece('passCut',950,cmd.tx,cmd.ty);
       log(`${p.team==='b'?'青':'赤'}スルーパス → ゴールエリアのGKにカット！`);
       setBallToPiece(goalAreaGK,true);
+      resetBattleDelayCount();
       log(`→ ${label(goalAreaGK)} が保持`);
       render(); return;
     }
@@ -3363,6 +3374,7 @@ async function execCommand(cmd,turnStartHasBallTeam=ballHolder()?.team||null){
       log('→ 着地マスでカット');
       if(cutter){ setBallToPiece(cutter,true); log(`→ ${label(cutter)} が保持`); }
       else placeLooseBallDefensive(cmd.tx,cmd.ty,'→ こぼれ球',p.team);
+      resetBattleDelayCount();
     }
     render();
   }else if(cmd.type==='shoot'){
@@ -3416,6 +3428,7 @@ function placeLooseBallDefensive(x,y,baseMsg,lastTeam=lastHadBallTeam){
 async function handleOffside(receiver, atX, atY, sourceTeam=lastHadBallTeam){
   receiver.x=receiver.sx; receiver.y=receiver.sy;         // 位置戻し（移動取り消し）
   placeLooseBall(atX, atY, `⚠ オフサイド：${label(receiver)} の動きが無効化されました`, sourceTeam);
+  resetBattleDelayCount();
   await showCutinAtPiece('offside', 1100, atX, atY);
 }
 
@@ -3472,6 +3485,7 @@ async function resolveShootCommand(p){
       }else{
         placeLooseBallDefensive(rx,ry,'→ シュートストップ → こぼれ球',p.team);
       }
+      resetBattleDelayCount();
       return;
     }
   }

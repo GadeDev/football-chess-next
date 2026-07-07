@@ -485,6 +485,7 @@ test("a normal shot miss becomes a saving catch when the GK is in the goal area"
     piece({ id: 3, team: "r", posType: "gk", cost: 3, x: 0, y: -2, sx: 0, sy: -2 }),
   ];
   state.ball = { target: "piece", pieceId: 1, x: null, y: null, lastTeam: "b" };
+  state.battleDelayCounts = { b: 2, r: 0 };
 
   const result = resolveServerTurn(state, {
     b: [
@@ -502,6 +503,7 @@ test("a normal shot miss becomes a saving catch when the GK is in the goal area"
     piece({ id: 2, team: "b", posType: "mf", cost: 1, x: 2, y: 1, sx: 2, sy: 1, moved: false }),
   );
   assert.equal(ballHolder(result.game)?.id, 3);
+  assert.deepEqual(result.game.battleDelayCounts, { b: 0, r: 0 });
 });
 
 test("a normal shot miss outside the GK goal-area catch stops later commands as GK", () => {
@@ -512,6 +514,7 @@ test("a normal shot miss outside the GK goal-area catch stops later commands as 
     piece({ id: 3, team: "r", posType: "gk", cost: 3, x: -1, y: -1, sx: -1, sy: -1 }),
   ];
   state.ball = { target: "piece", pieceId: 1, x: null, y: null, lastTeam: "b" };
+  state.battleDelayCounts = { b: 2, r: 0 };
 
   const result = resolveServerTurn(state, {
     b: [
@@ -529,6 +532,7 @@ test("a normal shot miss outside the GK goal-area catch stops later commands as 
     piece({ id: 2, team: "b", posType: "mf", cost: 1, x: 1, y: 1, sx: 1, sy: 1 }),
   );
   assert.equal(ballHolder(result.game)?.id, 3);
+  assert.deepEqual(result.game.battleDelayCounts, { b: 0, r: 0 });
 });
 
 test("a normal shot miss keeps replay metadata for the GK follow-up", () => {
@@ -623,6 +627,7 @@ test("a foul set-piece that ends in GK stops later commands in the same turn", (
     piece({ id: 4, team: "r", posType: "gk", cost: 3, x: 2, y: -1, sx: 2, sy: -1 }),
   ];
   state.ball = { target: "piece", pieceId: 1, x: null, y: null, lastTeam: "b" };
+  state.battleDelayCounts = { b: 2, r: 0 };
 
   const result = resolveServerTurn(state, {
     b: [
@@ -642,6 +647,7 @@ test("a foul set-piece that ends in GK stops later commands in the same turn", (
     piece({ id: 2, team: "b", posType: "mf", cost: 1, x: 1, y: 1, sx: 1, sy: 1 }),
   );
   assert.equal(ballHolder(result.game)?.team, "r");
+  assert.deepEqual(result.game.battleDelayCounts, { b: 0, r: 0 });
 });
 
 test("a foul PK goal stops later commands and records the final kick kind", () => {

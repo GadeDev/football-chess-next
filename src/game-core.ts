@@ -1251,6 +1251,7 @@ function resolveFlyingPassPath(
     } else {
       setBallToCell(state, x, y, opponentTeam(passPiece.team), true);
     }
+    resetBattleDelayCount(state);
     pushEvent(events, {
       type: "pass.cut",
       team: passPiece.team,
@@ -1299,6 +1300,7 @@ function handleOffside(
   receiver.x = receiver.sx;
   receiver.y = receiver.sy;
   setBallToCell(state, x, y, sourceTeam, true);
+  resetBattleDelayCount(state);
   pushEvent(events, {
     type: "offside",
     team: receiver.team,
@@ -1452,6 +1454,7 @@ function resolveSetPieceOutcome(
   }
   if (outcome.gk) {
     setBallToPiece(state, outcome.gk, true);
+    resetBattleDelayCount(state);
     if (stopOnSave) state.turnStopped = true;
     pushEvent(events, {
       type: "shot.saved",
@@ -1501,6 +1504,7 @@ function runTackle(
       details: { defenderCount, foulProbability, kind, kickerId: kicker.id, kickerFrom: coordOf(kicker), probability, success: ok },
     });
     logs.push(`${teamName(tackler.team)} foul: ${kind} ${probability}% => ${ok ? "goal" : "miss"}`);
+    resetBattleDelayCount(state);
     if (ok) {
       scoreGoal(state, holder.team, events, logs, { source: kind, kickerId: kicker.id, tacklerId: tackler.id, from: coordOf(kicker) });
       return true;
@@ -1522,6 +1526,7 @@ function runTackle(
   const success = rollPercent(state, probability);
   if (success) {
     setBallToPiece(state, tackler, true);
+    resetBattleDelayCount(state);
     pushEvent(events, {
       type: "tackle.success",
       team: tackler.team,
@@ -1590,6 +1595,7 @@ function resolveShoot(
     );
     if (blocker) setBallToPiece(state, blocker, true);
     else placeLooseBallDefensive(state, x, y, shooter.team);
+    resetBattleDelayCount(state);
     pushEvent(events, {
       type: "shot.blocked",
       team: shooter.team,
@@ -1825,6 +1831,7 @@ function resolveCommand(
     } else {
       setBallToCell(state, receiver.x, receiver.y, opponentTeam(piece.team), true);
     }
+    resetBattleDelayCount(state);
     pushEvent(events, {
       type: "pass.cut",
       team: piece.team,
@@ -1857,6 +1864,7 @@ function resolveCommand(
     const goalAreaGK = goalAreaPassCutGK(state, piece.team, command.tx, command.ty);
     if (goalAreaGK) {
       setBallToPiece(state, goalAreaGK, true);
+      resetBattleDelayCount(state);
       pushEvent(events, {
         type: "pass.cut",
         team: piece.team,
@@ -1900,6 +1908,7 @@ function resolveCommand(
     } else {
       setBallToCell(state, command.tx, command.ty, opponentTeam(piece.team), true);
     }
+    resetBattleDelayCount(state);
     pushEvent(events, {
       type: "pass.cut",
       team: piece.team,
