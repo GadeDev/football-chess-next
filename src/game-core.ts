@@ -1435,7 +1435,13 @@ function resolveSetPieceOutcome(
   saveType: ShotSaveType = "gk",
 ): void {
   logs.push(...outcome.logs);
-  const eventDetails = { ...details, kickLogs: outcome.logs, kickSteps: outcome.steps };
+  const finalKickStep = [...outcome.steps].reverse().find((step) => step.type === "ck-kick");
+  const eventDetails = {
+    ...details,
+    finalKickKind: finalKickStep?.kind ?? (typeof details.source === "string" ? details.source : undefined),
+    kickLogs: outcome.logs,
+    kickSteps: outcome.steps,
+  };
   if (outcome.goal) {
     scoreGoal(state, kicker.team, events, logs, eventDetails);
     return;

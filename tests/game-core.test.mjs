@@ -487,6 +487,7 @@ test("a normal shot miss keeps replay metadata for the GK follow-up", () => {
   assert.equal(saved.type, "shot.saved");
   assert.deepEqual(saved.from, { x: -1, y: -1 });
   assert.equal(saved.details?.source, "VitalAreaShoot");
+  assert.equal(saved.details?.finalKickKind, "VitalAreaShoot");
   assert.deepEqual(saved.details?.from, { x: -1, y: -1 });
   assert.deepEqual(saved.details?.kickLogs, ["VitalAreaShoot failed-to-CK 5% => GK"]);
   assert.deepEqual(saved.details?.kickSteps, [
@@ -522,7 +523,32 @@ test("a normal shot miss exposes structured CK replay steps", () => {
     { type: "failed-to-ck", kind: "CK", probability: 75, result: "CK" },
     { type: "ck-kick", kind: "CK", probability: 75, result: "miss" },
   ]);
+  assert.equal(saved.details?.finalKickKind, "CK");
   assert.equal(saved.details?.saveType, "gk");
+});
+
+test("a CK goal exposes the final kick kind for replay", () => {
+  const state = createInitialGameState("b", "ck-goal-15");
+  state.pieces = [
+    piece({ id: 1, team: "b", posType: "fw", cost: 1, x: -1, y: -1, sx: -1, sy: -1 }),
+    piece({ id: 3, team: "r", posType: "gk", cost: 3, x: -1, y: -1, sx: -1, sy: -1 }),
+  ];
+  state.ball = { target: "piece", pieceId: 1, x: null, y: null, lastTeam: "b" };
+
+  const result = resolveServerTurn(state, {
+    b: [{ type: "shoot", pieceId: 1, tx: 0, ty: -3, team: "b" }],
+  });
+  const goal = result.events.find((event) => event.type === "shot.goal");
+
+  assert.equal(Boolean(goal), true);
+  assert.equal(goal.details?.source, "VitalAreaShoot");
+  assert.equal(goal.details?.finalKickKind, "CK");
+  assert.deepEqual(goal.details?.kickLogs, ["VitalAreaShoot failed-to-CK 5% => CK", "CK 75% => goal"]);
+  assert.deepEqual(goal.details?.kickSteps, [
+    { type: "failed-to-ck", kind: "VitalAreaShoot", probability: 5, result: "CK" },
+    { type: "ck-kick", kind: "CK", probability: 75, result: "goal" },
+  ]);
+  assert.equal(result.game.score.b, 1);
 });
 
 test("a foul set-piece that ends in GK stops later commands in the same turn", () => {
