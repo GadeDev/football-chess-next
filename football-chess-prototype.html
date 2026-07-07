@@ -2500,8 +2500,9 @@ async function replayServerKickSequence(event,eventFrom){
   const logs=event?.details?.kickLogs;
   if(!Array.isArray(logs)||logs.length===0) return;
   for(const line of logs){
-    if(typeof line==='string' && (/^CK \d/.test(line)||/=> CK$/.test(line))){
-      await showCutinAtPiece('ck',750,x,y);
+    if(typeof line==='string' && line.includes('failed-to-CK') && (line.endsWith('=> CK')||line.endsWith('→ CK'))){
+      await showCutinAtPiece('saving',520,x,y);
+      await showCutinAtPiece('ck',720,x,y);
     }
   }
 }
