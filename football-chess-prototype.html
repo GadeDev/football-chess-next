@@ -2426,6 +2426,11 @@ function eventTeamName(team){ return team==='b'?'青':(team==='r'?'赤':''); }
 function commandTypeLabel(type){
   return ({move:'移動',dribble:'ドリブル',pass:'パス',throughpass:'スルーパス',shoot:'シュート'}[type])||type||'操作';
 }
+function pieceMoveReplayLabel(event){
+  if(event?.details?.carryBall) return 'ドリブル';
+  if(event?.details?.commandType==='dribble') return 'ドリブル移動';
+  return '移動';
+}
 function kickKindReplayLabel(kind){
   return ({shoot:'シュート',PenaltyAreaShoot:'PAシュート',VitalAreaShoot:'VAシュート',PK:'PK',FK:'FK',CK:'CK'}[kind])||'';
 }
@@ -2435,7 +2440,7 @@ function replayKickLabel(event){
 function onlineLogEvent(event){
   if(!event) return;
   const t=eventTeamName(event.team);
-  if(event.type==='piece.moved') log(`${t} ${event.pieceId} → (${event.to?.x},${event.to?.y})${event.details?.carryBall?' ドリブル':' 移動'}`);
+  if(event.type==='piece.moved') log(`${t} ${event.pieceId} → (${event.to?.x},${event.to?.y}) ${pieceMoveReplayLabel(event)}`);
   else if(event.type==='ball.moved') log(`${t} スルーパス → (${event.to?.x},${event.to?.y})`);
   else if(event.type==='pass.completed') log(`${t} パス成功 → ${event.details?.receiverId||''}`);
   else if(event.type==='pass.cut'){
