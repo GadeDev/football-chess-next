@@ -1345,6 +1345,15 @@ interface KickSequenceOutcome {
   goal: boolean;
   gk?: Piece;
   logs: string[];
+  steps: KickSequenceStep[];
+}
+
+interface KickSequenceStep {
+  type: "missing-gk" | "failed-to-ck" | "ck-kick" | "ck-limit";
+  kind?: KickKind;
+  probability?: number;
+  result: "goal" | "miss" | "CK" | "GK";
+  limit?: number;
 }
 
 type ShotSaveType = "saving" | "failedShoot" | "gk";
@@ -1357,33 +1366,42 @@ function resolveCKOrGKSequence(
   shoot = false,
 ): KickSequenceOutcome {
   const logs: string[] = [];
-  if (!gk) return { goal: true, logs: ["enemy GK missing"] };
+  const steps: KickSequenceStep[] = [];
+  if (!gk) {
+    steps.push({ type: "missing-gk", result: "goal" });
+    return { goal: true, logs: ["enemy GK missing"], steps };
+  }
   if (shoot) {
     const firstChance = failedToCK(firstKind, pieceCost(gk));
     const firstToCK = rollPercent(state, firstChance);
     logs.push(`${firstKind} failed-to-CK ${firstChance}% => ${firstToCK ? "CK" : "GK"}`);
-    if (!firstToCK) return { goal: false, gk, logs };
+    steps.push({ type: "failed-to-ck", kind: firstKind, probability: firstChance, result: firstToCK ? "CK" : "GK" });
+    if (!firstToCK) return { goal: false, gk, logs, steps };
 
     const firstCKProbability = calcCK(kicker, gk);
     const firstCKOk = rollPercent(state, firstCKProbability);
     logs.push(`CK ${firstCKProbability}% => ${firstCKOk ? "goal" : "miss"}`);
-    if (firstCKOk) return { goal: true, logs };
+    steps.push({ type: "ck-kick", kind: "CK", probability: firstCKProbability, result: firstCKOk ? "goal" : "miss" });
+    if (firstCKOk) return { goal: true, logs, steps };
 
     for (let index = 0; index < MAX_CK_NUM; index += 1) {
       const ckChance = failedToCK("CK", pieceCost(gk));
       const toCK = rollPercent(state, ckChance);
       logs.push(`CK failed-to-CK ${ckChance}% => ${toCK ? "CK" : "GK"}`);
+      steps.push({ type: "failed-to-ck", kind: "CK", probability: ckChance, result: toCK ? "CK" : "GK" });
       if (!toCK) continue;
 
       const ckProbability = calcCK(kicker, gk);
       const ckOk = rollPercent(state, ckProbability);
       logs.push(`CK ${ckProbability}% => ${ckOk ? "goal" : "miss"}`);
-      if (ckOk) return { goal: true, logs };
-      return { goal: false, gk, logs };
+      steps.push({ type: "ck-kick", kind: "CK", probability: ckProbability, result: ckOk ? "goal" : "miss" });
+      if (ckOk) return { goal: true, logs, steps };
+      return { goal: false, gk, logs, steps };
     }
 
     logs.push(`shoot CK retry limit ${MAX_CK_NUM} => GK`);
-    return { goal: false, gk, logs };
+    steps.push({ type: "ck-limit", kind: "CK", result: "GK", limit: MAX_CK_NUM });
+    return { goal: false, gk, logs, steps };
   }
 
   const maxAttempts = MAX_CK_NUM;
@@ -1392,15 +1410,18 @@ function resolveCKOrGKSequence(
     const ckChance = failedToCK(kickType, pieceCost(gk));
     const toCK = rollPercent(state, ckChance);
     logs.push(`${kickType} failed-to-CK ${ckChance}% => ${toCK ? "CK" : "GK"}`);
-    if (!toCK) return { goal: false, gk, logs };
+    steps.push({ type: "failed-to-ck", kind: kickType, probability: ckChance, result: toCK ? "CK" : "GK" });
+    if (!toCK) return { goal: false, gk, logs, steps };
     const ckProbability = calcCK(kicker, gk);
     const ckOk = rollPercent(state, ckProbability);
     logs.push(`CK ${ckProbability}% => ${ckOk ? "goal" : "miss"}`);
-    if (ckOk) return { goal: true, logs };
+    steps.push({ type: "ck-kick", kind: "CK", probability: ckProbability, result: ckOk ? "goal" : "miss" });
+    if (ckOk) return { goal: true, logs, steps };
     kickType = "CK";
   }
   logs.push(`CK limit ${maxAttempts} => GK`);
-  return { goal: false, gk, logs };
+  steps.push({ type: "ck-limit", kind: "CK", result: "GK", limit: maxAttempts });
+  return { goal: false, gk, logs, steps };
 }
 
 function resolveSetPieceOutcome(
@@ -1414,7 +1435,7 @@ function resolveSetPieceOutcome(
   saveType: ShotSaveType = "gk",
 ): void {
   logs.push(...outcome.logs);
-  const eventDetails = { ...details, kickLogs: outcome.logs };
+  const eventDetails = { ...details, kickLogs: outcome.logs, kickSteps: outcome.steps };
   if (outcome.goal) {
     scoreGoal(state, kicker.team, events, logs, eventDetails);
     return;

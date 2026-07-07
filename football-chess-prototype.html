@@ -2461,10 +2461,21 @@ function onlineLogEvent(event){
   else if(event.type==='fulltime') log(`―― フルタイム ${event.details?.score?.b??0} - ${event.details?.score?.r??0} ――`);
 }
 async function replayServerKickSequence(event,eventFrom){
-  const logs=event?.details?.kickLogs;
-  if(!Array.isArray(logs)||logs.length===0) return;
   const x=eventFrom?.x??event?.to?.x;
   const y=eventFrom?.y??event?.to?.y;
+  const steps=Array.isArray(event?.details?.kickSteps) ? event.details.kickSteps : null;
+  if(steps&&steps.length){
+    for(const step of steps){
+      if(step?.type==='failed-to-ck' && step.result==='CK'){
+        await showCutinAtPiece('ck',720,x,y);
+      }else if(step?.type==='ck-kick'){
+        await showCutinAtPiece('ck',720,x,y);
+      }
+    }
+    return;
+  }
+  const logs=event?.details?.kickLogs;
+  if(!Array.isArray(logs)||logs.length===0) return;
   for(const line of logs){
     if(typeof line==='string' && (/^CK \d/.test(line)||/=> CK$/.test(line))){
       await showCutinAtPiece('ck',750,x,y);

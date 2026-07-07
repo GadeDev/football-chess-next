@@ -489,6 +489,9 @@ test("a normal shot miss keeps replay metadata for the GK follow-up", () => {
   assert.equal(saved.details?.source, "VitalAreaShoot");
   assert.deepEqual(saved.details?.from, { x: -1, y: -1 });
   assert.deepEqual(saved.details?.kickLogs, ["VitalAreaShoot failed-to-CK 5% => GK"]);
+  assert.deepEqual(saved.details?.kickSteps, [
+    { type: "failed-to-ck", kind: "VitalAreaShoot", probability: 5, result: "GK" },
+  ]);
   assert.equal(saved.details?.gkId, 3);
   assert.equal(saved.details?.saveType, "failedShoot");
 });
