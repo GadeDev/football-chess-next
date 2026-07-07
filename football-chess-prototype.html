@@ -1296,7 +1296,9 @@ async function applyCKOrGKFromKick(kicker,gk,firstKind,x,y,options={}){
     return true;
   }
   if(result.gk){
-    await animateBallFlight({x,y}, {x:result.gk.x,y:result.gk.y}, kicker.team, {kind:'pass', duration:360, arc:28});
+    const fromGoal=kickSequenceReachedCK(result.log) || (options.shoot && !isAttackGoalArea(kicker.team,result.gk.x,result.gk.y));
+    const saveFrom=fromGoal ? goalCellFor(kicker.team) : {x,y};
+    await animateBallFlight(saveFrom, {x:result.gk.x,y:result.gk.y}, kicker.team, {kind:fromGoal?'pass':'shoot', duration:fromGoal?280:420, arc:fromGoal?18:30});
     await showCutinAtPiece('saving',900,result.gk.x,result.gk.y);
     setBallToPiece(result.gk,true);
     resetBattleDelayCount();
@@ -1369,6 +1371,7 @@ function isFoulFKArea(team,x,y){
 function resolveTackle(hasBallPiece, tackler){
   const out=[];
   const defNum=piecesAt(tackler.x,tackler.y).filter(q=>q.team===tackler.team).length;
+  const foulKickResult=(base,kicker,kind)=>Object.assign(base,{kicker,kind,kickFrom:{x:kicker.x,y:kicker.y}});
   // 1) ファウル判定
   const foulP=calcFoul(defNum);
   const isFoul=rollPercent(foulP);
@@ -1379,8 +1382,8 @@ function resolveTackle(hasBallPiece, tackler){
     const pkProb=calcPK(kicker,gk);
     const pkOk=rollPercent(pkProb);
     out.push(`PK ${label(kicker)}→GK（${pkProb}%）${pkOk?'成功':'失敗'}`);
-    if(pkOk) return {goal:true,log:out};
-    return resolveCKOrGKSequence(kicker,gk,'PK',out);
+    if(pkOk) return foulKickResult({goal:true,log:out},kicker,'PK');
+    return foulKickResult(resolveCKOrGKSequence(kicker,gk,'PK',out),kicker,'PK');
   }
   if(isFoul && isFoulFKArea(hasBallPiece.team,hasBallPiece.x,hasBallPiece.y)){
     out.push(`ファウル発生（守備${defNum}人, ${foulP}%）`);
@@ -1389,8 +1392,8 @@ function resolveTackle(hasBallPiece, tackler){
     const fkProb=calcFK(kicker,gk);
     const fkOk=rollPercent(fkProb);
     out.push(`FK ${label(kicker)}→GK（${fkProb}%）${fkOk?'成功':'失敗'}`);
-    if(fkOk) return {goal:true,log:out};
-    return resolveCKOrGKSequence(kicker,gk,'FK',out);
+    if(fkOk) return foulKickResult({goal:true,log:out},kicker,'FK');
+    return foulKickResult(resolveCKOrGKSequence(kicker,gk,'FK',out),kicker,'FK');
   }
   // 2) 通常タックル成功判定
   const tackP=calcTackleSuccess(hasBallPiece,tackler);
@@ -1400,6 +1403,7 @@ function resolveTackle(hasBallPiece, tackler){
 }
 
 async function applyTackleResult(holder,tackler,result,hx,hy){
+  const kickFrom=result.kickFrom||{x:hx,y:hy};
   for(const m of result.log){
     log('・'+m);
     if(m.includes('ファウル発生')){
@@ -1409,18 +1413,20 @@ async function applyTackleResult(holder,tackler,result,hx,hy){
     else if(m.startsWith('PK')) await showCutinAtPiece('pk',900,hx,hy);
     else if(m.startsWith('FK')) await showCutinAtPiece('fk',900,hx,hy);
     else if(m.endsWith('→ CK')){
-      await showCutinAtPiece('saving',650,hx,hy);
-      await showCutinAtPiece('ck',850,hx,hy);
+      await showCutinAtPiece('saving',650,kickFrom.x,kickFrom.y);
+      await showCutinAtPiece('ck',850,kickFrom.x,kickFrom.y);
     }
     else if(m.includes('タックル成功')) await showCutinAtPiece('tackleSuccess',900,hx,hy);
   }
   if(result.goal){
-    await animateBallFlight({x:hx,y:hy}, goalCellFor(holder.team), holder.team, {kind:'shoot', duration:520, arc:58});
+    await animateBallFlight(kickFrom, goalCellFor(holder.team), holder.team, {kind:'shoot', duration:520, arc:58});
     await scoreGoal(holder.team);
     return true;
   }
   if(result.gk){
-    await animateBallFlight({x:hx,y:hy}, {x:result.gk.x,y:result.gk.y}, holder.team, {kind:'pass', duration:360, arc:28});
+    const fromGoal=kickSequenceReachedCK(result.log);
+    const saveFrom=fromGoal ? goalCellFor(holder.team) : kickFrom;
+    await animateBallFlight(saveFrom, {x:result.gk.x,y:result.gk.y}, holder.team, {kind:fromGoal?'pass':'shoot', duration:fromGoal?280:420, arc:fromGoal?18:30});
     await showCutinAtPiece('saving',900,result.gk.x,result.gk.y);
     setBallToPiece(result.gk,true);
     resetBattleDelayCount();

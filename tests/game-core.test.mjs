@@ -653,8 +653,9 @@ test("a foul set-piece that ends in GK stops later commands in the same turn", (
 test("a foul PK goal stops later commands and records the final kick kind", () => {
   const state = createInitialGameState("b", "foul-goal-stop-8");
   state.pieces = [
-    piece({ id: 1, team: "b", posType: "fw", cost: 3, x: 0, y: -1, sx: 0, sy: -1 }),
+    piece({ id: 1, team: "b", posType: "fw", cost: 1, x: 0, y: -1, sx: 0, sy: -1 }),
     piece({ id: 2, team: "b", posType: "mf", cost: 1, x: 1, y: 1, sx: 1, sy: 1 }),
+    piece({ id: 5, team: "b", posType: "mf", cost: 3, x: 2, y: 1, sx: 2, sy: 1 }),
     piece({ id: 3, team: "r", posType: "df", cost: 1, x: 0, y: -2, sx: 0, sy: -2 }),
     piece({ id: 4, team: "r", posType: "gk", cost: 1, x: 2, y: -1, sx: 2, sy: -1 }),
   ];
@@ -672,7 +673,10 @@ test("a foul PK goal stops later commands and records the final kick kind", () =
     ["piece.moved", "tackle.foul", "shot.goal", "kickoff", "turn.completed"],
   );
   const goal = result.events.find((event) => event.type === "shot.goal");
+  assert.equal(goal.pieceId, 5);
+  assert.deepEqual(goal.from, { x: 2, y: 1 });
   assert.equal(goal.details?.source, "PK");
+  assert.equal(goal.details?.kickerId, 5);
   assert.equal(goal.details?.finalKickKind, "PK");
   assert.equal(result.events.some((event) => event.type === "piece.moved" && event.pieceId === 2), false);
 });
