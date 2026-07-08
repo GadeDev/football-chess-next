@@ -50,7 +50,7 @@
   .wrap>.hud,.wrap>.onlineBar,.wrap>.menuBar,.wrap>.footerBar{flex:none;}
 
   /* ===== 上部ヘッダー：スコアのみ（縮小版）＋左右の小型アイコン ===== */
-  .hud{position:relative; padding:3px 10px 2px;
+  .hud{position:relative; padding:3px 10px 0;
     background:linear-gradient(180deg,#0b1016 0%,#11181f 70%,#0e1418 100%);}
   /* バーは中央部の切り出し(--scoreBarMid)を伸ばし、三角錐は独立要素(.scoreTri)で縦横比を保つ */
   .scoreRow{position:relative; height:34px; background-image:var(--scoreBarMid); background-size:100% 100%; background-repeat:no-repeat;
@@ -101,18 +101,18 @@
   .dot{width:12px;height:12px;border-radius:50%;}
   .dot.b{background:#2f7be0;} .dot.r{background:#e04545;}
   .score{font-size:22px; font-variant-numeric:tabular-nums; min-width:26px; text-align:center;}
-  /* 幅基準の理想高さを要求し、入り切らない分だけ縮む（flex:0 1 auto）。余白はwrapのスペーサーが引き取る */
-  .boardWrap{padding:2px 8px 2px; position:relative; flex:0 1 auto; min-height:0;
-    height:calc((min(100vw, 480px) - 16px) * 1.87234 + 4px);
-    display:flex; justify-content:center; align-items:center;}
+  /* 盤画像の高さちょうどに収縮（上詰め・隙間ゼロ）。入り切らない画面では盤側だけが縮む */
+  .boardWrap{padding:0 8px; position:relative; flex:0 1 auto; min-height:0;
+    height:calc((min(100vw, 480px) - 16px) * 1.62128); /* 1143/705=画像アスペクト */
+    display:flex; justify-content:center;}
   /* ===== 盤ジオメトリ（Unity CellDef 準拠。診断2026-07-08） =====
      フィールド画像705x1143(=7.05x11.43世界単位)に対し、グリッドは5列x1.28=6.4幅、8行x1.65=13.2高。
-     グリッドは画像より縦に長い（ゴール行が上に8.97%・下に6.52%はみ出す）。
-     .boardBox はグリッド+画像の外接箱（幅=画像幅705、高さ=グリッド高1320相当）。 */
-  /* 親(boardWrap)の実高さに追従。比率は維持し、幅は高さから決まる（画像の引き伸ばしはしない） */
-  .boardBox{position:relative; aspect-ratio:705 / 1320; max-width:100%; height:100%;}
-  /* 盤画像レイヤー：箱の縦 7.765%〜94.356% に配置（=画像高86.591%） */
-  .fieldBg{position:absolute; left:0; width:100%; top:7.765%; height:86.591%;
+     グリッドは画像より縦に長く、ゴール行は画像の上8.97%・下6.52%へ透明のままはみ出して
+     ヘッダー/フッター領域に重なる（Unity同様ゴールマスはフィールド外。タップ不可なので干渉しない）。
+     .boardBox＝盤画像そのものの箱（705:1143）。レイアウトはこの箱を基準に密着させる。 */
+  .boardBox{position:relative; aspect-ratio:705 / 1143; max-width:100%; height:100%;}
+  /* 盤画像レイヤー：箱いっぱい */
+  .fieldBg{position:absolute; inset:0;
     background-image:var(--fieldImg); background-size:100% 100%; background-repeat:no-repeat;
     border-radius:6px; box-shadow:0 4px 16px rgba(0,0,0,.5);}
   /* Unity版の選択UI：タップしたマスで駒が拡大展開し、ボールが独立トークンとして飛び出す */
@@ -127,7 +127,7 @@
   .piece.dimmed{opacity:.38; filter:grayscale(.5) brightness(.65);}
   /* 駒/ボール選択の扇ポップアップ：マス中心から放射状に広がる選択肢 */
   /* 選択UIレイヤーは #board（グリッド箱）と完全に同じ矩形に重ねる */
-  #selectFan{position:absolute; left:4.61%; width:90.78%; top:0; height:100%; z-index:30; pointer-events:none;}
+  #selectFan{position:absolute; left:4.61%; width:90.78%; top:-8.968%; height:115.486%; z-index:30; pointer-events:none;}
   .selOpt{position:absolute; width:46px; height:46px; transform:translate(-50%,-50%) scale(.3); opacity:0;
     pointer-events:auto; cursor:pointer; border-radius:50%;
     background:radial-gradient(circle at 40% 35%, rgba(30,50,70,.96), rgba(10,20,30,.96));
@@ -151,8 +151,9 @@
   .selOpt.pop{animation:selPop .2s ease-out forwards !important; z-index:40;}
   @keyframes selPop{0%{transform:translate(-50%,-50%) scale(1);} 60%{transform:translate(-50%,-50%) scale(1.65);}
     100%{transform:translate(-50%,-50%) scale(1.4); opacity:.85;}}
-  /* #board は5x8論理グリッドの箱（画像は.fieldBg側）。セル座標(%)の基準はこの箱 */
-  .board{position:absolute; left:4.61%; width:90.78%; top:0; height:100%;
+  /* #board は5x8論理グリッドの箱（画像は.fieldBg側）。セル座標(%)の基準はこの箱。
+     画像箱(705:1143)基準で上に8.968%はみ出し、高さは115.486%（=グリッド13.2/画像11.43） */
+  .board{position:absolute; left:4.61%; width:90.78%; top:-8.968%; height:115.486%;
     overflow:visible; touch-action:none; /* 展開時のコマがはみ出しても切れないように */}
   /* 論理セルの枠を薄く表示し、コマがどのマスの中央にいるか分かるようにする */
   .cell{position:absolute;
@@ -162,8 +163,9 @@
   /* エリアの色付けは控えめに（フィールド画像が主役） */
   .cell.pa{background:rgba(255,255,255,.04);} .cell.va{background:rgba(255,255,0,.07);}
   .cell.cross{background:rgba(0,255,255,.05);}
-  /* ゴールマスは常時オーバーレイなし（盤画像のゴール描画に任せる）。ロジック上のセル・当たり判定は存在したまま */
-  .cell.selfgoal,.cell.oppgoal{background:none; box-shadow:none;}
+  /* ゴールマスは常時オーバーレイなし（盤画像のゴール描画に任せる）。ロジック上のセルは存在したまま。
+     ヘッダー/フッター領域に透明で重なるため pointer-events:none（元々タップしても何も起きないマス） */
+  .cell.selfgoal,.cell.oppgoal{background:none; box-shadow:none; pointer-events:none;}
   .cell.movable{background:var(--movable); cursor:pointer;}
   .cell.passable{background:var(--pass); cursor:pointer;}
   /* 移動先/パス先を大きな円マーカーで明示（セル幅の70%・脈動アニメ付き） */
@@ -270,7 +272,7 @@
     .onlineSeat.spec{grid-column:1 / -1;}
   }
   /* ===== フッター1行：時計｜残り時間バー｜TURN END ===== */
-  .footerBar{display:flex; align-items:center; gap:10px; padding:5px 10px 0;}
+  .footerBar{display:flex; align-items:center; gap:10px; padding:0 10px;}
   .clockText{flex:none; display:flex; flex-direction:column; align-items:center; line-height:1.15; min-width:56px;}
   .clockText .clockHalf{font-size:11px; font-weight:800; color:#ffe14d; letter-spacing:.05em; text-shadow:0 1px 2px #000;}
   .clockText .clockMin{font-size:15px; font-weight:900; color:#fff; font-variant-numeric:tabular-nums; text-shadow:0 1px 2px #000;}
