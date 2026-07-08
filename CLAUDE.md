@@ -73,6 +73,14 @@ Claude Code がこのリポジトリで作業する際の指針。詳細な背�
 - ~~公開URLでのプロトタイプHTML配信~~ → 2026-07-06 に static assets 方式で実装済み（下記デプロイ欄参照）。
 - PWA/スマホ仕上げ: **2026-07-07実装済み**: Webマニフェスト+アイコン(`pwa/`→`build:assets`が`public/`へコピー。ホーム画面追加でスタンドアロン起動)、リプレイ中の盤面タップ抑制(`body.replaying`)、狭い端末でのオンラインバー折り返し/長い表示名の省略表示、設定画面の効果音/触覚フィードバックON/OFFと軽量SE。Service Workerは意図的に未導入(HTML更新がキャッシュ固定される事故防止。オフライン対応する際はバージョン付きキャッシュで設計すること)。
 
+## UI方針（2026-07-08確定）
+- **演出優先・盤面最大化を最優先**。スマホ基準の1画面レイアウト（スクロールなし・TURN END常時可視）を全環境共通とする。ヘッダー=スコアのみ、フッター=時計｜残り時間バー｜TURN ENDの1行。
+- **UnityHUD忠実再現（フェーズ1）は方針変更により中止**（2026-07-08）。棚卸しレポート（BattleHud.prefab、基準750×1334）は資料として有効。中断時にファイル変更は発生しておらずstashは無し（直前のスマホ1画面修正はコミット `31386a5` として保全済み）。
+- **画面文言はL10N辞書経由**（スクリプト冒頭の `L10N` と `t(key)`。現状 `state.lang='ja'` 固定）。以後、文言の追加・変更は必ずこの辞書に載せる。
+- **盤ジオメトリはUnity `CellDef` 準拠**（2026-07-08修正）：セル=1.28×1.65世界単位。`#board`（5×8グリッド箱）は盤画像の横4.61%内側・縦は画像を上下にはみ出す（上8.97%/下6.52%、`.boardBox`=705:1320）。セル座標のJS計算（k/8, k/5）は `#board` 基準のままでよい。**画像全体を均等5×8で割る旧方式に戻さないこと**（駒とピッチ描線がズレる）。
+- 削除済みUI（2026-07-08）：配置リセット/タックル実演ボタン、操作説明文（modeHint）、凡例、ヘッダーの「🌐 ONLINE」文字（アイコン化）、MATCH TIME円形ロゴ（テキスト時計に置換）。`#resetBtn` はKICK OFF処理が `click()` を呼ぶため**非表示で残置**（削除禁止）。HOME/オフサイド実演/ログは☰メニュー内へ移設。
+- 旧版ChessClock枠デザイン（円形文字盤）の再現は将来の任意課題（`--clockDial`/`--clockFrame` のbase64アセットは残置済み）。
+
 ## 検証方法
 - **構文チェック**：`<script>`〜`</script>` を抽出して `node --check`。
   ```bash
@@ -92,5 +100,5 @@ Claude Code がこのリポジトリで作業する際の指針。詳細な背�
 - 内部ロジック（移動可否/パス範囲/確率/コマンド確定）の変更は慎重に。UI改修時は「表示のみ変更、ロジック不変」を原則とする。
 - Codexで継続する場合は、実装・検証・ローカルURL確認までこの単一HTML版で完結させる。演出移植はUnity C#を調べ、ボール軌跡・駒移動・カットインなど小さい単位で移す。
 - Git運用：remote は `origin https://github.com/GadeDev/football-chess-next.git`。最新作業は `origin/codex/prototype-throughpass-move-fix` にあり、ローカルにも同名の追跡ブランチを作成済み（2026-07-06。以前はローカル `master` が同リモートブランチを追跡していた）。`origin/main` は別履歴の古い系統なので、統合/上書きはユーザー確認なしに行わない。Pushはユーザーから明示依頼があった場合のみ行う。
-- デプロイ：Worker公開は `npm run check:worker` → `npx wrangler deploy --dry-run` → `npm run deploy:worker`（= `build:assets` + `wrangler deploy`）の順で行う。公開URLは `https://universofutbol-football-chess.yanagiho.workers.dev`（デプロイ後の確認は `/api/universofutbol/football-chess/health` が `{"ok":true,...,"environment":"production"}` を返すこと）。ENVIRONMENTは2026-07-06からproduction。ローカル`wrangler dev`は`.dev.vars`（Git管理外）でdevelopment表示。
+- デプロイ：Worker公開は `npm run check:worker` → `npx wrangler deploy --dry-run` → `npm run deploy:worker`（= `build:assets` + `wrangler deploy`）の順で行う。**正式公開URLは `https://mini.footballchess.io`**（Workerカスタムドメイン、2026-07-08設定。`universofutbol-football-chess` Workerに紐付け。workers.dev URLも併存）。デプロイ後は `curl -sL https://mini.footballchess.io/ | shasum -a 256` がローカル `public/index.html` と一致すること、`/api/universofutbol/football-chess/health` が `{"ok":true,...,"environment":"production"}` を返すことを確認。**旧Worker `football-chess-next`（旧Viteビルド配信、親フォルダ側）はデプロイ禁止・廃止予定**。`mini.football.io`（HostGator向きの別ドメイン）は本プロジェクトと無関係。ENVIRONMENTは2026-07-06からproduction。ローカル`wrangler dev`は`.dev.vars`（Git管理外）でdevelopment表示。
 - HTML配信：公開URLの `/` はゲームHTML本体を static assets で配信する（2026-07-06実装）。ソースはリポジトリ直下の `football-chess-prototype.html` が唯一の正で、`npm run build:assets` が `public/index.html` へコピーする（`public/` はGit管理外の生成物。直接編集しない）。同一オリジン配信なのでHTML内のオンラインAPIは自動で本番Workerへ向く。ROOM共有URLは `https://universofutbol-football-chess.yanagiho.workers.dev/?room=FC-XXXX-XXXX` 形式。
