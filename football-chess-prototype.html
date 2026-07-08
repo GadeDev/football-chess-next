@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <!-- PWA（サーバー配信時のみ有効。file://直開きでは無視される） -->
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0b1b33">
@@ -37,7 +37,14 @@
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   html,body{margin:0; background:#0e1418; color:#e8eef2;
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Hiragino Kaku Gothic ProN",Meiryo,sans-serif;}
-  .wrap{max-width:480px; margin:0 auto; padding:0 0 20px;}
+  /* スマホ1画面完結：ページスクロールは発生させない（盤面側が縮んで収まる） */
+  body{overflow:hidden;}
+  .wrap{max-width:480px; margin:0 auto;
+    height:100vh; height:100dvh; /* dvh非対応ブラウザはvhへフォールバック */
+    display:flex; flex-direction:column; overflow:hidden;
+    padding:0 0 6px; padding-bottom:max(6px, env(safe-area-inset-bottom));}
+  /* 盤面(.boardWrap)だけが伸縮し、他の行は固定高を保つ */
+  .wrap>.hud,.wrap>.turn,.wrap>.onlineBar,.wrap>.controls,.wrap>.legend,.wrap>.log{flex:none;}
 
   /* ===== Unity版風 上部HUD（スコア＋タイマー） ===== */
   .hud{position:relative; padding:8px 12px 6px;
@@ -51,7 +58,14 @@
   .scoreRow .bigscore{font-size:34px; font-weight:900; font-variant-numeric:tabular-nums;
     text-shadow:0 2px 4px #000,0 0 10px rgba(0,0,0,.6); min-width:42px; text-align:center; color:#fff;}
   .scoreRow .vs{font-size:14px; color:#fff; opacity:.7; margin:0 4px; font-weight:700;}
-  .clockRow{display:flex; align-items:center; justify-content:center; gap:10px; margin-top:4px;}
+  .clockRow{display:flex; align-items:center; justify-content:center; gap:10px; margin-top:4px; position:relative;}
+  /* オンラインバー開閉トグル（タイマー行の右隅） */
+  .onlineToggle{position:absolute; right:0; top:50%; transform:translateY(-50%);
+    height:28px; border:0; border-radius:8px; padding:0 9px; color:#cfe3ee; cursor:pointer;
+    font-size:10px; font-weight:900; letter-spacing:.04em; white-space:nowrap;
+    background:linear-gradient(180deg,#2d4355,#1f2d39);
+    box-shadow:0 2px 0 #111920, inset 0 1px 0 rgba(255,255,255,.12);}
+  .onlineToggle.active{background:linear-gradient(180deg,#32c7a7,#16866d); color:#fff; box-shadow:0 2px 0 #0a4f40;}
   .chessClock{position:relative; width:46px; height:46px; flex:none;}
   .chessClock .clockDial{position:absolute; inset:0; border-radius:50%;
     background-image:var(--clockDial); background-size:100% 100%;
@@ -92,7 +106,11 @@
   .score{font-size:22px; font-variant-numeric:tabular-nums; min-width:26px; text-align:center;}
   .turn{font-size:11px; color:#9fb0bd; text-align:center; margin-bottom:8px;}
 
-  .boardWrap{padding:4px 10px 8px; position:relative;}
+  /* 盤面は「残り高さ」基準でサイズが決まる（幅基準から変更）。min-height:0 が無いとflexで縮まない */
+  .boardWrap{padding:4px 10px 6px; position:relative; flex:1 1 auto; min-height:0;
+    display:flex; justify-content:center;}
+  /* 盤面と選択UI(#selectFan)を正確に重ねるためのボックス。高さに合わせて幅がアスペクト比で決まる */
+  .boardBox{position:relative; height:100%; aspect-ratio:705 / 1143; max-width:100%;}
   /* Unity版の選択UI：タップしたマスで駒が拡大展開し、ボールが独立トークンとして飛び出す */
   .ballToken{position:absolute; width:34%; max-width:30px; transform:translate(-50%,-50%);
     z-index:10; cursor:pointer; pointer-events:auto; animation:ballPop .16s ease-out;
@@ -104,7 +122,7 @@
   @keyframes ballPop{from{transform:translate(-50%,-50%) scale(.3); opacity:0;} to{opacity:1;}}
   .piece.dimmed{opacity:.38; filter:grayscale(.5) brightness(.65);}
   /* 駒/ボール選択の扇ポップアップ：マス中心から放射状に広がる選択肢 */
-  #selectFan{position:absolute; top:4px; left:10px; right:10px; bottom:8px; z-index:30; pointer-events:none;}
+  #selectFan{position:absolute; inset:0; z-index:30; pointer-events:none;}
   .selOpt{position:absolute; width:46px; height:46px; transform:translate(-50%,-50%) scale(.3); opacity:0;
     pointer-events:auto; cursor:pointer; border-radius:50%;
     background:radial-gradient(circle at 40% 35%, rgba(30,50,70,.96), rgba(10,20,30,.96));
@@ -128,8 +146,8 @@
   .selOpt.pop{animation:selPop .2s ease-out forwards !important; z-index:40;}
   @keyframes selPop{0%{transform:translate(-50%,-50%) scale(1);} 60%{transform:translate(-50%,-50%) scale(1.65);}
     100%{transform:translate(-50%,-50%) scale(1.4); opacity:.85;}}
-  /* field.png(705x1143=0.617)に合わせる。従来の5/7(0.714)は横伸び＆グリッドずれの原因だった */
-  .board{position:relative; width:100%; aspect-ratio:705 / 1143;
+  /* field.png(705x1143=0.617)。アスペクト比は親 .boardBox が持ち、盤はそこへ100%で追従する */
+  .board{position:relative; width:100%; height:100%;
     background-image:var(--fieldImg);
     background-size:100% 100%; background-repeat:no-repeat; background-position:center;
     border-radius:6px; overflow:visible; touch-action:none; /* 展開時のコマがはみ出しても切れないように */
@@ -191,8 +209,10 @@
     transform:translate(-50%,-50%); z-index:5; pointer-events:none;
     background:url(data:image/png;base64,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) center/contain no-repeat; transition:all .25s;}
 
-  .onlineBar{display:grid; grid-template-columns:minmax(0,1fr) minmax(74px,.5fr) auto auto auto; gap:6px; align-items:center;
+  /* オンラインバーはデフォルト折りたたみ（HUDの🌐トグルで開閉）。?room=自動参加時は開いた状態で開始 */
+  .onlineBar{display:none; grid-template-columns:minmax(0,1fr) minmax(74px,.5fr) auto auto auto; gap:6px; align-items:center;
     padding:7px 10px 0;}
+  .onlineBar.open{display:grid;}
   .onlineInput{min-width:0; height:31px; border:1px solid rgba(255,255,255,.16);
     border-radius:8px; padding:0 9px; color:#d9f2ff; background:rgba(8,15,22,.74);
     font-size:12px; font-weight:800; letter-spacing:.06em; text-transform:uppercase;
@@ -256,6 +276,14 @@
   .log{margin:10px 10px 0; background:rgba(12,18,24,.85); border-radius:9px; padding:8px 10px;
     font-size:11px; line-height:1.5; color:#aebdc8; height:72px; overflow-y:auto;
     box-shadow:inset 0 1px 3px rgba(0,0,0,.5);}
+  /* スマホ幅では盤面の高さを最優先：凡例を隠し、ログ/余白を圧縮 */
+  @media (max-width:520px){
+    .legend{display:none;}
+    .log{height:48px; margin-top:6px; padding:6px 10px;}
+    .hud{padding:6px 12px 4px;}
+    .controls{margin-top:6px;}
+    .btn{padding:10px 8px;}
+  }
 
   /* ボール軌跡演出（Unity版 BallBehaviour TrailRenderer 相当） */
   #ballFxLayer{position:fixed; inset:0; z-index:850; pointer-events:none; overflow:hidden;}
@@ -464,6 +492,7 @@ body.replaying .boardWrap::after{content:"";position:absolute;inset:0;}
         <span class="clockHalf" id="halfInfo">前半</span>
         <span class="half" id="turnInfo">ターン 1</span>
       </div>
+      <button class="onlineToggle" id="onlineToggleBtn" type="button">🌐 ONLINE</button>
     </div>
     <div class="timerWrap">
       <div class="timerBarBg" id="timerBarBg"></div>
@@ -472,7 +501,7 @@ body.replaying .boardWrap::after{content:"";position:absolute;inset:0;}
     </div>
   </div>
 
-  <div class="turn" id="modeHint" style="color:#5ad1ff;min-height:14px;text-align:center;font-size:11px;padding:4px 10px 0"></div>
+  <div class="turn" id="modeHint" style="color:#5ad1ff;min-height:14px;text-align:center;font-size:11px;padding:4px 10px 0;margin-bottom:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
 
   <div class="onlineBar">
     <input class="onlineInput" id="onlineRoomInput" placeholder="ROOM CODE" autocomplete="off">
@@ -491,15 +520,17 @@ body.replaying .boardWrap::after{content:"";position:absolute;inset:0;}
 
   <!-- ===== フィールド ===== -->
   <div class="boardWrap">
-    <div class="board" id="board"></div>
-    <div id="selectFan"></div>
+    <div class="boardBox">
+      <div class="board" id="board"></div>
+      <div id="selectFan"></div>
+    </div>
   </div>
 
   <!-- Unity版準拠：選択は盤上ポップアップ（駒=移動／ボール=パス／シュートも扇内の選択肢）。下部はTURN ENDのみ -->
   <div class="controls">
     <button class="btn primary" id="endTurnBtn">TURN END（決定）</button>
   </div>
-  <div class="controls" style="margin-top:8px">
+  <div class="controls" style="margin-top:6px">
     <button class="btn ghost" id="resetBtn">配置リセット</button>
     <button class="btn ghost" id="tackleDemoBtn">タックル実演</button>
     <button class="btn ghost" id="offsideDemoBtn">オフサイド実演</button>
@@ -2102,9 +2133,9 @@ function render(){
   const hint=document.getElementById('modeHint');
   if(isOnlineSpectator())hint.textContent='観戦中：試合進行を表示中';
   else if(state.phase==='replay')hint.textContent='▶ リプレイ再生中…';
-  else if(state.mode==='pass')hint.textContent='パス：青い丸のマス（味方/空マス）をタップ／ボールをタップした際の選択肢からシュートも可能';
-  else if(state.mode==='move')hint.textContent='移動/ドリブル：黄色いマスをタップ／ボールをタップでパスに切替';
-  else hint.textContent='駒をタップ＝移動、ボールをタップ＝パス／シュート（Unity版準拠）。仕込んだら TURN END';
+  else if(state.mode==='pass')hint.textContent='パス先（青い丸のマス）をタップ';
+  else if(state.mode==='move')hint.textContent='移動先（黄色いマス）をタップ';
+  else hint.textContent='駒/ボールをタップで仕込み → TURN END';
   renderSelectFan(); // 駒/ボール選択の扇ポップアップ
 }
 
@@ -3055,6 +3086,7 @@ function requestOnlineRematch(){
 function autoJoinOnlineRoomFromUrl(){
   const roomCode=roomCodeFromUrl();
   if(!roomCode) return;
+  setOnlineBarOpen(true); // ?room= 共有URLから開いた場合はバーを展開した状態で開始
   const requestedRole=roomRoleFromUrl();
   syncOnlineDisplayName({send:false});
   const input=document.getElementById('onlineRoomInput');
@@ -3110,6 +3142,17 @@ document.getElementById('onlineNameInput').addEventListener('keydown',ev=>{
     syncOnlineDisplayName({send:true});
     ev.currentTarget.blur();
   }
+});
+/* オンラインバーの開閉（表示のみ。接続状態やロジックには触れない） */
+function setOnlineBarOpen(open){
+  const bar=document.querySelector('.onlineBar');
+  const btn=document.getElementById('onlineToggleBtn');
+  if(bar) bar.classList.toggle('open', !!open);
+  if(btn) btn.classList.toggle('active', !!open);
+}
+document.getElementById('onlineToggleBtn').addEventListener('click',()=>{
+  const bar=document.querySelector('.onlineBar');
+  setOnlineBarOpen(!(bar && bar.classList.contains('open')));
 });
 document.getElementById('onlineLeaveBtn').addEventListener('click',()=>{
   leaveOnlineRoom();
