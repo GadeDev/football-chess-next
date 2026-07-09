@@ -2405,6 +2405,14 @@ function isPassable(p,x,y){
   return BALL_LIMIT.some(([lx,ly])=>lx===dx&&ly===dy);
 }
 
+/* パスモード中にタップした駒が「このターン既にボールを出した駒」なら、
+   戻しパスではなく“その駒の選択（＝移動の仕込み）”を優先する。
+   Unity版はパス後に受け手が自動でパスモードにならないため、パサーを普通に選択して動かせる。
+   Web版の自動連鎖（continueChainFrom）では直前のパサーが必ずパス範囲内に居るため、
+   タップが常に戻しパスに化けて「ボールを出した駒が移動できない」実バグになっていた（2026-07-10報告）。 */
+function preferSelectOverPassBack(p){
+  return p && p.team===localPlayerTeam() && chainPassedIds.has(p.id) && !chainMovedIds.has(p.id);
+}
 function onPieceClick(p,cx,cy){
   if(state.phase!=='input'){ playFeedback('error'); log('入力待ちではありません'); return; }
   // 駒選択中に、行動先として有効なマス（相手駒/自駒が既に乗っているマスも含む）をタップした場合は
@@ -2412,6 +2420,8 @@ function onPieceClick(p,cx,cy){
   // ここでonCellClickと同じ判定をこちらでも行う。
   if(state.selected){
     if(state.mode==='pass' && isPassable(state.selected,p.x,p.y)){
+      // ボールを出した駒（未移動）のタップは戻しパスではなく選択＝移動の仕込みへ
+      if(preferSelectOverPassBack(p)){ selectPieceItem(p); return; }
       // タップした駒自身が味方（＝パス対象そのもの）ならその駒へ直接パス。
       // 相手の駒や、同マスの別の味方駒をタップした場合はマスへのパス扱い（doPassToCell側で
       // 味方がいれば自動的にその駒へのパスに切り替わる）。
@@ -2487,7 +2497,12 @@ function onCellClick(x,y){
   // 駒選択中：有効な行動先なら実行、範囲外タップなら選択解除（キャンセル）
   if(state.selected){
     const p=state.selected;
-    if(state.mode==='pass' && isPassable(p,x,y)){ doPassToCell(p,x,y); return; }
+    if(state.mode==='pass' && isPassable(p,x,y)){
+      // マス上の味方が「ボールを出した駒（未移動）」だけなら、戻しパスではなくその駒の選択へ
+      const mates=piecesAt(x,y).filter(q=>q.team===localPlayerTeam());
+      if(mates.length && mates.every(q=>preferSelectOverPassBack(q))){ selectPieceItem(mates[0]); return; }
+      doPassToCell(p,x,y); return;
+    }
     if(state.mode==='move' && isMovable(p,x,y)){
       // 種別は「ユーザーがどの行動を選んだか」だけで決める（実行時のライブなボール保持状態から逆算しない）。
       // ドリブルはボールをタップして選ぶ操作（chainHolder）でのみ成立する。
