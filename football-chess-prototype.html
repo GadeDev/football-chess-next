@@ -515,6 +515,27 @@
 #matchingOverlay .mmCom{display:block;width:100%;border:none;border-radius:9px;margin-bottom:8px;
   background:linear-gradient(180deg,#5db6ff,#1f7be0 60%,#1565c0);color:#fff;font-size:12.5px;font-weight:800;padding:11px 0;cursor:pointer;}
 #matchingOverlay .mmCancel{display:block;width:100%;border:none;border-radius:9px;background:#28425f;color:#dfeaf6;font-size:12px;padding:10px 0;cursor:pointer;}
+/* フレンド対戦（maniacs FriendMatchScreen相当） */
+.ogFriendLink{display:block;width:100%;margin:12px 0 4px;border:1px solid rgba(255,215,0,.35);border-radius:10px;
+  background:rgba(255,215,0,.07);color:#ffe9a8;font-size:12.5px;font-weight:700;padding:12px 8px;cursor:pointer;}
+.ogFriendLink:active{filter:brightness(1.3);}
+#friendOverlay{position:fixed;inset:0;z-index:5400;background:rgba(2,6,12,.8);display:flex;align-items:center;justify-content:center;}
+#friendOverlay .panel{position:relative;background:#0c1f36;border:1px solid #2d5a8c;border-radius:12px;padding:24px 22px;width:min(86vw,340px);text-align:center;}
+#friendOverlay .frTitle{color:#eaf4ff;font-size:16px;font-weight:800;letter-spacing:.08em;margin-bottom:14px;}
+#friendOverlay .frBig{display:block;width:100%;border:1px solid rgba(90,180,255,.4);border-radius:10px;margin-bottom:10px;
+  background:rgba(68,136,204,.14);color:#fff;font-size:14px;font-weight:800;padding:14px 0;cursor:pointer;}
+#friendOverlay .frBig.sub{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.15);}
+#friendOverlay .frLabel{color:#8fb4da;font-size:12px;margin-bottom:6px;}
+#friendOverlay .frCode{color:#5ab4ff;font-size:26px;font-weight:800;letter-spacing:.12em;font-family:ui-monospace,monospace;margin-bottom:12px;}
+#friendOverlay .frCopyRow{display:flex;gap:8px;justify-content:center;margin-bottom:14px;}
+#friendOverlay .frCopy{border:1px solid rgba(90,180,255,.4);border-radius:8px;background:rgba(68,136,204,.12);
+  color:#5ab4ff;font-size:12px;font-weight:700;padding:8px 14px;cursor:pointer;}
+#friendOverlay .frCopy.copied{background:rgba(68,170,68,.2);color:#7fd76f;border-color:rgba(68,170,68,.4);}
+#friendOverlay .frWait{color:#8fb4da;font-size:12px;display:flex;align-items:center;justify-content:center;gap:8px;}
+#friendOverlay .mmSpinner.small{width:18px;height:18px;border-width:3px;margin:0;}
+#friendOverlay input{width:100%;box-sizing:border-box;background:#0d2038;border:1px solid #29517c;border-radius:8px;
+  color:#eaf4ff;font-size:18px;letter-spacing:.1em;text-align:center;font-family:ui-monospace,monospace;padding:10px;margin-bottom:12px;}
+#friendOverlay .frError{color:#ff9a86;font-size:11.5px;min-height:14px;margin-top:4px;}
 
 /* コスト変更（Unity UICostChangeDialog 相当。表向きの呼称は「ランク」、数値は「コスト」併記） */
 #ogCostPicker{position:fixed;inset:0;z-index:5200;background:rgba(2,6,12,.66);display:flex;align-items:center;justify-content:center;}
@@ -737,6 +758,8 @@ body.replaying .boardWrap::after{content:"";position:absolute;inset:0;}
       <div id="ogFormationList"></div>
       <div class="ogSectionTitle small">保存スロット</div>
       <div id="ogSlotList"></div>
+      <!-- フレンド対戦（footballchessmaniacs FriendMatchScreen相当：招待コード/URLで友達と対戦） -->
+      <button class="ogFriendLink" id="ogFriendBtn">🤝 フレンド対戦（招待コード/URLで友達と対戦）</button>
     </div>
 <div class="ogPage" id="ogPageSub" style="display:none">
       <button class="ogBackBtn" id="ogSubBackBtn">← 戻る</button>
@@ -779,6 +802,33 @@ body.replaying .boardWrap::after{content:"";position:absolute;inset:0;}
     <button class="ogKickoff online" id="ogOnlineBtn">オンライン対戦<span class="sub">自動マッチング</span></button>
     <button class="ogTab" id="ogTabSub"><span class="ogTabIco"></span>サブスク</button>
     <button class="ogTab" id="ogTabSettings"><span class="ogTabIco"></span>設定</button>
+  </div>
+</div>
+
+<!-- フレンド対戦オーバーレイ（footballchessmaniacs FriendMatchScreen相当：部屋を作る/部屋に入る・ID/URLコピー・参加待ち） -->
+<div id="friendOverlay" style="display:none">
+  <div class="panel">
+    <button class="closeX" id="frCloseBtn" aria-label="閉じる">×</button>
+    <div class="frTitle">フレンド対戦</div>
+    <div class="frMenu" id="frMenu">
+      <button class="frBig" id="frCreateBtn">部屋を作る</button>
+      <button class="frBig sub" id="frJoinModeBtn">部屋に入る</button>
+    </div>
+    <div class="frHosting" id="frHosting" style="display:none">
+      <div class="frLabel">ルームID</div>
+      <div class="frCode" id="frRoomCode">FC-XXXX-XXXX</div>
+      <div class="frCopyRow">
+        <button class="frCopy" id="frCopyIdBtn">IDをコピー</button>
+        <button class="frCopy" id="frCopyUrlBtn">URLをコピー</button>
+      </div>
+      <div class="frWait"><span class="mmSpinner small"></span>相手の参加を待っています…</div>
+    </div>
+    <div class="frJoining" id="frJoining" style="display:none">
+      <div class="frLabel">ルームIDを入力</div>
+      <input id="frJoinInput" maxlength="12" placeholder="FC-XXXX-XXXX" autocomplete="off">
+      <button class="frBig" id="frJoinBtn">参加</button>
+    </div>
+    <div class="frError" id="frError"></div>
   </div>
 </div>
 
@@ -893,6 +943,7 @@ function showCutin(key, dur, opts){
 function showCutinAtPiece(key, dur, x, y, opts){ return showCutin(key, dur, opts); }
 /* セル(x,y)の中心をビューポート座標(px)に変換。render()の駒配置と同じ計算式を流用。 */
 function cellCenterViewport(x,y){
+  ({x,y}=toViewXY(x,y)); // 表示座標へ視点変換（アニメ全般のファネル）
   const ci=COLS.indexOf(x), ri=ROWS.indexOf(y);
   if(ci<0||ri<0) return null;
   const rect=boardEl.getBoundingClientRect();
@@ -952,7 +1003,7 @@ function animateBallFlight(from,to,team,options={}){
   const dist=Math.hypot(end.x-start.x,end.y-start.y);
   const duration=options.duration || Math.max(kind==='shoot'?300:260, Math.min(kind==='shoot'?620:520, dist*1.45));
   const arc=options.arc ?? Math.min(kind==='shoot'?58:38, Math.max(12, dist*.16));
-  const colors=ballFxColors(team);
+  const colors=ballFxColors(viewTeam(team));
   const ballEl=document.createElement('div');
   ballEl.className='ball-flight'+(kind==='shoot'?' shoot':'');
   ballEl.style.setProperty('--glow',colors.glow);
@@ -1009,11 +1060,11 @@ function animatePieceMove(piece,from,to,options={}){
   const dist=Math.hypot(end.x-start.x,end.y-start.y);
   const duration=options.duration || Math.max(220, Math.min(380, dist*1.15));
   const el=document.createElement('div');
-  el.className='piece-flight '+piece.team;
+  el.className='piece-flight '+viewTeam(piece.team);
   el.style.width=size+'px';
   el.style.height=size+'px';
   const img=document.createElement('img');
-  img.src=IMG[piece.posType+'_'+piece.team];
+  img.src=IMG[piece.posType+'_'+viewTeam(piece.team)];
   el.appendChild(img);
   layer.appendChild(el);
   return new Promise(resolve=>{
@@ -2334,17 +2385,13 @@ function renderOnlineStatus(){
   if(btn){
     btn.disabled=isOnlineSpectator();
     if(online.connected && !online.enabled) btn.textContent='観戦中';
-    else btn.textContent=online.enabled ? (online.waiting?'送信済み':`TURN END（${localTeamLabel()}送信）`) : 'TURN END（決定）';
+    else btn.textContent=online.enabled ? (online.waiting?'送信済み':'TURN END（決定）') : 'TURN END（決定）';
   }
+  // ヘッダーは常に自分視点（あなた/あいて）。視点変換で自分=青見えのため、論理色の「赤/青」表記は出さない
   const names=document.querySelectorAll('.teamName');
   if(names[0]&&names[1]){
-    if(online.enabled && (online.role==='b'||online.role==='r')){
-      names[0].textContent=localTeamLabel();
-      names[1].textContent=remoteOpponentTeam()==='b'?'青':'赤';
-    }else{
-      names[0].textContent=t('you');
-      names[1].textContent=t('opp');
-    }
+    names[0].textContent=t('you');
+    names[1].textContent=t('opp');
   }
   renderOnlineRoster();
 }
@@ -2415,6 +2462,14 @@ function syncTurnTimer(){
   else stopTurnTimer();
 }
 
+/* ===== オンライン視点変換（Unity版準拠：ホストもゲストも「自分=青・下から上へ攻める」）=====
+   赤席のプレイヤーには盤を点対称（x→-x, y→1-y）で反転表示し、駒の見た目の色も入れ替える。
+   ロジック座標・チーム・通信は一切変更しない（表示とアニメ座標だけの変換）。
+   toViewXYは対合（2回適用で元に戻る）。セルのクリックは論理座標のまま配線されるため入力系は無変換でよい。 */
+function viewFlipped(){ return online.enabled && localPlayerTeam()==='r'; }
+function toViewXY(x,y){ return viewFlipped() ? {x:-x, y:1-y} : {x,y}; }
+function viewTeam(team){ return viewFlipped() ? (team==='b'?'r':'b') : team; }
+
 /* ===== 描画 ===== */
 const boardEl=document.getElementById('board');
 let replayHiddenPieceIds=new Set();
@@ -2428,7 +2483,10 @@ function render(){
   boardEl.innerHTML='';
   const cw=100/COLS.length, ch=100/ROWS.length;
   BOARD.forEach(c=>{
-    const ci=COLS.indexOf(c.x), ri=ROWS.indexOf(c.y);
+    // 表示位置のみ視点変換（赤席は点対称）。クリックハンドラ等は論理座標(c.x,c.y)のまま。
+    // 盤エリアは上下対称なのでエリア色/ラベルは反転後も一致する
+    const vc=toViewXY(c.x,c.y);
+    const ci=COLS.indexOf(vc.x), ri=ROWS.indexOf(vc.y);
     const el=document.createElement('div');
     el.className='cell '+c.t;
     el.style.left=(ci*cw)+'%'; el.style.top=(ri*ch)+'%';
@@ -2472,7 +2530,7 @@ function render(){
         const o=offs[i]||offs[offs.length-1];
         pe.style.left=o[0]+'%'; pe.style.top=o[1]+'%';
         const img=document.createElement('img');
-        img.src=IMG[p.posType+'_'+p.team];
+        img.src=IMG[p.posType+'_'+viewTeam(p.team)]; // 表示色は視点変換（赤席では自分=青見え）
         pe.appendChild(img);
         // ランク（コスト）バッジ：Unity版のCost表示に相当（編成画面と同じ★アイコンを流用）
         const rank=document.createElement('span');
@@ -2505,7 +2563,8 @@ function render(){
   });
   // フリーボール（マスに単独で存在する状態）を描画
   if(ball.target==='cell'){
-    const ci=COLS.indexOf(ball.x), ri=ROWS.indexOf(ball.y);
+    const vb=toViewXY(ball.x,ball.y);
+    const ci=COLS.indexOf(vb.x), ri=ROWS.indexOf(vb.y);
     const b=document.createElement('div'); b.className='ballfree';
     b.style.left=((ci+0.5)*cw)+'%';
     b.style.top=((ri+0.5)*ch)+'%';
@@ -2522,7 +2581,7 @@ function render(){
       const g=document.createElement('div');
       const img=document.createElement('img');
       if(cmd.type==='move'||cmd.type==='dribble'){
-        g.className='ghost'; img.src=IMG[p.posType+'_'+p.team];
+        g.className='ghost'; img.src=IMG[p.posType+'_'+viewTeam(p.team)];
       }else if(cmd.type==='pass'||cmd.type==='throughpass'){
         g.className='ghost ghostBall'; img.src=IMG.ball||IMG.have_ball;
       }else{ return; } // shoot等はゴースト対象外
@@ -2584,7 +2643,8 @@ function renderSelectFan(){
   const {x,y}=state.popup;
   const items=buildSelectItems(x,y);
   if(items.length<1) return;
-  const pci=COLS.indexOf(x), pri=ROWS.indexOf(y);
+  const vf=toViewXY(x,y);
+  const pci=COLS.indexOf(vf.x), pri=ROWS.indexOf(vf.y);
   if(pci<0||pri<0) return;
   const cw=100/COLS.length, ch=100/ROWS.length;
   const cx=(pci+0.5)*cw, cy=(pri+0.5)*ch;   // マス中心（%）＝弧の起点
@@ -2608,7 +2668,7 @@ function renderSelectFan(){
       const sp=document.createElement('span'); sp.textContent='SHOOT'; el.appendChild(sp);
     }else{
       const img=document.createElement('img');
-      img.src = it.type==='ball' ? (IMG.ball||IMG.have_ball) : IMG[it.piece.posType+'_'+it.piece.team];
+      img.src = it.type==='ball' ? (IMG.ball||IMG.have_ball) : IMG[it.piece.posType+'_'+viewTeam(it.piece.team)];
       el.appendChild(img);
     }
     el.title = it.type==='ball' ? 'ボール' : (it.type==='shoot' ? 'シュート' : label(it.piece));
@@ -3271,6 +3331,7 @@ function deadlineSuffix(inputDeadlineAt){
 function applyOnlinePresence(presence){
   if(!presence||!online.roomCode) return;
   online.presence=presence;
+  frOnPresenceUpdate(); // フレンド待機中なら両席が埋まった時点でオーバーレイを閉じて対戦へ
   if(online.connected && !online.enabled){
     setOnlineStatus(`${online.roomCode} / 観戦`,'live');
     return;
@@ -4082,7 +4143,7 @@ function spawnGoalBurst(){
 }
 /* 自分の得点のみ：チーム色＋金の紙吹雪（軽量CSSパーティクル26個・1.5sで消える） */
 function spawnGoalConfetti(team){
-  const colors= team==='b'
+  const colors= viewTeam(team)==='b'
     ? ['#5ab4ff','#9fd4ff','#ffd94d','#ffffff']
     : ['#ff6e5a','#ffb09f','#ffd94d','#ffffff'];
   const wrap=document.createElement('div');
@@ -4116,7 +4177,7 @@ async function playGoalConverge(team,mine){
     if(vp){
       el=document.createElement('div');
       el.id='goalConverge';
-      el.className=`${team} play`;
+      el.className=`${viewTeam(team)} play`;
       el.style.left=vp.x+'px'; el.style.top=vp.y+'px';
       document.body.appendChild(el);
     }
@@ -4411,7 +4472,7 @@ function openResultOverlay(){
     const selfTeam=online.enabled?localPlayerTeam():'b';
     timeline.forEach(g=>{
       const row=document.createElement('div');
-      row.className='g '+g.team;
+      row.className='g '+(g.team===selfTeam?'b':'r'); // 自分視点の色分け
       row.textContent=`${g.half} ターン${g.turn}　${t('rsGoal')}（${g.team===selfTeam?t('you'):t('opp')}）`;
       goals.appendChild(row);
     });
@@ -4900,6 +4961,79 @@ async function startMatchmaking(){
   tick();
 }
 document.getElementById('ogOnlineBtn').addEventListener('click',()=>{ playFeedback('submit'); ogSaveDeck(); startMatchmaking(); });
+
+/* ===== フレンド対戦（footballchessmaniacs FriendMatchScreen相当） =====
+   部屋を作る＝既存のROOM作成→接続し、コードと参加URLを大きく表示（ID/URLコピー・参加待ちスピナー）。
+   相手が席に着いたら（room.presenceで両席が埋まったら）オーバーレイを自動で閉じて対戦へ。
+   部屋に入る＝コード入力（?room= 共有URLからの参加は従来どおり自動）。 */
+function frSetMode(mode){
+  document.getElementById('frMenu').style.display=mode==='menu'?'':'none';
+  document.getElementById('frHosting').style.display=mode==='hosting'?'':'none';
+  document.getElementById('frJoining').style.display=mode==='joining'?'':'none';
+  document.getElementById('frError').textContent='';
+}
+function frOpen(){ frSetMode('menu'); ogShow('friendOverlay',true); }
+function frClose(){ ogShow('friendOverlay',false); }
+function frShareUrl(){ return `${location.origin}${location.pathname}?room=${encodeURIComponent(online.roomCode||'')}`; }
+async function frCopy(btnId,text){
+  const btn=document.getElementById(btnId);
+  try{
+    await navigator.clipboard.writeText(text);
+    btn.classList.add('copied');
+    const orig=btn.dataset.label||btn.textContent;
+    btn.dataset.label=orig;
+    btn.textContent='コピーしました!';
+    setTimeout(()=>{ btn.classList.remove('copied'); btn.textContent=btn.dataset.label; },1500);
+  }catch{ document.getElementById('frError').textContent='コピーに失敗しました（手動で選択してください）'; }
+}
+document.getElementById('ogFriendBtn').addEventListener('click',()=>{ playFeedback('tap'); ogSaveDeck(); frOpen(); });
+document.getElementById('frCloseBtn').addEventListener('click',()=>{ playFeedback('cancel'); frClose(); });
+document.getElementById('frCreateBtn').addEventListener('click',async()=>{
+  playFeedback('submit');
+  document.getElementById('frError').textContent='';
+  try{
+    await createOnlineRoom(); // 既存のROOM作成＋接続（自分がホスト=青席）
+    if(!online.roomCode) throw new Error('room create failed');
+    document.getElementById('frRoomCode').textContent=online.roomCode;
+    frSetMode('hosting');
+  }catch(err){
+    console.error(err);
+    document.getElementById('frError').textContent='部屋の作成に失敗しました。通信環境を確認してください';
+  }
+});
+document.getElementById('frCopyIdBtn').addEventListener('click',()=>frCopy('frCopyIdBtn',online.roomCode||''));
+document.getElementById('frCopyUrlBtn').addEventListener('click',()=>frCopy('frCopyUrlBtn',frShareUrl()));
+document.getElementById('frJoinModeBtn').addEventListener('click',()=>{ playFeedback('tap'); frSetMode('joining'); });
+document.getElementById('frJoinBtn').addEventListener('click',async()=>{
+  playFeedback('submit');
+  const raw=(document.getElementById('frJoinInput').value||'').trim().toUpperCase();
+  if(!raw){ document.getElementById('frError').textContent='ルームIDを入力してください'; return; }
+  document.getElementById('frError').textContent='';
+  try{
+    online.apiBase=defaultOnlineApiBase();
+    frClose();
+    ogShow('ogHome',false);
+    await connectOnlineRoom(raw,null,null);
+  }catch(err){
+    console.error(err);
+    ogShowHome();
+    frOpen(); frSetMode('joining');
+    document.getElementById('frError').textContent='ルームが見つかりません（IDを確認してください）';
+  }
+});
+/* 相手が席に着いたらホスト側のフレンド待機を自動で閉じて対戦画面へ */
+function frOnPresenceUpdate(){
+  const overlay=document.getElementById('friendOverlay');
+  if(!overlay||overlay.style.display==='none') return;
+  if(document.getElementById('frHosting').style.display==='none') return;
+  const players=online.presence&&online.presence.players;
+  const bothSeated=players ? !!(players.b&&players.r) : false;
+  if(bothSeated){
+    frClose();
+    ogShow('ogHome',false); // 対戦画面へ（既に接続済み）
+    log('フレンドが参加しました。対戦開始！');
+  }
+}
 document.getElementById('mmCancelBtn').addEventListener('click',()=>{ playFeedback('cancel'); stopMatchmaking(true); });
 document.getElementById('mmComBtn').addEventListener('click',()=>{
   playFeedback('submit');
