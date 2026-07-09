@@ -2156,9 +2156,13 @@ function render(){
       const offs=STACK_OFFSET[Math.min(ps.length,3)]||STACK_OFFSET[3];
       ps.forEach((p,i)=>{
         const pe=document.createElement('div');
+        // 仕込み中(input)は連鎖プレビューの保持駒(chainHolderId)を優先し、未設定なら実際の保持駒に出す。
+        // chainHolderId は自チーム保持時のみ設定されるため、相手チーム保持のままターンが始まると
+        // ボール表示がどこにも出ない実バグがあった（オフサイド修正で相手ボール再開が増えて顕在化）。
+        const realHasBall = ball.target==='piece'&&ball.pieceId===p.id;
         const hasBall = state.phase==='input'
-          ? (chainHolderId===p.id)
-          : (ball.target==='piece'&&ball.pieceId===p.id);
+          ? (chainHolderId!=null ? chainHolderId===p.id : realHasBall)
+          : realHasBall;
         const isSel=(state.selected&&state.selected.id===p.id);
         pe.className='piece'+(i>0?' stackBack':'')+(hasBall?' hasball':'')+(isSel?' psel':'')+(hasCommand(p.id)?' reserved':'')+(dimOthers?' dimmed':'');
         const o=offs[i]||offs[offs.length-1];
