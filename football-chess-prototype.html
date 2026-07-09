@@ -2778,6 +2778,32 @@ function syncBallAfterServerEvent(event){
     setBallToCell(event.to.x,event.to.y,event.details?.sourceTeam||event.team,true);
   }
 }
+/* 通常移動イベントか（ボールを運ばないpiece.moved＝一斉再生の対象） */
+function isPlainServerMove(event){
+  return event?.type==='piece.moved' && !!event.from && !!event.to && !event.details?.carryBall;
+}
+/* 連続する通常移動イベントの一斉再生（replayServerPieceMoveの非運搬ケースをまとめて実行） */
+async function replayServerPieceMovesTogether(events){
+  const jobs=[];
+  for(const ev of events){
+    onlineLogEvent(ev); // 個別再生時（playServerEvent冒頭）と同じくログは全件出す
+    const piece=pieceById(ev.pieceId);
+    if(!piece) continue;
+    jobs.push({piece, ev});
+  }
+  if(jobs.length===0) return;
+  jobs.forEach(j=>replayHiddenPieceIds.add(j.piece.id));
+  render();
+  await Promise.all(jobs.map(j=>animatePieceMove(j.piece,j.ev.from,j.ev.to,{duration:280})));
+  jobs.forEach(j=>{
+    replayHiddenPieceIds.delete(j.piece.id);
+    j.piece.x=j.ev.to.x;
+    j.piece.y=j.ev.to.y;
+    j.piece.moved=true;
+  });
+  render();
+}
+
 async function replayServerPieceMove(event){
   const piece=pieceById(event?.pieceId);
   if(!piece||!event.from||!event.to) return;
@@ -2935,10 +2961,18 @@ async function playServerResolution(resolution,snapshot,reason){
   if(reason==='timeout') log('入力期限に達したため、未送信側は操作なしで解決します');
   await showCutin('start_turn',450);
   let snapshotRevealed=false;
-  for(const event of (resolution?.events||[])){
-    if(event.type==='turn.completed') continue;
+  const events=(resolution?.events||[]).filter(e=>e.type!=='turn.completed');
+  for(let i=0;i<events.length;i++){
+    const event=events[i];
     if(!snapshotRevealed && shouldRevealResolutionSnapshot(event)){
       snapshotRevealed=revealResolutionSnapshot(snapshot);
+    }
+    // 通常移動（ボール非運搬のpiece.moved）が連続する区間は一斉にアニメ再生（ローカル再生と同じ方針）
+    if(isPlainServerMove(event)){
+      const group=[event];
+      while(i+1<events.length && isPlainServerMove(events[i+1])) group.push(events[++i]);
+      await replayServerPieceMovesTogether(group);
+      continue;
     }
     await playServerEvent(event);
   }
@@ -3416,8 +3450,19 @@ async function resolveSimultaneousTurn(){
     ...merged.filter(c=>isNormalMoveCommand(c)&&!landingMoveRefs.has(c)),
   ];
 
-  // 順番に実行
-  for(const cmd of ordered){
+  // 順番に実行。ただし通常移動（'move'）が連続する区間は一斉にアニメ再生する。
+  // 通常移動は実行時に相互作用（タックル/カットイン/ボール処理）を起こさないため、
+  // まとめて動かしても解決順・結果は順次実行と同一（2026-07-10 見た目の同時感と時間短縮のため）。
+  for(let i=0;i<ordered.length;i++){
+    const cmd=ordered[i];
+    if(cmd.type==='move'){
+      const group=[cmd];
+      while(i+1<ordered.length && ordered[i+1].type==='move') group.push(ordered[++i]);
+      await execPlainMovesTogether(group);
+      render();
+      if(turnStopped) break;
+      continue;
+    }
     await execCommand(cmd,turnStartHasBallTeam);
     render();
     if(turnStopped) break;
@@ -3490,6 +3535,27 @@ async function advanceMatchClock(){
       state.matchOver=true;
     }
   }
+}
+
+/* 通常移動の一斉実行：連続する'move'コマンドをまとめて滑走アニメし、完了後に座標を確定する。
+   通常移動は実行時に相互作用（タックル/カットイン/ボール処理）を起こさないため、
+   結果は1件ずつの順次実行と同一。ドリブル/パス/シュートは対象外（従来どおりexecCommandで順次）。 */
+async function execPlainMovesTogether(cmds){
+  const jobs=[];
+  for(const cmd of cmds){
+    const p=pieceById(cmd.pieceId);
+    if(!p) continue; // 既に奪われた等（execCommandと同じ扱い）
+    jobs.push({p, from:{x:p.x,y:p.y}, to:{x:cmd.tx,y:cmd.ty}});
+  }
+  if(jobs.length===0) return;
+  jobs.forEach(j=>replayHiddenPieceIds.add(j.p.id));
+  render();
+  await Promise.all(jobs.map(j=>animatePieceMove(j.p,j.from,j.to)));
+  jobs.forEach(j=>{
+    replayHiddenPieceIds.delete(j.p.id);
+    j.p.x=j.to.x; j.p.y=j.to.y;
+    log(`${j.p.team==='b'?'青':'赤'} ${label(j.p)} → (${j.to.x},${j.to.y}) 移動`);
+  });
 }
 
 async function execCommand(cmd,turnStartHasBallTeam=ballHolder()?.team||null){
