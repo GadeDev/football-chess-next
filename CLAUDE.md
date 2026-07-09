@@ -85,6 +85,7 @@ Claude Code がこのリポジトリで作業する際の指針。詳細な背�
 - 削除済みUI（2026-07-08）：配置リセット/タックル実演ボタン、操作説明文（modeHint）、凡例、ヘッダーの「🌐 ONLINE」文字（アイコン化）、MATCH TIME円形ロゴ（テキスト時計に置換）。`#resetBtn` はKICK OFF処理が `click()` を呼ぶため**非表示で残置**（削除禁止）。HOME/オフサイド実演/ログは☰メニュー内へ移設。
 - 旧版ChessClock枠デザイン（円形文字盤）の再現は将来の任意課題（`--clockDial`/`--clockFrame` のbase64アセットは残置済み）。
 - **ターン入力タイマー（2026-07-09実装）**：フッターの残り時間バー（`#timerBar`/`#timerLabel`）は `INPUT_TIME_SEC=20` 秒のカウントダウン。Unity `BattleSequence.TurnElement` の `FCTime.Out(BattleDef.MoveTurnTimeSecond)` 相当で、時間切れは仕込み済みコマンドのまま `endTurnBtn.click()` を自動発火。オフラインAI戦の仕込み中のみ作動（オンライン=サーバー3分期限が権威／リプレイ・試合終了・アウトゲーム表示中は停止して満タン表示）。開始/停止は `syncTurnTimer()` に集約し、`render()` と `ogShow()` から呼ぶ（ホーム画面表示中に裏で自動決定しないため。この呼び出しを消さないこと）。
+- **フルタイム結果ダイアログ（2026-07-09実装）**：オフライン試合の試合終了時に `showFulltimeResult()`（`#fulltimeResult`、z-index:5300）でスコア＋勝敗＋「もう一度プレイ」（`resetBtn.click()`）＋「ホームへ戻る」（`ogShowHome()`）を表示する。**これが無いと試合終了後に再開手段が見えず手詰まりになる**（リセットボタンは非表示・案内ログは☰メニュー内のため。スマホ実機で「ゲームが止まった」と報告された実バグ）。呼び出し元は `resolveSimultaneousTurn` の `matchOver` 分岐のみ＝オフライン限定（オンラインは対戦バーのFULL TIME表示＋再戦/退出が既存導線）。文言はL10N辞書（`ftWin/ftLose/ftDraw/ftAgain/ftHome`）。
 - **フッター/ヘッダーの重なり順（2026-07-09修正・戻さないこと）**：`#board`/`#selectFan` のゴール行は盤画像の上下へ透明のままはみ出すが、`.boardWrap` が positioned のため素のままでは透明グリッドが後続の `.footerBar` より手前になり **TURN END がタップ不能になる**（スマホで発覚した実バグ）。対策として `.wrap>.hud/.onlineBar/.menuBar/.footerBar` に `position:relative; z-index:20` を付与済み（`#selectFan` の z-index:30 より下なので弧ポップアップは従来どおり最前面）。ゴールマスの `pointer-events:none` だけでは不十分（親の `#board` 自体がヒットテストに掛かる）。
 
 ## 検証方法

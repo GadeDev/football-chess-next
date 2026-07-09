@@ -463,6 +463,20 @@ body.replaying .boardWrap::after{content:"";position:absolute;inset:0;}
 #ogLogin .guest{display:block;width:100%;margin-top:8px;border:none;border-radius:9px;background:#28425f;color:#dfeaf6;font-size:12px;padding:9px 0;cursor:pointer;}
 #ogLogin .note{color:#6f93b8;font-size:10.5px;margin-top:12px;line-height:1.6;}
 
+/* ===== フルタイム結果ダイアログ（オフライン試合終了時。Unityのリザルト→ホーム導線相当） =====
+   これが無いと試合終了後に何も押せない手詰まりに見える（リセットボタンは非表示・ログは☰内のため） */
+#fulltimeResult{position:fixed;inset:0;z-index:5300;background:rgba(2,6,12,.72);display:flex;align-items:center;justify-content:center;}
+#fulltimeResult .panel{background:#0c1f36;border:1px solid #2d5a8c;border-radius:12px;padding:22px 20px;width:min(86vw,340px);text-align:center;}
+#fulltimeResult .ttl{color:#ffd24d;font-weight:800;font-size:18px;letter-spacing:.14em;}
+#fulltimeResult .score{color:#eaf4ff;font-weight:800;font-size:36px;margin:10px 0 2px;}
+#fulltimeResult .names{color:#a8cdf0;font-size:11px;margin-bottom:12px;}
+#fulltimeResult .result{font-size:14px;font-weight:800;margin-bottom:16px;}
+#fulltimeResult .result.win{color:#7fd76f;}
+#fulltimeResult .result.lose{color:#ff8d7a;}
+#fulltimeResult .result.draw{color:#bfd6ec;}
+#fulltimeResult .again{display:block;width:100%;border:none;border-radius:9px;background:linear-gradient(180deg,#5db6ff,#1f7be0 60%,#1565c0);color:#fff;font-size:14px;font-weight:800;padding:12px 0;cursor:pointer;}
+#fulltimeResult .home{display:block;width:100%;margin-top:8px;border:none;border-radius:9px;background:#28425f;color:#dfeaf6;font-size:12px;padding:10px 0;cursor:pointer;}
+
 .ogUserBox .badge{display:inline-block;font-size:10px;font-weight:800;border-radius:6px;padding:2px 7px;margin-bottom:2px;letter-spacing:.05em;}
 .ogUserBox .badge.premium{background:linear-gradient(180deg,#ffe48a,#d6a01e);color:#3a2c05;}
 .ogUserBox .badge.free{background:#28425f;color:#cfe4fa;}
@@ -640,6 +654,17 @@ body.replaying .boardWrap::after{content:"";position:absolute;inset:0;}
     <div class="ttl" id="ogCostTitle">コスト変更</div>
     <div class="opts" id="ogCostOpts"></div>
     <button class="cancel" id="ogCostCancel">キャンセル</button>
+  </div>
+</div>
+<!-- フルタイム結果ダイアログ（オフライン試合終了時。文言はL10N辞書から showFulltimeResult() が流し込む） -->
+<div id="fulltimeResult" style="display:none">
+  <div class="panel">
+    <div class="ttl">FULL TIME</div>
+    <div class="score" id="ftScore">0 - 0</div>
+    <div class="names" id="ftNames"></div>
+    <div class="result" id="ftOutcome"></div>
+    <button class="again" id="ftAgainBtn"></button>
+    <button class="home" id="ftHomeBtn"></button>
   </div>
 </div>
 <div id="ogToast"></div>
@@ -1777,8 +1802,10 @@ function buildTeams(){
    以後、画面に出す文言の追加・変更はすべてこの辞書経由（t('key')）で行う。
    今回は state.lang='ja' 固定。言語切替UIは未実装。 */
 const L10N={
-  ja:{ you:'あなた', opp:'あいて' },
-  en:{ you:'YOU',    opp:'OPP' }
+  ja:{ you:'あなた', opp:'あいて',
+       ftWin:'勝利！', ftLose:'敗北…', ftDraw:'引き分け', ftAgain:'もう一度プレイ', ftHome:'ホームへ戻る' },
+  en:{ you:'YOU',    opp:'OPP',
+       ftWin:'WIN!',  ftLose:'LOSE…', ftDraw:'DRAW',     ftAgain:'PLAY AGAIN',      ftHome:'HOME' }
 };
 const t=k=>(L10N[state.lang]??L10N.ja)[k]??k;
 
@@ -3330,6 +3357,7 @@ async function resolveSimultaneousTurn(){
     await showCutin('start_turn',700);
     log(`―― 試合終了（フルタイム）　あなた ${state.scoreSelf} - ${state.scoreOpp} 相手 ――`);
     render();
+    showFulltimeResult(); // オフライン試合の終了導線（これが無いと再開手段が見えず手詰まり。オンラインは対戦バーの再戦/退出を使う）
     return;
   }
   resetChain();
@@ -3677,6 +3705,29 @@ function onlineDeckPayload(){
 
 /* ---- 画面制御 ---- */
 function ogShow(el,on){ document.getElementById(el).style.display=on?'':'none'; syncTurnTimer(); } // 画面遷移でタイマー開始/停止を追従（ホーム表示中に裏で自動決定しないように）
+
+/* ===== フルタイム結果ダイアログ（オフライン試合終了時） ===== */
+function showFulltimeResult(){
+  document.getElementById('ftScore').textContent=`${state.scoreSelf} - ${state.scoreOpp}`;
+  document.getElementById('ftNames').textContent=`${t('you')} - ${t('opp')}`;
+  const outcome=document.getElementById('ftOutcome');
+  const diff=state.scoreSelf-state.scoreOpp;
+  outcome.textContent=diff>0?t('ftWin'):diff<0?t('ftLose'):t('ftDraw');
+  outcome.className='result '+(diff>0?'win':diff<0?'lose':'draw');
+  document.getElementById('ftAgainBtn').textContent=t('ftAgain');
+  document.getElementById('ftHomeBtn').textContent=t('ftHome');
+  ogShow('fulltimeResult',true);
+}
+document.getElementById('ftAgainBtn').addEventListener('click',()=>{
+  playFeedback('submit');
+  ogShow('fulltimeResult',false);
+  document.getElementById('resetBtn').click(); // 現在の編成のままキックオフから再開
+});
+document.getElementById('ftHomeBtn').addEventListener('click',()=>{
+  playFeedback('tap');
+  ogShow('fulltimeResult',false);
+  ogShowHome();
+});
 function ogShowTitle(){ ogShow('ogTitle',true); }
 function ogShowHome(){
   ogShow('ogHome',true);
