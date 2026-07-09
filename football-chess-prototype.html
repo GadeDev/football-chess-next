@@ -353,6 +353,32 @@
   .cutin .cutin-band{position:absolute; inset:0; transform:skewX(0);}
   /* カットインは全種とも同一サイズの中央帯で統一（Unity BattleTurnCutInBehaviour 準拠。2026-07-10）。
      旧・駒追従の小型プレート(.cutin.onpiece 120px)は「プレートの大きさが揃わない」ため廃止。戻さないこと。 */
+  /* ===== ゴール演出（第4弾）。秒数はJS側 GOAL_FX に集約 ===== */
+  /* ①自分の得点時のみ軽い画面シェイク（2px・0.2s） */
+  @keyframes goalShake{0%,100%{transform:none;}20%{transform:translate(2px,1px);}40%{transform:translate(-2px,-1px);}60%{transform:translate(2px,-1px);}80%{transform:translate(-2px,1px);}}
+  body.goalShake .wrap{animation:goalShake .2s linear;}
+  /* ②フラッシュ：自分=白く強く/失点=赤系で弱く短く */
+  #goalFlash{position:fixed;inset:0;z-index:1000;pointer-events:none;opacity:0;}
+  #goalFlash.mine{background:#fff;animation:goalFlashMine .15s ease-out;}
+  #goalFlash.concede{background:#c8321e;animation:goalFlashConcede .12s ease-out;}
+  @keyframes goalFlashMine{from{opacity:.85;}to{opacity:0;}}
+  @keyframes goalFlashConcede{from{opacity:.22;}to{opacity:0;}}
+  /* ②失点時はGOALカットインの彩度を落とす */
+  .cutin.concede{filter:saturate(.35) brightness(.8);}
+  /* ③スコアパンチ：新しい数字が弾んで入る＋得点側三角錐のグロー */
+  .bigscore.punch{display:inline-block;animation:scorePunch .4s cubic-bezier(.2,1.4,.4,1);}
+  @keyframes scorePunch{from{transform:scale(1.6);}to{transform:scale(1);}}
+  .scoreTri.glowGold{filter:drop-shadow(0 0 6px #ffd94d) drop-shadow(0 0 12px #ffb300) brightness(1.4);transition:filter .45s;}
+  .scoreTri.glowRed{filter:drop-shadow(0 0 5px rgba(255,90,70,.8)) brightness(1.15);transition:filter .45s;}
+  /* ④収束：得点=チーム色の光がゴール位置から拡散フェード／失点=暗転気味フェード */
+  #goalConverge{position:fixed;z-index:900;pointer-events:none;width:64px;height:64px;border-radius:50%;transform:translate(-50%,-50%);}
+  #goalConverge.b{background:radial-gradient(circle,rgba(90,180,255,.85),rgba(90,180,255,0) 70%);}
+  #goalConverge.r{background:radial-gradient(circle,rgba(255,110,90,.85),rgba(255,110,90,0) 70%);}
+  #goalConverge.play{animation:goalConvergeExpand .7s ease-out forwards;}
+  @keyframes goalConvergeExpand{from{transform:translate(-50%,-50%) scale(.4);opacity:1;}to{transform:translate(-50%,-50%) scale(9);opacity:0;}}
+  #goalConcedeFade{position:fixed;inset:0;z-index:900;pointer-events:none;background:#000;opacity:0;}
+  #goalConcedeFade.play{animation:goalConcedeDip .7s ease forwards;}
+  @keyframes goalConcedeDip{0%{opacity:0;}45%{opacity:.45;}100%{opacity:0;}}
   /* 専用画像が無いカットイン（fulltime/halftime等）は既存プレートと同形式のテキスト帯で表示 */
   .cutin.textband{background:linear-gradient(90deg,rgba(6,22,44,0) 0%,rgba(8,30,60,.94) 12%,rgba(12,44,88,.96) 50%,rgba(8,30,60,.94) 88%,rgba(6,22,44,0) 100%);
     height:96px;display:flex;align-items:center;justify-content:center;
@@ -729,10 +755,11 @@ const CUTIN_LABEL={
   'additional-time':'AT', halftime:'HALF TIME', fulltime:'FULL TIME'
 };
 let cutinQueue=[]; let cutinPlaying=false;
-/* カットインは全種とも画面中央の同一サイズ帯で表示（Unity BattleTurnCutInBehaviour 準拠）。 */
-function showCutin(key, dur){
+/* カットインは全種とも画面中央の同一サイズ帯で表示（Unity BattleTurnCutInBehaviour 準拠）。
+   opts.cssClass=追加クラス（例:失点時'concede'のトーン落とし）／opts.quietSe=既定SEを鳴らさない */
+function showCutin(key, dur, opts){
   return new Promise(resolve=>{
-    cutinQueue.push({key,dur:dur||1000,resolve});
+    cutinQueue.push({key,dur:dur||1000,resolve,opts:opts||null});
     if(!cutinPlaying) playNextCutin();
   });
 }
@@ -895,10 +922,11 @@ function animatePieceMove(piece,from,to,options={}){
 function playNextCutin(){
   if(cutinQueue.length===0){ cutinPlaying=false; return; }
   cutinPlaying=true;
-  const {key,dur,resolve}=cutinQueue.shift();
+  const {key,dur,resolve,opts}=cutinQueue.shift();
   const layer=document.getElementById('cutinLayer');
   const el=document.createElement('div');
   el.className='cutin';
+  if(opts?.cssClass) el.classList.add(opts.cssClass);
   el.style.setProperty('--dur',dur+'ms');
   const src=(typeof CUTIN!=='undefined')?CUTIN[key]:null;
   if(src){ const img=document.createElement('img'); img.src=src; el.appendChild(img); }
@@ -908,7 +936,7 @@ function playNextCutin(){
   layer.appendChild(el);
   void el.offsetWidth;
   el.classList.add('play');
-  playFeedbackForCutin(key);
+  if(!opts?.quietSe) playFeedbackForCutin(key);
   setTimeout(()=>{ el.remove(); resolve(); playNextCutin(); }, dur);
 }
 async function playCutins(keys){ for(const k of keys){ await showCutin(k, 950); } }
@@ -2884,7 +2912,7 @@ async function playServerEvent(event){
     await replayServerKickSequence(event,eventFrom);
     await animateBallFlight(eventFrom,goalCellFor(event.team),event.team,{kind:'shoot',duration:520,arc:58});
     if(applyServerScore(event.details?.score)) render();
-    await showCutin('goal',900);
+    await playGoalCelebration(event.team); // 第4弾：得点/失点は自分視点で演出差別化（表示のみ・同期に影響なし）
   }else if(event?.type==='pass.cut'){
     const cutAt=event.details?.cutAt||event.to;
     if(event.from&&cutAt) await animateBallFlight(event.from,cutAt,event.team,{kind:'pass',duration:300,arc:24});
@@ -3689,10 +3717,86 @@ async function execCommand(cmd,turnStartHasBallTeam=ballHolder()?.team||null){
     render();
   }
 }
+/* ===== ゴール演出（第4弾）＝4段構成・合計約2秒 =====
+   ①一拍0.3s（自分の得点のみ画面シェイク）→②GOALカットイン1.0s（フラッシュ重ね。失点は赤弱＋彩度落とし・SE無音）
+   →③スコアパンチ（②と並行。数字バウンス＋得点側三角錐グロー）→④収束0.7s（得点=チーム色拡散光/失点=暗転フェード）。
+   得点判定・スコア集計・キックオフ再開のロジックは不変（見せる時間を挟むだけ）。
+   画面タップで④をスキップ。goalFxActiveで二重発火ガード。秒数はGOAL_FXに集約（実機体感で調整前提）。 */
+const GOAL_FX={pause:300, cutin:1000, converge:700};
+let goalFxActive=false;
+let goalFxSkip=false;
+function goalFxIsMine(team){ return team===(online.enabled?localPlayerTeam():'b'); }
+function goalFxSleep(ms,skippable){
+  return new Promise(res=>{
+    const t0=Date.now();
+    const iv=setInterval(()=>{ if((skippable&&goalFxSkip)||Date.now()-t0>=ms){ clearInterval(iv); res(); } },50);
+  });
+}
+async function playGoalCelebration(team){
+  if(goalFxActive) return; // 二重発火ガード
+  goalFxActive=true;
+  goalFxSkip=false;
+  const onTap=()=>{ goalFxSkip=true; };
+  document.addEventListener('pointerdown',onTap,true);
+  try{
+    const mine=goalFxIsMine(team);
+    // ①決まった瞬間の一拍（自分の得点のみ軽い画面シェイク）
+    if(mine){
+      document.body.classList.add('goalShake');
+      setTimeout(()=>document.body.classList.remove('goalShake'),250);
+    }
+    await goalFxSleep(GOAL_FX.pause,false);
+    // ②GOALカットイン＋フラッシュ、③スコアパンチ（並行）
+    spawnGoalFlash(mine);
+    punchScore(mine);
+    await showCutin('goal',GOAL_FX.cutin, mine?null:{cssClass:'concede',quietSe:true});
+    // ④収束（タップでスキップ可）
+    if(!goalFxSkip) await playGoalConverge(team,mine);
+  }finally{
+    document.removeEventListener('pointerdown',onTap,true);
+    goalFxActive=false;
+  }
+}
+function spawnGoalFlash(mine){
+  const el=document.createElement('div');
+  el.id='goalFlash';
+  el.className=mine?'mine':'concede';
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),220);
+}
+function punchScore(mine){
+  render(); // 加算済みスコアを表示に反映してから弾ませる（更新タイミングのロジックは不変）
+  const num=document.getElementById(mine?'scoreSelf':'scoreOpp');
+  if(num){ num.classList.remove('punch'); void num.offsetWidth; num.classList.add('punch'); setTimeout(()=>num.classList.remove('punch'),450); }
+  const tri=document.querySelector(mine?'.scoreTri.b':'.scoreTri.r'); // ヘッダーのb側は常に自分表示
+  if(tri){ const cls=mine?'glowGold':'glowRed'; tri.classList.add(cls); setTimeout(()=>tri.classList.remove(cls),650); }
+}
+async function playGoalConverge(team,mine){
+  let el=null;
+  if(mine){
+    const g=goalCellFor(team);
+    const vp=g?cellCenterViewport(g.x,g.y):null;
+    if(vp){
+      el=document.createElement('div');
+      el.id='goalConverge';
+      el.className=`${team} play`;
+      el.style.left=vp.x+'px'; el.style.top=vp.y+'px';
+      document.body.appendChild(el);
+    }
+  }else{
+    el=document.createElement('div');
+    el.id='goalConcedeFade';
+    el.className='play';
+    document.body.appendChild(el);
+  }
+  await goalFxSleep(GOAL_FX.converge,true);
+  if(el) el.remove();
+}
+
 async function scoreGoal(team){
   turnStopped=true;
   if(team==='r'){state.scoreOpp++;}else{state.scoreSelf++;}
-  await showCutin('goal',1300);
+  await playGoalCelebration(team); // 第4弾：従来のgoalカットイン(1.3s)を内包した約2秒の祝祭
   log(team==='b'?'⚽ ゴール！':'⚽ 相手ゴール！');
   const kickoffTeam=team==='b'?'r':'b';
   buildKickoffForTeam(kickoffTeam,{keepTurnStopped:true});
