@@ -17,8 +17,17 @@
     "ENVIRONMENT": "production",
     "CONTENT_SLUG": "universofutbol-football-chess",
     "PUBLIC_BASE_PATH": "/universofutbol/football-chess",
-    "UNIVERSO_FUTBOL_URL": "https://universofutbol.com"
+    "UNIVERSO_FUTBOL_URL": "https://universofutbol.com",
+    "PLATFORM_API_ORIGIN": "https://fc-platform-api.yanagiho.workers.dev"
   },
+  // 同一アカウントの workers.dev 同士は素の fetch() では相手のWorkerに到達しないため、
+  // Universo Platform API (fc-platform-api) はサービスバインディング経由で呼ぶ
+  "services": [
+    {
+      "binding": "PLATFORM_API",
+      "service": "fc-platform-api"
+    }
+  ],
   "durable_objects": {
     "bindings": [
       {

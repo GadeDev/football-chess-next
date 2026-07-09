@@ -19,6 +19,7 @@ Football Chess Web版を universofutbol.com に組み込むためのログイン
 | POST | `/auth/logout` | `Authorization: Bearer` | セッション破棄 |
 | GET | `/auth/me` | `Authorization: Bearer` | ログイン状態とサブスク状態を返す |
 | POST | `/auth/sso` | `{token: <JWT>}` | UniversoFutbol発行のSSOトークンでログイン（下記） |
+| POST | `/auth/uf-sso` | `{access_token}` | **Universo Platform (fc-platform-api) の access token でログイン（現行の本番SSO、下記）** |
 | POST | `/billing/subscribe` | `Authorization: Bearer` | デモサブスク加入（30日） |
 | POST | `/billing/cancel` | `Authorization: Bearer` | サブスク解約 |
 
@@ -29,6 +30,24 @@ Football Chess Web版を universofutbol.com に組み込むためのログイン
 - ホームのフッターに「サブスク」タブ（Unity UISubscriptionPage 相当）。加入/解約/状態表示
 - コスト変更はプレミアム限定（非加入者はサブスクページへ誘導）。フォーメーション変更・保存スロットは無料のまま
 - ログインするとオンライン対戦の表示名もアカウント名に同期
+
+## Universo Platform SSO ハンドオフ（2026-07-09 実装・現行の本番経路）
+
+ポータル（universo-frontpage、universo-futbol.com）のゲームカードは
+`GET /api/auth/launch?to=https://mini.footballchess.io` を経由し、ログイン済みなら
+`https://mini.footballchess.io/#uf_sso=<base64url JSON>` に 302 リダイレクトする
+（payload: `{access_token, refresh_token, expires_in, user_id, email, source}`。fragment なのでサーバーには送られない）。
+
+### フロー
+1. クライアント（`ogHandleUfSsoFromHash`）が起動時に `#uf_sso` を検出 → fragment を即座にURLから除去
+2. payload の `access_token` を `POST /auth/uf-sso` に送信
+3. Worker が service binding `PLATFORM_API`（→ `fc-platform-api`。同一アカウントの workers.dev 同士は素の fetch 不可）経由で検証:
+   - `GET /v1/users/me`（Bearer）→ トークン有効性 + `user_id` + `state=active` 確認
+   - `GET /v1/portal/users/{user_id}/profile` → 表示名（失敗時 `UF-<id先頭8桁>`）
+   - `GET /v1/entitlements?state=active&tag=uf_subscription` → UF共通サブスクを premium として同期
+4. `external_id = "uf:<platform user_id>"` でアカウント自動作成/紐づけ → 通常セッション発行
+- 必要な設定: wrangler.jsonc の `services`（PLATFORM_API）と vars `PLATFORM_API_ORIGIN`。Secret 不要
+- ポータル側の許可リスト: universo-frontpage `src/pages/api/auth/launch.ts` の `ALLOWED_GAME_HOSTS`（mini.footballchess.io 登録済み）
 
 ## UniversoFutbol(WordPress) 側で将来やること — SSO 連携
 

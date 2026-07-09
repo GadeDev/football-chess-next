@@ -270,6 +270,65 @@ async function verifySsoToken(
   };
 }
 
+/* Universo Futbol Platform (fc-platform-api) の access token を検証してプロフィールを得る。
+   ポータル(universo-frontpage)の /api/auth/launch が付ける #uf_sso ハンドオフの受け口。
+   同一アカウントの workers.dev 同士は素の fetch() が通らないため service binding 経由で呼ぶ。 */
+async function verifyUniversoPlatformToken(
+  env: Env,
+  accessToken: string,
+): Promise<{ externalId: string; name: string; subscribed: boolean } | null> {
+  const binding = (env as { PLATFORM_API?: Fetcher }).PLATFORM_API;
+  if (!binding) return null;
+  const origin =
+    (env as { PLATFORM_API_ORIGIN?: string }).PLATFORM_API_ORIGIN ??
+    "https://fc-platform-api.yanagiho.workers.dev";
+  const authHeaders = { authorization: `Bearer ${accessToken}` };
+
+  // トークン検証 + user_id 取得（無効・期限切れトークンはここで弾かれる）
+  const meRes = await binding.fetch(`${origin}/v1/users/me`, { headers: authHeaders });
+  if (!meRes.ok) return null;
+  const me = parseJsonObject(await meRes.text());
+  const userId = me && typeof me.user_id === "string" ? me.user_id : "";
+  if (!userId || !me) return null;
+  if (typeof me.state === "string" && me.state !== "active") return null;
+
+  // 表示名（公開プロフィール）。失敗してもログインは通す
+  let name = "";
+  try {
+    const profRes = await binding.fetch(`${origin}/v1/portal/users/${userId}/profile`);
+    if (profRes.ok) {
+      const prof = parseJsonObject(await profRes.text());
+      if (prof && typeof prof.display_name === "string") name = prof.display_name;
+    }
+  } catch {
+    /* 表示名はフォールバックで続行 */
+  }
+
+  // UFサブスク（uf_subscription_*、game_id=NULL の共通サブスク）を premium として同期
+  let subscribed = false;
+  try {
+    const entRes = await binding.fetch(
+      `${origin}/v1/entitlements?state=active&tag=uf_subscription`,
+      { headers: authHeaders },
+    );
+    if (entRes.ok) {
+      const ent = parseJsonObject(await entRes.text());
+      const items = ent && Array.isArray(ent.items) ? (ent.items as unknown[]) : [];
+      subscribed = items.some(
+        (it) => !!it && typeof it === "object" && (it as { kind?: unknown }).kind === "subscription",
+      );
+    }
+  } catch {
+    /* サブスク同期失敗時は無料扱いで続行（次回SSOで再同期される） */
+  }
+
+  return {
+    externalId: `uf:${userId}`,
+    name: stringField(name, `UF-${userId.slice(0, 8)}`, 16),
+    subscribed,
+  };
+}
+
 function clientIp(request: Request): string {
   return request.headers.get("CF-Connecting-IP") ?? "unknown";
 }
@@ -292,7 +351,10 @@ async function handleAuthApi(request: Request, env: Env, pathname: string): Prom
   const route = `${request.method} ${pathname.slice(API_PREFIX.length)}`;
 
   const isAuthAttempt =
-    route === "POST /auth/register" || route === "POST /auth/login" || route === "POST /auth/sso";
+    route === "POST /auth/register" ||
+    route === "POST /auth/login" ||
+    route === "POST /auth/sso" ||
+    route === "POST /auth/uf-sso";
   if (isAuthAttempt && (await rateLimited(env, "auth", request))) {
     return problem(429, "試行回数が多すぎます。しばらく待ってから再試行してください");
   }
@@ -317,6 +379,14 @@ async function handleAuthApi(request: Request, env: Env, pathname: string): Prom
       const token = typeof body.token === "string" ? body.token : "";
       const profile = await verifySsoToken(token, secret);
       if (!profile) return problem(401, "Invalid SSO token");
+      return json(await accounts.ssoLogin(profile));
+    }
+    case "POST /auth/uf-sso": {
+      // Universo Futbol ポータルからのSSOハンドオフ（#uf_sso fragment の access_token）
+      const accessToken = typeof body.access_token === "string" ? body.access_token.trim() : "";
+      if (!accessToken) return problem(400, "access_token is required");
+      const profile = await verifyUniversoPlatformToken(env, accessToken);
+      if (!profile) return problem(401, "Invalid Universo Futbol access token");
       return json(await accounts.ssoLogin(profile));
     }
     case "POST /billing/subscribe":
