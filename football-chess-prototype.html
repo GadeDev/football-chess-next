@@ -416,11 +416,16 @@
 #ogDeckBoard .ogGrid{display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(3,1fr);gap:4px;}
 #ogDeckBoard .ogCell{position:relative;aspect-ratio:1/1;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.18);border-radius:6px;}
 #ogDeckBoard .ogRowLab{position:absolute;left:-2px;top:50%;transform:translate(-100%,-50%);color:#cfe8d2;font-size:10px;}
-.ogPiece{position:absolute;width:58%;transform:translate(-50%,-50%);cursor:pointer;transition:filter .15s;}
-.ogPiece:active{filter:brightness(1.4);}
+.ogPiece{position:absolute;width:58%;transform:translate(-50%,-50%);cursor:pointer;transition:filter .15s,transform .1s;}
+.ogPiece:active{filter:brightness(1.4);transform:translate(-50%,-50%) scale(.92);}
 .ogPiece img{width:100%;display:block;filter:drop-shadow(0 2px 3px rgba(0,0,0,.55));}
-.ogPiece .ogCost{position:absolute;right:-14%;bottom:-6%;width:56%;aspect-ratio:40/34;background-size:100% 100%;background-repeat:no-repeat;pointer-events:none;}
+.ogPiece .ogCost{position:absolute;right:-18%;bottom:-8%;width:73%;aspect-ratio:40/34;background-size:100% 100%;background-repeat:no-repeat;pointer-events:none;}
 .ogPiece.sel img{outline:2px solid #5ad1ff;outline-offset:2px;border-radius:8px;}
+.ogPiece.ogPulse{animation:ogPiecePulse .3s ease;}
+@keyframes ogPiecePulse{0%{transform:translate(-50%,-50%) scale(1);}50%{transform:translate(-50%,-50%) scale(1.15);}100%{transform:translate(-50%,-50%) scale(1);}}
+.ogHint{color:#7fa8d0;font-size:11px;text-align:center;margin:6px 2px 2px;}
+#ogTeamCost.punch{display:inline-block;animation:ogCostPunch .4s cubic-bezier(.2,1.4,.4,1);}
+@keyframes ogCostPunch{from{transform:scale(1.4);}to{transform:scale(1);}}
 
 #ogFormationList{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
 .ogFormBtn{background:var(--ogBtnBlue) center/100% 100% no-repeat;border:none;color:#fff;font-weight:700;font-size:11px;padding:10px 4px 12px;cursor:pointer;text-shadow:0 1px 2px rgba(0,0,0,.6);opacity:.82;}
@@ -454,13 +459,26 @@
 .ogKickoff{width:min(46vw,230px);height:66px;border:none;background:var(--ogFootMatch) center/100% 100% no-repeat;color:#fff;font-size:20px;font-weight:900;letter-spacing:.12em;text-shadow:0 2px 4px rgba(0,40,80,.65);cursor:pointer;transition:transform .12s;}
 .ogKickoff:active{transform:scale(.94);}
 
-/* コスト変更（Unity UICostChangeDialog 相当） */
+/* コスト変更（Unity UICostChangeDialog 相当。表向きの呼称は「ランク」、数値は「コスト」併記） */
 #ogCostPicker{position:fixed;inset:0;z-index:5200;background:rgba(2,6,12,.66);display:flex;align-items:center;justify-content:center;}
 #ogCostPicker .panel{background:#0c1f36;border:1px solid #2d5a8c;border-radius:12px;padding:16px 18px;width:min(84vw,340px);}
-#ogCostPicker .ttl{color:#eaf4ff;font-weight:700;font-size:14px;margin-bottom:10px;}
-#ogCostPicker .opts{display:flex;gap:8px;justify-content:center;margin-bottom:12px;}
-#ogCostPicker .opt{width:44px;aspect-ratio:40/34;border:none;background-color:transparent;background-size:100% 100%;cursor:pointer;filter:grayscale(.35);}
-#ogCostPicker .opt.cur{filter:none;outline:2px solid #5ad1ff;border-radius:6px;}
+#ogCostPicker .ttl{color:#eaf4ff;font-weight:700;font-size:14px;margin-bottom:4px;}
+#ogCostPicker .preview{color:#9fe8bd;font-size:12px;text-align:center;margin:0 0 12px;}
+#ogCostPicker .opts{display:flex;gap:8px;justify-content:center;margin-bottom:12px;flex-wrap:wrap;}
+#ogCostPicker .opt{position:relative;width:58px;min-height:80px;border:1px solid transparent;border-radius:8px;background-color:rgba(255,255,255,.05);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:2px;padding:8px 2px 5px;color:#dfeaf6;font-size:10px;font-weight:700;transition:transform .1s;}
+#ogCostPicker .opt:active{transform:scale(.94);}
+#ogCostPicker .opt .ic{width:40px;aspect-ratio:40/34;background-size:100% 100%;background-repeat:no-repeat;}
+#ogCostPicker .opt .num{font-size:11px;}
+#ogCostPicker .opt .delta{font-size:9px;font-weight:400;opacity:.85;white-space:nowrap;}
+#ogCostPicker .opt.cur{outline:2px solid #5ad1ff;background-color:rgba(90,209,255,.14);}
+#ogCostPicker .opt .curBadge{position:absolute;top:-8px;left:50%;transform:translateX(-50%);background:#5ad1ff;color:#03101f;font-size:8px;font-weight:900;padding:1px 5px;border-radius:6px;white-space:nowrap;}
+#ogCostPicker .opt.locked{cursor:not-allowed;opacity:.62;background-image:repeating-linear-gradient(-45deg,rgba(255,255,255,.07) 0 6px,transparent 6px 12px);}
+#ogCostPicker .opt.locked .ic{filter:grayscale(1);}
+#ogCostPicker .opt .lockIco{font-size:12px;line-height:1;}
+#ogCostPicker .opt .overLabel{font-size:8px;color:#ff9a86;font-weight:700;}
+#ogCostPicker .premiumLock{background:rgba(9,26,48,.9);border:1px solid #2d5a8c;border-radius:8px;padding:10px;margin:0 0 12px;text-align:center;}
+#ogCostPicker .premiumLock .msg{color:#eaf4ff;font-size:12px;margin-bottom:8px;}
+#ogCostPicker .premiumBtn{border:none;border-radius:8px;background:#e0a53a;color:#2a1a00;font-weight:800;font-size:12px;padding:8px 16px;cursor:pointer;}
 #ogCostPicker .cancel{display:block;margin:0 auto;background:#28425f;color:#dfeaf6;border:none;border-radius:8px;font-size:12px;padding:7px 18px;cursor:pointer;}
 
 #ogToast{position:fixed;left:50%;bottom:12vh;transform:translateX(-50%);z-index:6000;background:rgba(180,40,30,.92);color:#fff;font-size:13px;font-weight:700;padding:10px 18px;border-radius:10px;opacity:0;pointer-events:none;transition:opacity .25s;white-space:nowrap;}
@@ -648,7 +666,8 @@ body.replaying .boardWrap::after{content:"";position:absolute;inset:0;}
     <div class="ogPage" id="ogPageDeck">
       <div class="ogSectionTitle">チーム編成 <span id="ogTeamCost"></span></div>
       <div id="ogDeckBoard"><div class="ogGrid" id="ogDeckGrid"></div></div>
-      <div class="ogSectionTitle small">フォーメーション（駒をタップでコスト変更）</div>
+      <div class="ogHint" id="ogCostHint"></div>
+      <div class="ogSectionTitle small">フォーメーション</div>
       <div id="ogFormationList"></div>
       <div class="ogSectionTitle small">保存スロット</div>
       <div id="ogSlotList"></div>
@@ -659,7 +678,7 @@ body.replaying .boardWrap::after{content:"";position:absolute;inset:0;}
         <div class="plan">Football Chess プレミアム</div>
         <div class="price">月額 ¥480 <span class="demo">※デモ表示（実際の請求は発生しません）</span></div>
         <ul class="benefits">
-          <li>駒コスト変更の解放（Unity版と同じプレミアム特典）</li>
+          <li>駒のランク変更（コスト変更）の解放（Unity版と同じプレミアム特典）</li>
           <li>広告なしでプレイ</li>
           <li>今後追加: 限定フォーメーション・リプレイ保存 など</li>
         </ul>
@@ -713,8 +732,13 @@ body.replaying .boardWrap::after{content:"";position:absolute;inset:0;}
 <!-- コスト変更ダイアログ（Unity UICostChangeDialog 移植） -->
 <div id="ogCostPicker" style="display:none">
   <div class="panel">
-    <div class="ttl" id="ogCostTitle">コスト変更</div>
+    <div class="ttl" id="ogCostTitle">ランク変更</div>
+    <div class="preview" id="ogCostPreview"></div>
     <div class="opts" id="ogCostOpts"></div>
+    <div class="premiumLock" id="ogCostPremiumLock" style="display:none">
+      <div class="msg" id="ogCostPremiumMsg"></div>
+      <button class="premiumBtn" id="ogCostPremiumBtn"></button>
+    </div>
     <button class="cancel" id="ogCostCancel">キャンセル</button>
   </div>
 </div>
@@ -1136,15 +1160,17 @@ const T_PA_SHOOT=[
 // VAシュート基礎確率 [GKコスト][攻撃コスト]  DrawingVitalAreaShootMaster
 const T_VA_SHOOT=[
   [25,30,40,40,45],[20,25,40,40,45],[15,15,30,35,30],[15,15,25,30,30],[10,10,10,10,15]];
-// PK成功率 [攻撃][GK]  DrawingPKMaster
+// PK成功率 [攻撃][GK]  DrawingPKMaster（S3配信マスタ正式値。2026-07-10照合。
+// UnityはUSE_BASE64_MASTER有効＝配信マスタを使用するため、同梱LotteryDataのJSON値は正典ではない。
+// 旧値（同梱JSON由来 75〜90/65〜85/55〜75）はPK/FK/CKが決まりすぎるバグだった）
 const T_PK=[
-  [75,80,85,85,90],[70,75,85,85,90],[65,65,75,80,85],[65,65,70,75,85],[55,55,65,65,75]];
-// FK成功率 [攻撃][GK]  DrawingFKMaster
+  [60,70,70,80,80],[50,60,70,70,80],[50,50,60,70,70],[50,50,50,60,70],[40,50,50,50,60]];
+// FK成功率 [攻撃][GK]  DrawingFKMaster（配信正式値）
 const T_FK=[
-  [65,70,75,75,85],[60,65,75,75,85],[55,55,60,65,70],[55,55,55,60,70],[45,50,50,50,55]];
-// CK成功率 [攻撃][GK]  DrawingCKMaster
+  [50,60,60,70,70],[40,50,60,70,70],[40,40,50,60,60],[40,40,40,50,60],[40,40,40,40,50]];
+// CK成功率 [攻撃][GK]  DrawingCKMaster（配信正式値。FKと同値）
 const T_CK=[
-  [55,60,65,65,75],[50,55,65,65,75],[45,50,50,55,60],[45,50,45,50,60],[35,35,40,40,45]];
+  [50,60,60,70,70],[40,50,60,70,70],[40,40,50,60,60],[40,40,40,50,60],[40,40,40,40,50]];
 // スルーパス基礎 [相手][パス出す]  DrawingThroughPassMaster
 const T_THROUGH_PASS=[
   [50,55,60,60,75],[45,50,60,60,75],[30,30,40,45,50],[30,30,35,40,50],[25,25,25,25,30]];
@@ -1882,13 +1908,24 @@ const L10N={
   ja:{ you:'あなた', opp:'あいて',
        rsWin:'WIN', rsLose:'LOSE', rsDraw:'DRAW',
        rsRematch:'再戦', rsHome:'HOME', rsGoal:'ゴール',
-       rsOppWants:'相手が再戦を希望しています', rsRematchSent:'再戦希望を送信しました' },
+       rsOppWants:'相手が再戦を希望しています', rsRematchSent:'再戦希望を送信しました',
+       ogCostHint:'駒をタップでランク変更', ogCostCurrentBadge:'現在', ogCostOverLabel:'コスト超過',
+       ogCostPremiumMsg:'ランク変更はプレミアム限定です', ogCostPremiumBtn:'プレミアムについて',
+       ogCostTitleTpl:'{pos} のランク　現在 {rank}（コスト{cost}）',
+       ogCostPreviewTpl:'TEAM COST {total} / {max}',
+       ogCostToastTpl:'{pos} をランク{rank}に変更（TEAM COST {total}/{max}）' },
   en:{ you:'YOU',    opp:'OPP',
        rsWin:'WIN', rsLose:'LOSE', rsDraw:'DRAW',
        rsRematch:'REMATCH', rsHome:'HOME', rsGoal:'GOAL',
-       rsOppWants:'Opponent wants a rematch', rsRematchSent:'Rematch request sent' }
+       rsOppWants:'Opponent wants a rematch', rsRematchSent:'Rematch request sent',
+       ogCostHint:'Tap a piece to change its rank', ogCostCurrentBadge:'Current', ogCostOverLabel:'Over limit',
+       ogCostPremiumMsg:'Rank change is a premium feature', ogCostPremiumBtn:'About Premium',
+       ogCostTitleTpl:'{pos} rank — current {rank} (cost {cost})',
+       ogCostPreviewTpl:'TEAM COST {total} / {max}',
+       ogCostToastTpl:'Changed {pos} to rank {rank} (TEAM COST {total}/{max})' }
 };
 const t=k=>(L10N[state.lang]??L10N.ja)[k]??k;
+function tFmt(k,params){ let s=t(k); for(const p in params) s=s.split('{'+p+'}').join(params[p]); return s; }
 
 let state={lang:'ja',turn:1,half:'前半',scoreSelf:0,scoreOpp:0,
   selected:null,   // 選択中の駒
@@ -4170,6 +4207,9 @@ function ogRenderDeck(){
   const costEl=document.getElementById('ogTeamCost');
   costEl.textContent=`TEAM COST ${total.toFixed(1)} / ${OG_MAX_TEAM_COST.toFixed(1)}`;
   costEl.classList.toggle('over',total>OG_MAX_TEAM_COST);
+  costEl.classList.remove('punch');
+  if(ogCostPunchPending){ void costEl.offsetWidth; costEl.classList.add('punch'); ogCostPunchPending=false; }
+  document.getElementById('ogCostHint').textContent=t('ogCostHint');
   const grid=document.getElementById('ogDeckGrid');
   grid.innerHTML='';
   const cellMap={}; // "x,y" -> [pieceIndex]
@@ -4184,7 +4224,7 @@ function ogRenderDeck(){
       idx.forEach((pi,n)=>{
         const p=f.pos[pi], cost=ogDeck.costs[pi];
         const el=document.createElement('div');
-        el.className='ogPiece'+(pi===ogSelectedPiece?' sel':'');
+        el.className='ogPiece'+(pi===ogSelectedPiece?' sel':'')+(pi===ogLastChangedPiece?' ogPulse':'');
         const s=spots[Math.min(n,spots.length-1)];
         el.style.left=s[0]+'%'; el.style.top=s[1]+'%'; el.style.width=s[2]+'%';
         el.innerHTML=`<img src="${IMG[p[0]+'_b']}" alt="${p[0]}"><span class="ogCost" style="background-image:var(--cost${cost*10})"></span>`;
@@ -4194,6 +4234,7 @@ function ogRenderDeck(){
       grid.appendChild(cell);
     }
   }
+  ogLastChangedPiece=-1;
   // フォーメーション一覧
   const fl=document.getElementById('ogFormationList');
   fl.innerHTML='';
@@ -4227,33 +4268,67 @@ function ogRenderDeck(){
   }
 }
 
-/* ---- コスト変更（Unity UICostChangeDialog：上限16超の増加は拒否して戻す） ---- */
+/* ---- ランク（コスト）変更（Unity UICostChangeDialog：上限16超の増加は拒否して戻す） ---- */
+function ogRankLabel(cost){ return '★'.repeat(Math.floor(cost))+(cost%1!==0?'+':''); }
+// 変更後のチームコスト合計を返す純粋関数。事前プレビュー表示と実行時の上限判定は必ずこれ経由にする（判定式の二重実装を避ける）。
+function ogCostPreviewTotal(pi,level){ return ogDeckCost()-ogDeck.costs[pi]+level; }
+function ogCostExceedsLimit(pi,level){ return ogCostPreviewTotal(pi,level)>OG_MAX_TEAM_COST; }
+let ogLastChangedPiece=-1;
+let ogCostPunchPending=false;
 function ogOpenCostPicker(pi){
-  // Unity準拠: コスト変更はサブスク限定（UIDeckEditDialog の Cost Change 相当）
-  if(!ogIsPremium()){ ogShowSubRequired(); return; }
   ogSelectedPiece=pi; ogRenderDeck();
   const f=ogFormation(ogDeck.formationId);
   const pt=f.pos[pi][0].toUpperCase();
-  document.getElementById('ogCostTitle').textContent=`${pt} のコスト変更（現在 ${ogDeck.costs[pi]}）`;
+  const cur=ogDeck.costs[pi];
+  const premium=ogIsPremium();
+  document.getElementById('ogCostTitle').textContent=tFmt('ogCostTitleTpl',{pos:pt,rank:ogRankLabel(cur),cost:cur.toFixed(1)});
+  document.getElementById('ogCostPreview').textContent=tFmt('ogCostPreviewTpl',{total:ogDeckCost().toFixed(1),max:OG_MAX_TEAM_COST.toFixed(1)});
+  const lockPanel=document.getElementById('ogCostPremiumLock');
+  lockPanel.style.display=premium?'none':'';
+  if(!premium){
+    document.getElementById('ogCostPremiumMsg').textContent=t('ogCostPremiumMsg');
+    document.getElementById('ogCostPremiumBtn').textContent=t('ogCostPremiumBtn');
+  }
   const opts=document.getElementById('ogCostOpts');
   opts.innerHTML='';
   OG_COST_LEVELS.forEach(c=>{
+    const isCurrent=c===cur;
+    const overLimit=!isCurrent&&ogCostExceedsLimit(pi,c);
+    const locked=!premium||overLimit;
     const b=document.createElement('button');
-    b.className='opt'+(c===ogDeck.costs[pi]?' cur':'');
-    b.style.backgroundImage=`var(--cost${c*10})`;
-    b.title=`コスト${c}`;
-    b.addEventListener('click',()=>{
-      const cur=ogDeck.costs[pi];
-      const newTotal=ogDeckCost()-cur+c;
-      if(c>cur && newTotal>OG_MAX_TEAM_COST){
-        ogToast(`チームコスト上限 ${OG_MAX_TEAM_COST} を超えます（${newTotal.toFixed(1)}）`);
-        return;
-      }
-      ogDeck.costs[pi]=c; ogSaveDeck();
-      ogShow('ogCostPicker',false); ogSelectedPiece=-1; ogRenderDeck();
-    });
+    b.className='opt'+(isCurrent?' cur':'')+(locked?' locked':'');
+    b.disabled=!premium; // プレミアム未加入時のみ完全無効化。上限超過時は警告トーストを出すためタップ可能にする
+    let html=`<span class="ic" style="background-image:var(--cost${c*10})"></span><span class="num">${c.toFixed(1)}</span>`;
+    if(isCurrent) html+=`<span class="curBadge">${t('ogCostCurrentBadge')}</span>`;
+    if(!premium){
+      html+=`<span class="lockIco">🔒</span>`;
+    }else if(overLimit){
+      html+=`<span class="lockIco">🔒</span><span class="overLabel">${t('ogCostOverLabel')}</span>`;
+    }else{
+      const delta=c-cur;
+      const deltaText=delta===0?'±0':(delta>0?'+':'')+delta.toFixed(1);
+      html+=`<span class="delta">${deltaText}　→${ogCostPreviewTotal(pi,c).toFixed(1)}</span>`;
+    }
+    b.innerHTML=html;
+    if(premium&&!overLimit){
+      b.addEventListener('click',()=>{
+        const newTotal=ogCostPreviewTotal(pi,c);
+        ogDeck.costs[pi]=c; ogSaveDeck();
+        ogLastChangedPiece=pi; ogCostPunchPending=true;
+        ogShow('ogCostPicker',false); ogSelectedPiece=-1; ogRenderDeck();
+        ogToast(tFmt('ogCostToastTpl',{pos:pt,rank:ogRankLabel(c),total:newTotal.toFixed(1),max:OG_MAX_TEAM_COST.toFixed(1)}),true);
+      });
+    }else if(premium&&overLimit){
+      b.addEventListener('click',()=>{
+        ogToast(`チームコスト上限 ${OG_MAX_TEAM_COST} を超えます（${ogCostPreviewTotal(pi,c).toFixed(1)}）`);
+      });
+    }
     opts.appendChild(b);
   });
+  document.getElementById('ogCostPremiumBtn').onclick=()=>{
+    ogShow('ogCostPicker',false); ogSelectedPiece=-1; ogRenderDeck();
+    ogShowSubRequired();
+  };
   ogShow('ogCostPicker',true);
 }
 
@@ -4379,7 +4454,7 @@ function ogRenderAuth(){
   if(acc){
     acc.textContent=ogIsLoggedIn()
       ? `ログイン中: ${ogAuth.user.name}（${ogIsPremium()?'プレミアム':'無料プラン'}）`
-      : 'ゲストプレイ中。ログインするとサブスク（コスト変更解放）を利用できます。';
+      : 'ゲストプレイ中。ログインするとサブスク（ランク変更解放）を利用できます。';
     document.getElementById('ogLogoutBtn').style.display=ogIsLoggedIn()?'':'none';
     document.getElementById('ogGotoLoginBtn').style.display=ogIsLoggedIn()?'none':'';
   }
@@ -4395,7 +4470,7 @@ function ogRenderSubPage(){
     const until=sub.until?new Date(sub.until).toLocaleDateString('ja-JP'):'';
     st.innerHTML=`<b>プレミアム加入中</b>${sub.demo?'（デモ）':''}${until?`<br>有効期限: ${until}`:''}`;
   }else{
-    st.innerHTML='<b>無料プランです</b><br>プレミアムに加入すると駒コスト変更が解放されます。';
+    st.innerHTML='<b>無料プランです</b><br>プレミアムに加入すると駒のランク変更（コスト変更）が解放されます。';
   }
   document.getElementById('ogSubBtn').style.display=(ogIsLoggedIn()&&!ogIsPremium())?'':'none';
   document.getElementById('ogSubCancelBtn').style.display=ogIsPremium()?'':'none';
@@ -4421,7 +4496,7 @@ function ogSelectTab(tab){
   document.getElementById('ogTabSettings').classList.toggle('active',tab==='settings');
 }
 function ogShowSubRequired(){
-  ogToast('コスト変更はプレミアム（サブスク）限定です');
+  ogToast('ランク変更はプレミアム（サブスク）限定です');
   ogSelectTab('sub');
 }
 function setFeedbackSetting(kind,enabled){

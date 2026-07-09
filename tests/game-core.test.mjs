@@ -582,15 +582,15 @@ test("a normal shot miss exposes structured CK replay steps", () => {
   assert.equal(Boolean(saved), true);
   assert.deepEqual(saved.details?.kickLogs, [
     "VitalAreaShoot failed-to-CK 5% => CK",
-    "CK 75% => miss",
+    "CK 70% => miss",
     "CK failed-to-CK 75% => CK",
-    "CK 75% => miss",
+    "CK 70% => miss",
   ]);
   assert.deepEqual(saved.details?.kickSteps, [
     { type: "failed-to-ck", kind: "VitalAreaShoot", probability: 5, result: "CK" },
-    { type: "ck-kick", kind: "CK", probability: 75, result: "miss" },
+    { type: "ck-kick", kind: "CK", probability: 70, result: "miss" },
     { type: "failed-to-ck", kind: "CK", probability: 75, result: "CK" },
-    { type: "ck-kick", kind: "CK", probability: 75, result: "miss" },
+    { type: "ck-kick", kind: "CK", probability: 70, result: "miss" },
   ]);
   assert.equal(saved.details?.finalKickKind, "CK");
   assert.equal(saved.details?.saveType, "gk");
@@ -612,10 +612,10 @@ test("a CK goal exposes the final kick kind for replay", () => {
   assert.equal(Boolean(goal), true);
   assert.equal(goal.details?.source, "VitalAreaShoot");
   assert.equal(goal.details?.finalKickKind, "CK");
-  assert.deepEqual(goal.details?.kickLogs, ["VitalAreaShoot failed-to-CK 5% => CK", "CK 75% => goal"]);
+  assert.deepEqual(goal.details?.kickLogs, ["VitalAreaShoot failed-to-CK 5% => CK", "CK 70% => goal"]);
   assert.deepEqual(goal.details?.kickSteps, [
     { type: "failed-to-ck", kind: "VitalAreaShoot", probability: 5, result: "CK" },
-    { type: "ck-kick", kind: "CK", probability: 75, result: "goal" },
+    { type: "ck-kick", kind: "CK", probability: 70, result: "goal" },
   ]);
   assert.equal(result.game.score.b, 1);
 });
