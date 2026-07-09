@@ -826,6 +826,24 @@ test("same-team loose ball pickup uses turn-start position, not pickup cell, for
   assert.equal(ballHolder(result.game)?.id, 1);
 });
 
+test("battle delay restarts with the opponent team's kickoff like Unity", () => {
+  // Unity OnBattleDelayAsync→GetReKickOffTeamType=FlipTeamType() の回帰テスト：
+  // 時間稼ぎをした側（青）ではなく、相手（赤）ボールでキックオフ再開する
+  const state = createInitialGameState("b", "battle-delay-restart");
+  const holder = state.pieces.find((candidate) => candidate.team === "b" && candidate.y >= 1);
+  state.ball = { target: "piece", pieceId: holder.id, x: null, y: null, lastTeam: "b" };
+  state.battleDelayCounts = { b: 2, r: 0 }; // このターンの自陣保持で閾値3に到達
+
+  const result = resolveServerTurn(state, {});
+
+  const delay = result.events.find((event) => event.type === "battle-delay");
+  assert.ok(delay, "battle-delay event should fire");
+  assert.equal(delay.team, "b");
+  const newHolder = ballHolder(result.game);
+  assert.equal(newHolder?.team, "r"); // 相手ボールで再開（旧実装は青ボールで逆だった）
+  assert.deepEqual(result.game.battleDelayCounts, { b: 0, r: 0 });
+});
+
 test("passive tactics is flagged when nine pieces stay deep and the ball is outside that area", () => {
   const state = createInitialGameState("b", "passive-tactics-flag");
   state.pieces = [

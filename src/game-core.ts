@@ -1717,8 +1717,10 @@ function resolveTurnEndRules(
         to: coordOf(holder),
         details: { turns: BATTLE_DELAY_COUNT },
       });
-      logs.push(`${teamName(holder.team)} battle delay; kickoff reset`);
-      setupKickoffForTeam(state, holder.team, true);
+      // Unity OnBattleDelayAsync 準拠：時間稼ぎをした側のペナルティとして相手ボールでキックオフ再開
+      // （ResetAsync(delayTeam)→GetReKickOffTeamType=FlipTeamType()。旧実装は遅延側ボールで逆だった）
+      logs.push(`${teamName(holder.team)} battle delay; kickoff reset (${teamName(opponentTeam(holder.team))} ball)`);
+      setupKickoffForTeam(state, opponentTeam(holder.team), true);
       return;
     }
   } else {
