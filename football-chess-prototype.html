@@ -48,6 +48,10 @@
      上詰めレイアウト（2026-07-08）：ヘッダー直下に盤面、直下にフッター。縦の余りはすべて画面最下部へ */
   .wrap{justify-content:flex-start;}
   .wrap>.hud,.wrap>.onlineBar,.wrap>.menuBar,.wrap>.footerBar{flex:none;}
+  /* #board/#selectFan のゴール行は盤画像の上下へ透明のままはみ出す（Unity CellDef準拠）。
+     .boardWrap が positioned のため、そのままでは透明グリッドが後続のフッターより手前になり
+     TURN END のタップを奪う。ヘッダー/フッター行を必ず盤グリッドより手前に置く。 */
+  .wrap>.hud,.wrap>.onlineBar,.wrap>.menuBar,.wrap>.footerBar{position:relative; z-index:20;}
 
   /* ===== 上部ヘッダー：スコアのみ（縮小版）＋左右の小型アイコン ===== */
   .hud{position:relative; padding:3px 10px 0;
@@ -2019,6 +2023,54 @@ let chainBallCanMove=true; // Unity BallModel.CanMove 相当。敵同居で止�
 let chainMovedIds=new Set(); // このターンに「移動」を仕込んだ駒（=もうパスを受けても蹴れるが移動はできない）
 let chainPassedIds=new Set(); // このターンに「パス／スルーパス」でボールを離した駒（通常移動は追加可）
 
+/* ===== ターン入力タイマー（フッターの残り時間バー） =====
+   Unity BattleSequence.TurnElement の FCTime.Out(BattleDef.MoveTurnTimeSecond) 相当。
+   仕込み中(phase==='input')のみ20秒カウントダウンし、時間切れは仕込み済みコマンドのまま
+   TURN END ボタンと同じ処理を自動発火する。オフラインAI戦のみ作動
+   （オンラインはサーバーの3分入力期限が権威。アウトゲーム表示中/リプレイ中/試合終了後は停止）。 */
+const INPUT_TIME_SEC=20;
+let turnTimerId=null;
+let turnTimerEndAt=0;
+function renderTurnTimer(sec){
+  const bar=document.getElementById('timerBar');
+  const label=document.getElementById('timerLabel');
+  if(!bar||!label) return;
+  const ratio=Math.max(0,Math.min(1,sec/INPUT_TIME_SEC));
+  bar.style.width=(ratio*100)+'%';
+  bar.classList.toggle('warn',sec>0&&sec<=5);
+  label.textContent=String(Math.max(0,Math.ceil(sec)));
+}
+function outgameOverlayVisible(){
+  return ['ogTitle','ogHome','ogLogin'].some(id=>{
+    const el=document.getElementById(id);
+    return el&&el.style.display!=='none';
+  });
+}
+function turnTimerShouldRun(){
+  return state.phase==='input'&&!(online.connected||online.enabled)&&!outgameOverlayVisible();
+}
+function stopTurnTimer(){
+  if(turnTimerId){clearInterval(turnTimerId);turnTimerId=null;}
+  renderTurnTimer(INPUT_TIME_SEC); // 停止中はバー満タン＋既定秒表示に戻す
+}
+function startTurnTimer(){
+  if(turnTimerId){clearInterval(turnTimerId);turnTimerId=null;}
+  turnTimerEndAt=Date.now()+INPUT_TIME_SEC*1000;
+  renderTurnTimer(INPUT_TIME_SEC);
+  turnTimerId=setInterval(()=>{
+    const remain=(turnTimerEndAt-Date.now())/1000;
+    if(remain>0){renderTurnTimer(remain);return;}
+    clearInterval(turnTimerId);turnTimerId=null;
+    renderTurnTimer(0);
+    // Unity同様、時間切れはTURN ENDボタン押下と同じ経路で解決する（発火直前に条件を再確認）
+    if(turnTimerShouldRun()) document.getElementById('endTurnBtn').click();
+  },200);
+}
+function syncTurnTimer(){
+  if(turnTimerShouldRun()){ if(!turnTimerId) startTurnTimer(); }
+  else stopTurnTimer();
+}
+
 /* ===== 描画 ===== */
 const boardEl=document.getElementById('board');
 let replayHiddenPieceIds=new Set();
@@ -2028,6 +2080,7 @@ function piecesAt(x,y){return pieces.filter(p=>p.x===x&&p.y===y);}
 function render(){
   // リプレイ中は盤面タップを無効化（誤操作防止。CSSの .replaying と対）
   document.body.classList.toggle('replaying', state.phase==='replay');
+  syncTurnTimer(); // 仕込み中のみターンタイマーを進める（リプレイ/終了/オンライン/アウトゲームでは停止）
   boardEl.innerHTML='';
   const cw=100/COLS.length, ch=100/ROWS.length;
   BOARD.forEach(c=>{
@@ -3623,7 +3676,7 @@ function onlineDeckPayload(){
 }
 
 /* ---- 画面制御 ---- */
-function ogShow(el,on){ document.getElementById(el).style.display=on?'':'none'; }
+function ogShow(el,on){ document.getElementById(el).style.display=on?'':'none'; syncTurnTimer(); } // 画面遷移でタイマー開始/停止を追従（ホーム表示中に裏で自動決定しないように）
 function ogShowTitle(){ ogShow('ogTitle',true); }
 function ogShowHome(){
   ogShow('ogHome',true);
