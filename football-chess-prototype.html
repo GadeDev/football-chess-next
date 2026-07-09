@@ -499,8 +499,22 @@
 .ogTab#ogTabDeck.active .ogTabIco{background-image:var(--ogTeamBlue);}
 .ogTab#ogTabSettings .ogTabIco{background-image:var(--ogSetGray);}
 .ogTab#ogTabSettings.active .ogTabIco{background-image:var(--ogSetBlue);}
-.ogKickoff{width:min(46vw,230px);height:66px;border:none;background:var(--ogFootMatch) center/100% 100% no-repeat;color:#fff;font-size:20px;font-weight:900;letter-spacing:.12em;text-shadow:0 2px 4px rgba(0,40,80,.65);cursor:pointer;transition:transform .12s;}
+.ogKickoff{width:min(34vw,180px);height:66px;border:none;background:var(--ogFootMatch) center/100% 100% no-repeat;color:#fff;font-size:15px;font-weight:900;letter-spacing:.08em;text-shadow:0 2px 4px rgba(0,40,80,.65);cursor:pointer;transition:transform .12s;line-height:1.15;}
 .ogKickoff:active{transform:scale(.94);}
+.ogKickoff .sub{display:block;font-size:9px;font-weight:700;letter-spacing:.05em;opacity:.85;}
+.ogKickoff.online{filter:hue-rotate(105deg) saturate(1.1);} /* 同素材を緑系に転用（オンライン対戦） */
+/* マッチング待機オーバーレイ */
+#matchingOverlay{position:fixed;inset:0;z-index:5400;background:rgba(2,6,12,.8);display:flex;align-items:center;justify-content:center;}
+#matchingOverlay .panel{background:#0c1f36;border:1px solid #2d5a8c;border-radius:12px;padding:26px 24px;width:min(84vw,320px);text-align:center;}
+#matchingOverlay .mmSpinner{width:44px;height:44px;margin:0 auto 14px;border-radius:50%;
+  border:4px solid rgba(90,180,255,.25);border-top-color:#5ab4ff;animation:mmSpin 1s linear infinite;}
+@keyframes mmSpin{to{transform:rotate(360deg);}}
+#matchingOverlay .mmTitle{color:#eaf4ff;font-size:15px;font-weight:800;}
+#matchingOverlay .mmElapsed{color:#8fb4da;font-size:12px;margin:6px 0 2px;}
+#matchingOverlay .mmName{color:#6f93b8;font-size:11px;margin-bottom:14px;}
+#matchingOverlay .mmCom{display:block;width:100%;border:none;border-radius:9px;margin-bottom:8px;
+  background:linear-gradient(180deg,#5db6ff,#1f7be0 60%,#1565c0);color:#fff;font-size:12.5px;font-weight:800;padding:11px 0;cursor:pointer;}
+#matchingOverlay .mmCancel{display:block;width:100%;border:none;border-radius:9px;background:#28425f;color:#dfeaf6;font-size:12px;padding:10px 0;cursor:pointer;}
 
 /* コスト変更（Unity UICostChangeDialog 相当。表向きの呼称は「ランク」、数値は「コスト」併記） */
 #ogCostPicker{position:fixed;inset:0;z-index:5200;background:rgba(2,6,12,.66);display:flex;align-items:center;justify-content:center;}
@@ -759,10 +773,24 @@ body.replaying .boardWrap::after{content:"";position:absolute;inset:0;}
     </div>
   </div>
   <!-- 「編成」タブは削除（ホーム＝編成画面のため無意味。2026-07-10）。サブスク/設定は各ページの「← 戻る」でホームへ -->
+  <!-- KICK OFF=COM対戦／オンライン対戦=自動マッチング（footballchessmaniacsのModeSelect相当。フレンド対戦は試合画面の🌐ROOM共有） -->
   <div class="ogFooter">
-    <button class="ogKickoff" id="ogKickoffBtn">KICK OFF</button>
+    <button class="ogKickoff" id="ogKickoffBtn">KICK OFF<span class="sub">COM対戦</span></button>
+    <button class="ogKickoff online" id="ogOnlineBtn">オンライン対戦<span class="sub">自動マッチング</span></button>
     <button class="ogTab" id="ogTabSub"><span class="ogTabIco"></span>サブスク</button>
     <button class="ogTab" id="ogTabSettings"><span class="ogTabIco"></span>設定</button>
+  </div>
+</div>
+
+<!-- マッチング待機オーバーレイ（footballchessmaniacs Matching.tsx相当の簡略版。30秒でCOM対戦を提案） -->
+<div id="matchingOverlay" style="display:none">
+  <div class="panel">
+    <div class="mmSpinner"></div>
+    <div class="mmTitle">対戦相手を探しています…</div>
+    <div class="mmElapsed" id="mmElapsed">0秒</div>
+    <div class="mmName" id="mmMyName"></div>
+    <button class="mmCom" id="mmComBtn" style="display:none">相手が見つかりません。COMと対戦する</button>
+    <button class="mmCancel" id="mmCancelBtn">キャンセル</button>
   </div>
 </div>
 
@@ -4819,6 +4847,66 @@ document.getElementById('ogSubBackBtn').addEventListener('click',()=>{ playFeedb
 document.getElementById('ogSettingsBackBtn').addEventListener('click',()=>{ playFeedback('cancel'); ogSelectTab('deck'); });
 // 右上ログインボタン（未ログイン時のみ表示）→ ログインウィンドウを開く
 document.getElementById('ogHeadLoginBtn').addEventListener('click',()=>{ playFeedback('tap'); ogShowLogin(); });
+
+/* ===== オンライン対戦：自動マッチング（footballchessmaniacs Matching相当の簡略版） =====
+   2秒間隔で /matchmaking/join をポーリングし、ペア成立でroomCodeを受け取って
+   既存のROOM参加フロー（connectOnlineRoom）へ接続する。30秒でCOM対戦を提案。 */
+let mmActive=false, mmTimer=null, mmStart=0;
+function stopMatchmaking(sendLeave){
+  if(!mmActive) return;
+  mmActive=false;
+  clearTimeout(mmTimer); mmTimer=null;
+  ogShow('matchingOverlay',false);
+  if(sendLeave){
+    fetch(`${online.apiBase}/matchmaking/leave`,{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({clientId:online.clientId})}).catch(()=>{});
+  }
+}
+async function startMatchmaking(){
+  if(mmActive||online.connected) return;
+  mmActive=true;
+  mmStart=Date.now();
+  online.apiBase=defaultOnlineApiBase();
+  document.getElementById('mmElapsed').textContent='0秒';
+  document.getElementById('mmComBtn').style.display='none';
+  document.getElementById('mmMyName').textContent=`表示名：${getOnlineDisplayName()}`;
+  ogShow('matchingOverlay',true);
+  const tick=async()=>{
+    if(!mmActive) return;
+    try{
+      const res=await fetch(`${online.apiBase}/matchmaking/join`,{method:'POST',headers:{'content-type':'application/json'},
+        body:JSON.stringify({clientId:online.clientId,name:getOnlineDisplayName()})});
+      const data=await res.json();
+      if(!mmActive) return; // ポーリング中にキャンセルされた
+      if(data.status==='matched'){
+        stopMatchmaking(false);
+        log(`マッチング成立：${data.opponentName} と対戦します（ROOM ${data.roomCode}）`);
+        ogShow('ogHome',false);
+        try{
+          await connectOnlineRoom(data.roomCode,null,null); // 席は接続の先着順（先=青/後=赤）
+        }catch(err){
+          console.error(err);
+          setOnlineStatus('マッチング後の接続に失敗しました','err');
+          ogShowHome();
+        }
+        return;
+      }
+    }catch(e){ /* 一時的な失敗は次のポーリングで再試行 */ }
+    const sec=Math.floor((Date.now()-mmStart)/1000);
+    document.getElementById('mmElapsed').textContent=`${sec}秒`;
+    if(sec>=30) document.getElementById('mmComBtn').style.display=''; // maniacs準拠：30秒でCOM提案
+    mmTimer=setTimeout(tick,2000);
+  };
+  tick();
+}
+document.getElementById('ogOnlineBtn').addEventListener('click',()=>{ playFeedback('submit'); ogSaveDeck(); startMatchmaking(); });
+document.getElementById('mmCancelBtn').addEventListener('click',()=>{ playFeedback('cancel'); stopMatchmaking(true); });
+document.getElementById('mmComBtn').addEventListener('click',()=>{
+  playFeedback('submit');
+  stopMatchmaking(true);
+  ogCloseHome();
+  document.getElementById('resetBtn').click(); // COM対戦へフォールバック
+});
 // ログインウィンドウの閉じる×
 document.getElementById('ogLoginClose').addEventListener('click',()=>{ playFeedback('cancel'); ogShow('ogLogin',false); });
 // UniversoFutbolポータル経由ログイン（Google等の外部認証はポータル側が処理し #uf_sso で戻る）

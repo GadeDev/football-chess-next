@@ -18,6 +18,7 @@ Claude Code がこのリポジトリで作業する際の指針。詳細な背�
 - `src/game-core.ts` には盤面、初期配置、確率計算、seeded RNG、コマンド検証、サーバー側ターン解決の初期版を抽出済み。
 - 青赤両方の `match.intent` が揃うと、`MatchRoom` は `resolveServerTurn` を呼び、移動/ドリブル/通常パス/スルーパス/こぼれ球/オフサイド/タックル/ファウル/PK/FK/CK/GK/シュート/得点後キックオフまでの結果イベントを `match.turn.resolved` で配信する。
 - `football-chess-prototype.html` にはオンライン対戦バーを追加済み。`ROOM作成` / `参加` でWorkerへ接続し、オンライン中の `TURN END` はローカルAIではなく `match.intent` を送る。
+- **自動マッチング（2026-07-10実装。続編footballchessmaniacsのMatchmaking DOをプロトタイプ規模に簡略移植）**：ホームの「オンライン対戦」ボタン→`#matchingOverlay`（スピナー＋経過秒＋キャンセル）→`POST /matchmaking/join` を2秒ポーリング→先着ペア成立で`createRoomCode`を払い出し→両者が既存`connectOnlineRoom`でROOM参加（席は接続の先着順）。**30秒で「COMと対戦する」提案**（maniacs準拠）。サーバーは単一`Matchmaker` DO（`MATCHMAKER`バインディング・migration v3）＝待機Map＋結果Map（8秒ポーリング途絶で離脱、結果TTL60秒）。maniacsにあるレーティング帯±200→±400段階拡大・リージョンシャード・WebSocket化は将来課題。フレンド対戦＝従来の🌐ROOMコード共有。
 - オンラインバーは `URL` ボタンで `?room=...` 共有URLをコピーでき、そのURLを開くと自動参加する。`退出` / `投了` / `再戦` も実装済み。再戦はフルタイムまたは投了後、青赤両者が希望すると同じROOMでターン1から再開する。ブラウザは `localStorage` にオンライン用 `clientId` を保持するため、リロード後も同じ席へ復帰しやすい。
 - オンラインバーには表示名入力、青/赤の席、観戦人数、自分の席、送信済みマークを出すロスター行がある。表示名は `localStorage` に保存し、接続時の `name` パラメータと接続後の `client.hello` でROOMに反映する。`room.presence` / `match.intent.received` で更新され、観戦者にも同じ席状況が見える。
 - 観戦者はスナップショット/ターン解決後も `phase='replay'` の読み取り専用を維持し、TURN ENDボタンもdisabledにする。観戦者から `match.intent` は送らない。

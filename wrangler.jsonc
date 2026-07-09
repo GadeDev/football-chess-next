@@ -37,6 +37,10 @@
       {
         "name": "ACCOUNTS",
         "class_name": "AccountStore"
+      },
+      {
+        "name": "MATCHMAKER",
+        "class_name": "Matchmaker"
       }
     ]
   },
@@ -48,6 +52,10 @@
     {
       "tag": "v2",
       "new_sqlite_classes": ["AccountStore"]
+    },
+    {
+      "tag": "v3",
+      "new_sqlite_classes": ["Matchmaker"]
     }
   ]
 }

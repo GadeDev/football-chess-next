@@ -206,6 +206,92 @@ function roomStub(env: Env, roomCode: string): DurableObjectStub<MatchRoom> {
   return env.MATCH_ROOM.getByName(roomCode);
 }
 
+function matchmakerStub(env: Env): DurableObjectStub<Matchmaker> {
+  return env.MATCHMAKER.getByName("global");
+}
+
+/* ===== マッチメイキング（自動対戦相手探し） =====
+   続編 footballchessmaniacs の Matchmaking DO をプロトタイプ規模に簡略化した実装：
+   単一DO・HTTPポーリング方式（2秒間隔）・先着ペアリング。レーティング帯やリージョン分割は
+   将来課題（maniacsはWebSocket＋±200→±400→クロスリージョンの段階拡大＋30秒でCOM提案）。
+   ペア成立時に既存のMatchRoom用roomCodeを払い出し、両者は既存のROOM参加フローで接続する。 */
+interface MatchmakingWaiting {
+  clientId: string;
+  name: string;
+  joinedAt: number;
+  lastSeen: number;
+}
+interface MatchmakingResult {
+  roomCode: string;
+  opponentName: string;
+  matchedAt: number;
+}
+const MM_STALE_MS = 8_000; // ポーリングが8秒途絶えたら離脱扱い
+const MM_RESULT_TTL_MS = 60_000; // マッチ結果の保持時間（受け取り猶予）
+
+export class Matchmaker extends DurableObject<Env> {
+  private waiting = new Map<string, MatchmakingWaiting>();
+  private results = new Map<string, MatchmakingResult>();
+
+  private prune(now: number): void {
+    for (const [id, w] of this.waiting) {
+      if (now - w.lastSeen > MM_STALE_MS) this.waiting.delete(id);
+    }
+    for (const [id, r] of this.results) {
+      if (now - r.matchedAt > MM_RESULT_TTL_MS) this.results.delete(id);
+    }
+  }
+
+  async fetch(request: Request): Promise<Response> {
+    if (request.method !== "POST") return problem(405, "Method not allowed");
+    const url = new URL(request.url);
+    let body: { clientId?: string; name?: string } = {};
+    try {
+      body = (await request.json()) as { clientId?: string; name?: string };
+    } catch {
+      return problem(400, "Invalid JSON body");
+    }
+    const clientId = typeof body.clientId === "string" ? body.clientId.slice(0, 64) : "";
+    if (!clientId) return problem(400, "clientId is required");
+    const name = typeof body.name === "string" && body.name.trim() ? body.name.trim().slice(0, 16) : "Player";
+    const now = Date.now();
+    this.prune(now);
+
+    if (url.pathname.endsWith("/leave")) {
+      this.waiting.delete(clientId);
+      return json({ status: "left" });
+    }
+
+    // 既にペア成立済みなら結果を返す（TTL内は再取得可＝ポーリングの取りこぼし対策）
+    const matched = this.results.get(clientId);
+    if (matched) {
+      return json({ status: "matched", roomCode: matched.roomCode, opponentName: matched.opponentName });
+    }
+
+    // 待機中の別クライアントがいれば先着とペアリング
+    for (const [otherId, other] of this.waiting) {
+      if (otherId === clientId) continue;
+      this.waiting.delete(otherId);
+      this.waiting.delete(clientId);
+      const roomCode = createRoomCode();
+      // 双方に結果を保存（相手側は次のポーリングで受け取る。席は既存ROOMの先着順=先に接続した方が青）
+      this.results.set(otherId, { roomCode, opponentName: name, matchedAt: now });
+      this.results.set(clientId, { roomCode, opponentName: other.name, matchedAt: now });
+      return json({ status: "matched", roomCode, opponentName: other.name });
+    }
+
+    // 誰もいなければ待機（lastSeen更新）
+    const entry = this.waiting.get(clientId);
+    if (entry) {
+      entry.lastSeen = now;
+      entry.name = name;
+    } else {
+      this.waiting.set(clientId, { clientId, name, joinedAt: now, lastSeen: now });
+    }
+    return json({ status: "waiting", waitingSec: Math.floor((now - (this.waiting.get(clientId)?.joinedAt ?? now)) / 1000) });
+  }
+}
+
 /* ===== UniversoFutbol 会員/サブスク（暫定: Worker内アカウント。AUTH_UNIVERSOFUTBOL.md 参照） ===== */
 
 function accountStub(env: Env): DurableObjectStub<AccountStore> {
@@ -416,6 +502,14 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
     url.pathname.startsWith(`${API_PREFIX}/billing/`)
   ) {
     return handleAuthApi(request, env, url.pathname);
+  }
+
+  // マッチメイキング（自動対戦相手探し）：/matchmaking/join を2秒間隔でポーリング、/leave でキャンセル
+  if (
+    (url.pathname === `${API_PREFIX}/matchmaking/join` || url.pathname === `${API_PREFIX}/matchmaking/leave`) &&
+    request.method === "POST"
+  ) {
+    return matchmakerStub(env).fetch(request);
   }
 
   if (url.pathname === `${API_PREFIX}/matches` && request.method === "POST") {
