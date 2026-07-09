@@ -1100,6 +1100,11 @@ const STACK_OFFSET={
   1:[[50,50]],
   2:[[42,58],[66,36]],
   3:[[50,62],[27,36],[73,36]],
+  // 4体以上はUnity CellDef.ActorNormalOffsetMap 準拠（4=四隅、5=四隅＋中央）。
+  // 通常は実行時再検証で1マス最大3体だが、同時解決の過渡状態やオフサイド位置戻しで
+  // 一時的に超えることがあるため表示側も備える（重なって崩れないように）
+  4:[[30,64],[70,64],[30,36],[70,36]],
+  5:[[30,64],[70,64],[30,36],[70,36],[50,50]],
 };
 // 展開時：Unity版 ActorExpansionOffsetMap 準拠で大きく広げる（他マスは暗転するので重なってOK）。
 // セル四隅～やや外まで展開。盤は overflow:visible にして端でも切れないようにする。
@@ -2265,7 +2270,7 @@ function render(){
     if(ps.length>1) el.classList.add('stack');
     if(ps.length && !inPopup){
       const pc=document.createElement('div'); pc.className='pieces';
-      const offs=STACK_OFFSET[Math.min(ps.length,3)]||STACK_OFFSET[3];
+      const offs=STACK_OFFSET[Math.min(ps.length,5)]||STACK_OFFSET[5];
       ps.forEach((p,i)=>{
         const pe=document.createElement('div');
         // 仕込み中(input)は連鎖プレビューの保持駒(chainHolderId)を優先し、未設定なら実際の保持駒に出す。
@@ -3608,14 +3613,41 @@ async function advanceMatchClock(){
   }
 }
 
+/* 実行時のマス満員チェック（Unity CellDef.MaxPieceNum / サーバーisMovable再検証と同じ規則）。
+   仕込み時はターン開始時点の空きで判定するため、同時解決で複数駒が同じマスへ収束すると
+   1マス3体を超えてしまう（表示も崩れる）。実行時に満員なら中止する（先着優先＝解決順）。 */
+function cellHasRoomFor(p,x,y){
+  const others=piecesAt(x,y).filter(q=>q.id!==p.id);
+  if(others.length>=MAX_PER_CELL) return false;
+  if(others.filter(q=>q.team===p.team).length>=MAX_PER_CELL) return false;
+  return true;
+}
 /* 通常移動の一斉実行：連続する'move'コマンドをまとめて滑走アニメし、完了後に座標を確定する。
    通常移動は実行時に相互作用（タックル/カットイン/ボール処理）を起こさないため、
-   結果は1件ずつの順次実行と同一。ドリブル/パス/シュートは対象外（従来どおりexecCommandで順次）。 */
+   結果は1件ずつの順次実行と同一。ドリブル/パス/シュートは対象外（従来どおりexecCommandで順次）。
+   満員判定は解決順に仮想位置で行う（先に動いた駒が空けたマスへは入れる／埋めたマスへは入れない）。 */
 async function execPlainMovesTogether(cmds){
   const jobs=[];
+  // 解決順の逐次実行と同じ結果になるよう、仮想位置で満員判定を行う
+  const virtualPos=new Map(pieces.map(q=>[q.id,{x:q.x,y:q.y,team:q.team}]));
+  const virtualCount=(x,y,team,selfId)=>{
+    let total=0,own=0;
+    virtualPos.forEach((v,id)=>{
+      if(id===selfId) return;
+      if(v.x===x&&v.y===y){ total++; if(v.team===team) own++; }
+    });
+    return {total,own};
+  };
   for(const cmd of cmds){
     const p=pieceById(cmd.pieceId);
     if(!p) continue; // 既に奪われた等（execCommandと同じ扱い）
+    const {total,own}=virtualCount(cmd.tx,cmd.ty,p.team,p.id);
+    if(total>=MAX_PER_CELL||own>=MAX_PER_CELL){
+      log(`${p.team==='b'?'青':'赤'} ${label(p)} の移動は中止（(${cmd.tx},${cmd.ty})が満員）`);
+      continue;
+    }
+    const vp=virtualPos.get(p.id);
+    vp.x=cmd.tx; vp.y=cmd.ty;
     jobs.push({p, from:{x:p.x,y:p.y}, to:{x:cmd.tx,y:cmd.ty}});
   }
   if(jobs.length===0) return;
@@ -3647,6 +3679,11 @@ async function execCommand(cmd,turnStartHasBallTeam=ballHolder()?.team||null){
     }
   }
   if(cmd.type==='move'||cmd.type==='dribble'){
+    // 実行時の満員再チェック（サーバーのisMovable再検証と同じ規則。1マス3体を超えさせない）
+    if(!cellHasRoomFor(p,cmd.tx,cmd.ty)){
+      log(`${p.team==='b'?'青':'赤'} ${label(p)} の${cmd.type==='dribble'?'ドリブル':'移動'}は中止（(${cmd.tx},${cmd.ty})が満員）`);
+      return;
+    }
     // carryはcmd.type（予約時に確定した種別）だけで決める。movePiece側の原則と統一。
     // 実行時のライブなボール保持状態（ballHolder()）を見て暗黙に上書きすることはしない。
     const carry=cmd.type==='dribble';

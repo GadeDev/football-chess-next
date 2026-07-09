@@ -8,7 +8,7 @@ Claude Code がこのリポジトリで作業する際の指針。詳細な背�
 - 対人対戦化はCloudflare Workers + Durable Objectsで追加中。`src/index.ts` がUniversoFutbol配下の対戦ルームAPI、`src/game-core.ts` がサーバー権威化に向けた純粋ゲームロジック抽出先。
 - **現在の正しい作業対象はこのフォルダ**（`/Users/yanagiho-mba/football-chess-next/football-chess-repo/`）。`football-chess-next-clone` は別系統なので、このプロトタイプ修正では触らない。
 - 方針：広告なし・サブスク課金・スマホ前提。**「面白く楽しめればよい、細部はおまかせ」**。グラフィック再現を重視。
-- 正典＝Unity版実装。Unityソースは `/Users/yanagiho-mba/football-chess-unity-source/`（`Assets/_Chess/Scripts/`）。数値が食い違う場合は基本Unity実装を優先。CellDef準拠で1マス最大3駒。
+- 正典＝Unity版実装。Unityソースは `/Users/yanagiho-mba/football-chess-unity-source/`（`Assets/_Chess/Scripts/`）。数値が食い違う場合は基本Unity実装を優先。CellDef準拠で1マス最大3駒（**2026-07-10修正：仕込み時チェックだけでは同時解決の収束で4体以上入ってしまうため、ローカルHTMLも実行時に満員再検証**`cellHasRoomFor`/`execPlainMovesTogether`の仮想位置判定**を行い中止する。サーバー`isMovable`再検証と同挙動・先着優先。表示`STACK_OFFSET`はUnity `ActorNormalOffsetMap`準拠で4=四隅/5=四隅＋中央まで対応＝オフサイド位置戻し等の過渡状態向け保険）。
 - ユーザーは非エンジニア。**日本語で対応**。
 
 ## アーキテクチャ
