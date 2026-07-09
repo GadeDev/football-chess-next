@@ -3431,7 +3431,22 @@ async function execCommand(cmd,turnStartHasBallTeam=ballHolder()?.team||null){
     const carry=cmd.type==='dribble';
     // 演出は移動先に敵駒がいて接触（競り合い）が起こり得る場合のみ。素通りの移動では出さない。
     if(carry && piecesAt(cmd.tx,cmd.ty).some(q=>q.team!==p.team)) await showCutin('dribble',850);
-    if(carry) await animateBallFlight({x:p.x,y:p.y},{x:cmd.tx,y:cmd.ty},p.team,{kind:'dribble',duration:320,arc:14});
+    // 駒はワープさせず、オンライン再生（replayServerPieceMove）と同じ滑走アニメで移動する。
+    // 本体駒を一時非表示にして飛行ゴーストを動かし、完了後に座標を確定して再表示する。
+    // ドリブル時は駒とボールを並走させる（Unityの「運ぶ」見た目に合わせる）。
+    const moveFrom={x:p.x,y:p.y}, moveTo={x:cmd.tx,y:cmd.ty};
+    replayHiddenPieceIds.add(p.id);
+    render();
+    const pieceMove=animatePieceMove(p,moveFrom,moveTo,carry?{duration:330}:{});
+    if(carry){
+      await Promise.all([
+        pieceMove,
+        animateBallFlight(moveFrom,moveTo,p.team,{kind:'dribble',duration:330,arc:14}),
+      ]);
+    }else{
+      await pieceMove;
+    }
+    replayHiddenPieceIds.delete(p.id);
     p.x=cmd.tx; p.y=cmd.ty;
     if(carry) markBallMoved();
     log(`${p.team==='b'?'青':'赤'} ${label(p)} → (${cmd.tx},${cmd.ty}) ${carry?'ドリブル':'移動'}`);
@@ -3569,11 +3584,22 @@ function placeLooseBallDefensive(x,y,baseMsg,lastTeam=lastHadBallTeam){
    ★旧実装の「成立地点にこぼれ球」は戻さないこと：受け手自身が同ターン末の pickupLooseBall で拾い直して
    オフサイドが実質無効化される（カットインだけ出て進行が変わらない）実バグの原因だった。 */
 async function handleOffside(receiver, atX, atY, sourceTeam=lastHadBallTeam){
-  receiver.x=receiver.sx; receiver.y=receiver.sy;         // 位置戻し（移動取り消し）
   log(`⚠ オフサイド：${label(receiver)} の動きが無効化されました`);
   await showCutinAtPiece('offside', 1100, atX, atY);
+  // 位置戻し（移動取り消し）はワープさせず、オンライン再生（replayServerOffsideReset）と同じ滑走アニメで戻す
+  const resetFrom={x:receiver.x,y:receiver.y}, resetTo={x:receiver.sx,y:receiver.sy};
+  if(resetFrom.x!==resetTo.x||resetFrom.y!==resetTo.y){
+    replayHiddenPieceIds.add(receiver.id);
+    render();
+    await animatePieceMove(receiver,resetFrom,resetTo,{duration:280});
+    replayHiddenPieceIds.delete(receiver.id);
+  }
+  receiver.x=resetTo.x; receiver.y=resetTo.y;
+  render();
   const kicker=nearestOffsideKicker(receiver.team==='b'?'r':'b', atX, atY);
   if(kicker){
+    // ボールもワープさせず、オフサイド地点からキッカーへ飛ばして受け渡す
+    await animateBallFlight({x:atX,y:atY},{x:kicker.x,y:kicker.y},kicker.team,{kind:'pass',duration:300,arc:16});
     setBallToPiece(kicker,true);
     log(`→ ${label(kicker)} のボールで再開`);
   }else{
