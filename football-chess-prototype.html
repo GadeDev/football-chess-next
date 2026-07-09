@@ -407,10 +407,17 @@
 #ogTitle .ogGadeLogo{width:110px;height:40px;margin-bottom:8px;background:var(--ogTitleLogo) center/contain no-repeat;}
 #ogTitle .ogVer{color:#9fc3e8;font-size:11px;margin-bottom:14px;letter-spacing:.08em;}
 
-#ogHome{position:fixed;inset:0;z-index:4500;background:#0a1830;background-image:var(--ogHomeBg);background-size:360px 640px;display:flex;flex-direction:column;}
+/* ホーム背景＝旧タイトル画像（タイトル画面廃止に伴い転用。2026-07-10 ※要検討につき差し戻し容易な1行変更） */
+#ogHome{position:fixed;inset:0;z-index:4500;background:#0a1830;
+  background-image:linear-gradient(rgba(5,14,28,.86),rgba(5,14,28,.93)),var(--ogTitleBg);
+  background-size:cover,cover;background-position:center,center;display:flex;flex-direction:column;}
 #ogHome .ogHeader{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(3,10,22,.72);border-bottom:1px solid #1d3a5f;}
 #ogHome .ogHomeLogo{width:84px;height:44px;background:var(--ogHomeLogo) left center/contain no-repeat;}
 #ogHome .ogUserBox{margin-left:auto;text-align:right;line-height:1.35;}
+/* 右上ログインボタン（未ログイン時のみ表示。ログインウィンドウはここから開く） */
+#ogHome .ogHeadLogin{flex:0 0 auto;border:1px solid #3f8ae0;border-radius:8px;background:linear-gradient(180deg,#2a6ec2,#1a4e93);
+  color:#fff;font-size:12px;font-weight:700;padding:8px 14px;cursor:pointer;}
+#ogHome .ogHeadLogin:active{filter:brightness(1.2);}
 #ogHome .ogUserBox .name{color:#eaf4ff;font-size:14px;font-weight:700;}
 #ogHome .ogUserBox .club{color:#7fa8d0;font-size:11px;}
 #ogHome .ogPages{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 12px 96px;max-width:560px;width:100%;margin:0 auto;box-sizing:border-box;}
@@ -432,6 +439,10 @@
 .ogPiece.ogPulse{animation:ogPiecePulse .3s ease;}
 @keyframes ogPiecePulse{0%{transform:translate(-50%,-50%) scale(1);}50%{transform:translate(-50%,-50%) scale(1.15);}100%{transform:translate(-50%,-50%) scale(1);}}
 .ogHint{color:#7fa8d0;font-size:11px;text-align:center;margin:6px 2px 2px;}
+/* サブスク/設定ページの「← 戻る」（編成タブ削除に伴いホームへ戻る導線） */
+.ogBackBtn{border:1px solid #29517c;border-radius:8px;background:#0d2038;color:#8fb4da;
+  font-size:12px;font-weight:700;padding:7px 14px;margin:2px 0 8px;cursor:pointer;}
+.ogBackBtn:active{filter:brightness(1.3);}
 #ogTeamCost.punch{display:inline-block;animation:ogCostPunch .4s cubic-bezier(.2,1.4,.4,1);}
 @keyframes ogCostPunch{from{transform:scale(1.4);}to{transform:scale(1);}}
 
@@ -501,7 +512,15 @@ body.replaying .boardWrap::after{content:"";position:absolute;inset:0;}
 
 /* ===== 会員/サブスク（UniversoFutbol暫定ログイン + Unity UISubscriptionPage 相当） ===== */
 #ogLogin{position:fixed;inset:0;z-index:5300;background:rgba(2,6,12,.72);display:flex;align-items:center;justify-content:center;}
-#ogLogin .panel{background:#0c1f36;border:1px solid #2d5a8c;border-radius:12px;padding:18px 20px;width:min(86vw,360px);}
+#ogLogin .panel{position:relative;background:#0c1f36;border:1px solid #2d5a8c;border-radius:12px;padding:18px 20px;width:min(86vw,360px);}
+/* ダイアログ共通の閉じるボタン（右上×） */
+.closeX{position:absolute;right:8px;top:8px;width:30px;height:30px;border:none;border-radius:50%;
+  background:rgba(255,255,255,.12);color:#cfe4fa;font-size:16px;font-weight:700;line-height:1;cursor:pointer;}
+.closeX:active{background:rgba(255,255,255,.25);}
+/* UniversoFutbolポータル経由ログイン（Google等の外部認証はポータル側で処理） */
+#ogLogin .ufLogin{display:block;width:100%;border:none;border-radius:9px;margin:2px 0 4px;
+  background:linear-gradient(180deg,#ffd75e,#e0a53a 60%,#c8892a);color:#2a1a00;font-size:13px;font-weight:800;padding:11px 0;cursor:pointer;}
+#ogLogin .orSep{color:#6f93b8;font-size:11px;text-align:center;margin:8px 0;}
 #ogLogin .ttl{color:#eaf4ff;font-weight:800;font-size:15px;margin-bottom:12px;text-align:center;}
 #ogLogin .modeRow{display:flex;gap:6px;margin-bottom:12px;}
 #ogLogin .mode{flex:1;border:1px solid #29517c;background:#0d2038;color:#8fb4da;border-radius:8px;font-size:12px;font-weight:700;padding:8px 0;cursor:pointer;}
@@ -669,6 +688,7 @@ body.replaying .boardWrap::after{content:"";position:absolute;inset:0;}
   <div class="ogHeader">
     <div class="ogHomeLogo"></div>
     <div class="ogUserBox"><div class="badge" id="ogHeadBadge"></div><div class="name" id="ogHeadName"></div><div class="club" id="ogHeadClub"></div></div>
+    <button class="ogHeadLogin" id="ogHeadLoginBtn">ログイン</button>
   </div>
   <div class="ogPages">
     <div class="ogPage" id="ogPageDeck">
@@ -681,11 +701,13 @@ body.replaying .boardWrap::after{content:"";position:absolute;inset:0;}
       <div id="ogSlotList"></div>
     </div>
 <div class="ogPage" id="ogPageSub" style="display:none">
+      <button class="ogBackBtn" id="ogSubBackBtn">← 戻る</button>
       <div class="ogSectionTitle">サブスクリプション</div>
       <div class="ogSubCard">
-        <div class="plan">Football Chess プレミアム</div>
-        <div class="price">月額 ¥480 <span class="demo">※デモ表示（実際の請求は発生しません）</span></div>
+        <div class="plan">UniversoFutbol サブスクリプション</div>
+        <div class="price">月額 ¥2,000 <span class="demo">※現在はデモ（実際の請求は発生しません。本番はUniversoFutbol共通サブスクに連動）</span></div>
         <ul class="benefits">
+          <li>UniversoFutbolの全コンテンツで共通のサブスクリプション</li>
           <li>駒のランク変更（コスト変更）の解放（Unity版と同じプレミアム特典）</li>
           <li>広告なしでプレイ</li>
           <li>今後追加: 限定フォーメーション・リプレイ保存 など</li>
@@ -694,10 +716,11 @@ body.replaying .boardWrap::after{content:"";position:absolute;inset:0;}
         <button class="subBtn" id="ogSubBtn">プレミアムに加入する（デモ）</button>
         <button class="subCancel" id="ogSubCancelBtn">解約する</button>
         <button class="subBtn" id="ogSubLoginBtn">ログインして加入する</button>
-        <div class="note">本番では UniversoFutbol 会員のサブスク状態と連動します（決済もUniversoFutbol側で一元化）。デモ加入は30日で自動的に切れます。</div>
+        <div class="note">決済はUniversoFutbol側で一元化されます（月額¥2,000・全コンテンツ共通）。デモ加入は30日で自動的に切れます。</div>
       </div>
     </div>
     <div class="ogPage" id="ogPageSettings" style="display:none">
+      <button class="ogBackBtn" id="ogSettingsBackBtn">← 戻る</button>
       <div class="ogSectionTitle">設定</div>
       <div class="ogSetRow"><label>プレイヤー名（オンライン対戦の表示名と共通）</label><input id="ogSetName" maxlength="16" autocomplete="nickname"></div>
       <div class="ogSetRow"><label>クラブ名</label><input id="ogSetClub" maxlength="20"></div>
@@ -711,8 +734,8 @@ body.replaying .boardWrap::after{content:"";position:absolute;inset:0;}
       <div class="note">フレンド機能はWeb版では未実装です。<br>編成とプレイヤー名はこの端末（ブラウザ）に保存されます。</div>
     </div>
   </div>
+  <!-- 「編成」タブは削除（ホーム＝編成画面のため無意味。2026-07-10）。サブスク/設定は各ページの「← 戻る」でホームへ -->
   <div class="ogFooter">
-    <button class="ogTab active" id="ogTabDeck"><span class="ogTabIco"></span>編成</button>
     <button class="ogKickoff" id="ogKickoffBtn">KICK OFF</button>
     <button class="ogTab" id="ogTabSub"><span class="ogTabIco"></span>サブスク</button>
     <button class="ogTab" id="ogTabSettings"><span class="ogTabIco"></span>設定</button>
@@ -722,7 +745,10 @@ body.replaying .boardWrap::after{content:"";position:absolute;inset:0;}
 <!-- ログインダイアログ（Unity TitleMainのログイン相当。本番はUniversoFutbol SSOに差し替え: AUTH_UNIVERSOFUTBOL.md） -->
 <div id="ogLogin" style="display:none">
   <div class="panel">
+    <button class="closeX" id="ogLoginClose" aria-label="閉じる">×</button>
     <div class="ttl">UniversoFutbol アカウント</div>
+    <button class="ufLogin" id="ogUfLoginBtn">UniversoFutbolでログイン（Google対応）</button>
+    <div class="orSep">または</div>
     <div class="modeRow">
       <button id="ogLoginModeLogin" class="mode active">ログイン</button>
       <button id="ogLoginModeReg" class="mode">新規登録</button>
@@ -4279,6 +4305,9 @@ function ogRenderDeck(){
   if(ogCostPunchPending){ void costEl.offsetWidth; costEl.classList.add('punch'); ogCostPunchPending=false; }
   document.getElementById('ogCostHint').textContent=t('ogCostHint');
   const grid=document.getElementById('ogDeckGrid');
+  // フォーメーション切替の滑らか移動（FLIP）：再構築前の各駒の画面位置を記録しておく
+  const prevRects={};
+  grid.querySelectorAll('.ogPiece[data-pi]').forEach(el=>{ prevRects[el.dataset.pi]=el.getBoundingClientRect(); });
   grid.innerHTML='';
   const cellMap={}; // "x,y" -> [pieceIndex]
   f.pos.forEach((p,i)=>{ const k=p[1]+','+p[2]; (cellMap[k]=cellMap[k]||[]).push(i); });
@@ -4293,6 +4322,7 @@ function ogRenderDeck(){
         const p=f.pos[pi], cost=ogDeck.costs[pi];
         const el=document.createElement('div');
         el.className='ogPiece'+(pi===ogSelectedPiece?' sel':'')+(pi===ogLastChangedPiece?' ogPulse':'');
+        el.dataset.pi=pi;
         const s=spots[Math.min(n,spots.length-1)];
         el.style.left=s[0]+'%'; el.style.top=s[1]+'%'; el.style.width=s[2]+'%';
         el.innerHTML=`<img src="${IMG[p[0]+'_b']}" alt="${p[0]}"><span class="ogCost" style="background-image:var(--cost${cost*10})"></span>`;
@@ -4302,6 +4332,21 @@ function ogRenderDeck(){
       grid.appendChild(cell);
     }
   }
+  // FLIP再生：旧位置→新位置へ滑走（.ogPieceの基準transformはtranslate(-50%,-50%)なので差分を合成する）
+  grid.querySelectorAll('.ogPiece[data-pi]').forEach(el=>{
+    const prev=prevRects[el.dataset.pi];
+    if(!prev) return;
+    const now=el.getBoundingClientRect();
+    const dx=prev.left-now.left, dy=prev.top-now.top;
+    if(Math.abs(dx)<1&&Math.abs(dy)<1) return;
+    el.style.transition='none';
+    el.style.transform=`translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+    requestAnimationFrame(()=>{
+      el.style.transition='transform .45s cubic-bezier(.25,.9,.3,1)';
+      el.style.transform='translate(-50%,-50%)';
+      setTimeout(()=>{ el.style.transition=''; el.style.transform=''; },500);
+    });
+  });
   ogLastChangedPiece=-1;
   // フォーメーション一覧
   const fl=document.getElementById('ogFormationList');
@@ -4526,6 +4571,8 @@ function ogRenderAuth(){
     document.getElementById('ogLogoutBtn').style.display=ogIsLoggedIn()?'':'none';
     document.getElementById('ogGotoLoginBtn').style.display=ogIsLoggedIn()?'none':'';
   }
+  const headLogin=document.getElementById('ogHeadLoginBtn');
+  if(headLogin) headLogin.style.display=ogIsLoggedIn()?'none':''; // ログイン済みなら右上ボタンを隠す（ユーザー名表示が代わり）
   ogRenderSubPage();
 }
 function ogRenderSubPage(){
@@ -4559,9 +4606,9 @@ async function ogCancelSub(){
 function ogSelectTab(tab){
   const map={deck:'ogPageDeck',sub:'ogPageSub',settings:'ogPageSettings'};
   for(const k in map) ogShow(map[k],k===tab);
-  document.getElementById('ogTabDeck').classList.toggle('active',tab==='deck');
-  document.getElementById('ogTabSub').classList.toggle('active',tab==='sub');
-  document.getElementById('ogTabSettings').classList.toggle('active',tab==='settings');
+  document.getElementById('ogTabDeck')?.classList.toggle('active',tab==='deck'); // 編成タブは削除済み（ホーム=編成のため）
+  document.getElementById('ogTabSub')?.classList.toggle('active',tab==='sub');
+  document.getElementById('ogTabSettings')?.classList.toggle('active',tab==='settings');
 }
 function ogShowSubRequired(){
   ogToast('ランク変更はプレミアム（サブスク）限定です');
@@ -4588,8 +4635,20 @@ document.getElementById('ogSubLoginBtn').addEventListener('click',()=>ogShowLogi
 document.getElementById('ogTitle').addEventListener('click',()=>{ ogShow('ogTitle',false); if(ogIsLoggedIn()) ogShowHome(); else ogShowLogin(); });
 document.getElementById('ogCostCancel').addEventListener('click',()=>{ ogShow('ogCostPicker',false); ogSelectedPiece=-1; ogRenderDeck(); });
 document.getElementById('ogCostPicker').addEventListener('click',e=>{ if(e.target.id==='ogCostPicker'){ ogShow('ogCostPicker',false); ogSelectedPiece=-1; ogRenderDeck(); } });
-document.getElementById('ogTabDeck').addEventListener('click',()=>ogSelectTab('deck'));
 document.getElementById('ogTabSub').addEventListener('click',()=>ogSelectTab('sub'));
+// サブスク/設定ページの「← 戻る」＝ホーム（編成）へ（編成タブ削除に伴う導線）
+document.getElementById('ogSubBackBtn').addEventListener('click',()=>{ playFeedback('cancel'); ogSelectTab('deck'); });
+document.getElementById('ogSettingsBackBtn').addEventListener('click',()=>{ playFeedback('cancel'); ogSelectTab('deck'); });
+// 右上ログインボタン（未ログイン時のみ表示）→ ログインウィンドウを開く
+document.getElementById('ogHeadLoginBtn').addEventListener('click',()=>{ playFeedback('tap'); ogShowLogin(); });
+// ログインウィンドウの閉じる×
+document.getElementById('ogLoginClose').addEventListener('click',()=>{ playFeedback('cancel'); ogShow('ogLogin',false); });
+// UniversoFutbolポータル経由ログイン（Google等の外部認証はポータル側が処理し #uf_sso で戻る）
+document.getElementById('ogUfLoginBtn').addEventListener('click',()=>{
+  playFeedback('submit');
+  const to = location.hostname==='mini.footballchess.io' ? location.origin : 'https://mini.footballchess.io';
+  location.href='https://universo-futbol.com/api/auth/launch?to='+encodeURIComponent(to);
+});
 document.getElementById('ogTabSettings').addEventListener('click',()=>ogSelectTab('settings'));
 document.getElementById('ogSetName').addEventListener('change',e=>{
   const v=normalizeOnlineDisplayName(e.target.value||'Player');
@@ -4617,7 +4676,9 @@ document.getElementById('ogHomeBtn').addEventListener('click',()=>{ ogShowHome()
 function ogBoot(){
   // ?room= 付き共有URLは従来どおり直接試合画面（自動参加）へ（セッションだけ裏で復元）
   if(roomCodeFromUrl()){ ogRestoreSession(); return; }
-  ogShowTitle();
+  // 他のUniversoFutbolコンテンツとの整合性のため、タイトル画面・自動ログインダイアログは廃止（2026-07-10）。
+  // 直接ホームを表示し、ログインは右上のログインボタンから任意で行う（タイトル画像はホーム背景に転用）
+  ogShowHome();
   (async()=>{ if(!(await ogHandleUfSsoFromHash())) await ogHandleSsoFromUrl(); await ogRestoreSession(); })();
 }
 
