@@ -4,9 +4,11 @@ import assert from "node:assert/strict";
 import {
   ballHolder,
   calcFlyingPass,
+  calcOffside,
   calcPassDisplayProbability,
   calcTackleSuccess,
   createInitialGameState,
+  offsideLineFor,
   resolveServerTurn,
   validateCommandsForTeam,
 } from "../.test-dist/src/game-core.js";
@@ -747,7 +749,63 @@ test("same-team loose ball pickup is offside from the turn-start line like Unity
     result.game.pieces.find((candidate) => candidate.id === 1),
     piece({ id: 1, team: "b", posType: "fw", cost: 2, x: 1, y: -1, sx: 1, sy: -1 }),
   );
-  assert.deepEqual(result.game.ball, { target: "cell", pieceId: null, x: 0, y: -1, lastTeam: "b" });
+  // Unity OnOffsideAsync準拠：オフサイド地点に最も近い相手駒（(0,-2)のGK）がボールを獲得して再開
+  assert.equal(result.events[1].details?.kickerId, 2);
+  assert.equal(ballHolder(result.game)?.id, 2);
+});
+
+test("offside line stays at the deep defender line instead of being clamped to halfway", () => {
+  // 旧実装のクランプ逆転バグの回帰テスト：赤守備の後方から2番目がy=-2なら、ラインは-2のまま
+  // （旧実装は Math.max(-2,0)=0 に引き上げられ、DFライン手前のy=-1で受ける通常パスまで100%誤判定だった）
+  const state = createInitialGameState("b", "offside-line-clamp");
+  state.pieces = [
+    piece({ id: 1, team: "r", posType: "gk", cost: 3, x: 0, y: -3, sx: 0, sy: -3 }),
+    piece({ id: 2, team: "r", posType: "df", cost: 1, x: 0, y: -2, sx: 0, sy: -2 }),
+    piece({ id: 3, team: "r", posType: "df", cost: 1, x: 1, y: -2, sx: 1, sy: -2 }),
+  ];
+  assert.equal(offsideLineFor(state, "r"), -2);
+  // 赤守備が押し上げている場合はハーフウェイ(青の攻撃方向でy=1)でクランプ
+  state.pieces = [
+    piece({ id: 1, team: "r", posType: "gk", cost: 3, x: 0, y: 2, sx: 0, sy: 2 }),
+    piece({ id: 2, team: "r", posType: "df", cost: 1, x: 0, y: 3, sx: 0, sy: 3 }),
+  ];
+  assert.equal(offsideLineFor(state, "r"), 1);
+});
+
+test("calcOffside follows the Unity master: ball direction picks the row", () => {
+  // 前進パスで着地がライン手前(B)なら0%（旧実装は着地=受け手のみ参照で誤って100%になり得た）
+  assert.equal(calcOffside(-2, 0, -1, -1), 0);
+  // 前進パスで着地がライン越え(T)なら、蹴り出し位置に関わらず100%
+  assert.equal(calcOffside(-1, 0, -2, -1), 100);
+  // 後方パス（ボールより後ろで受ける）はライン越え同士でも0%＝オフサイドなし
+  assert.equal(calcOffside(0, -2, -1, -1), 0);
+  // 横パスでライン越え同士なら50%
+  assert.equal(calcOffside(0, -1, -1, -1), 50);
+});
+
+test("offside pass hands the ball to the nearest defending piece like Unity's restart", () => {
+  const state = createInitialGameState("b", "offside-pass-kicker");
+  state.pieces = [
+    piece({ id: 1, team: "b", posType: "mf", cost: 2, x: 0, y: 0, sx: 0, sy: 0 }),
+    piece({ id: 2, team: "b", posType: "fw", cost: 2, x: 0, y: -2, sx: 0, sy: -2 }),
+    piece({ id: 3, team: "r", posType: "gk", cost: 3, x: 0, y: -3, sx: 0, sy: -3 }),
+    piece({ id: 4, team: "r", posType: "df", cost: 1, x: 2, y: -1, sx: 2, sy: -1 }),
+  ];
+  state.ball = { target: "piece", pieceId: 1, x: null, y: null, lastTeam: "b" };
+
+  // 赤の後方2番目=(2,-1)→ライン-1。受け手(0,-2)はライン越え=前進パスで100%オフサイド
+  const result = resolveServerTurn(state, {
+    b: [{ type: "pass", pieceId: 1, targetId: 2, tx: 0, ty: -2, team: "b" }],
+  });
+
+  const offside = result.events.find((event) => event.type === "offside");
+  assert.ok(offside, "offside event should fire");
+  assert.deepEqual(offside.details?.resetTo, { x: 0, y: -2 });
+  // 最寄りの赤駒=(2,-1)のDF（距離4 vs GK(0,-3)の距離1…GKが最寄り）がボール獲得
+  assert.equal(offside.details?.kickerId, 3);
+  assert.equal(ballHolder(result.game)?.id, 3);
+  // こぼれ球は残らない（受け手が拾い直してオフサイドが無効化される旧バグの回帰確認）
+  assert.notEqual(result.game.ball.target, "cell");
 });
 
 test("same-team loose ball pickup uses turn-start position, not pickup cell, for offside", () => {

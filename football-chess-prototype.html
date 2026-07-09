@@ -1092,9 +1092,15 @@ const T_FAILED={
   FK:[60,65,75,60,85],
   CK:[50,55,65,70,75],
 };
-// オフサイドになる確率テーブル DrawingOffsideMaster（before×after の相対位置）
-// 行=before(Up/Side/Down) 列=after(Up/Side/Down)
-const T_OFFSIDE=[[100,100,100],[100,50,0],[100,50,0]];
+// オフサイドになる確率テーブル DrawingOffsideMaster（配信マスタ正式値。2026-07-09照合）
+// キー=ボールの移動方向（OffsideUp=ゴール方向へ前進/OffsideSide=横/OffsideDown=後方）
+// 値=before(蹴り出し位置)×after(着地位置)のライン相対（T=ライン越え/M=ライン上/B=手前）。-1=起こり得ない組合せ
+// ※後方パス（OffsideDown）は全て0%＝「ボールより後ろで受ければオフサイドなし」の実ルール通り
+const T_OFFSIDE={
+  OffsideUp:  {TT:100,TM:-1,TB:-1,MT:100,MM:-1,MB:-1,BT:100,BM:0,BB:0},
+  OffsideSide:{TT:50, TM:-1,TB:-1,MT:-1, MM:0, MB:-1,BT:-1, BM:-1,BB:0},
+  OffsideDown:{TT:0,  TM:0, TB:0, MT:-1, MM:-1,MB:0, BT:-1, BM:-1,BB:0},
+};
 // ファウル発生率（守備側の同マス人数→%）: Unity DrawingFoulProbabilityMaster
 const T_FOUL={1:10,2:35,3:60};
 // 消極的戦術: Unity DrawingPassiveTacticsMaster
@@ -1389,12 +1395,21 @@ function relLine(offsideLine, y, dir){
   if(d===0) return 1;      // ライン上
   return d>0 ? 0 : 2;      // ゴール側=Up(オフサイド側) / 自陣側=Down(オンサイド)
 }
+const REL_OFFSIDE_KEY=['T','M','B']; // relLine(0=ライン越え/1=ライン上/2=手前)→マスタ添字
 function calcOffside(offsideLine, beforeY, afterY, dir){
-  const rb=relLine(offsideLine,beforeY,dir), ra=relLine(offsideLine,afterY,dir);
-  return clampProb(T_OFFSIDE[rb][ra]);
+  // Unity DrawingRepository.GetOffsideEntry 準拠：ボールの移動方向（前進/横/後方）でキーを選び、
+  // before(蹴り出し位置)×after(着地位置)のライン相対位置で確率を引く。
+  const forward = dir<0 ? (beforeY-afterY) : (afterY-beforeY); // ゴール方向へ進むほど正
+  const key = forward>0 ? 'OffsideUp' : forward<0 ? 'OffsideDown' : 'OffsideSide';
+  const cell = REL_OFFSIDE_KEY[relLine(offsideLine,beforeY,dir)] + REL_OFFSIDE_KEY[relLine(offsideLine,afterY,dir)];
+  return clampProb(Math.max(T_OFFSIDE[key][cell],0)); // -1(起こり得ない組合せ)は0扱い
 }
-/* オフサイドライン＝守備側の後方から2番目の守備者のY（相手DFライン基準／GDD準拠）。
-   青が守る自ゴール=y=4(大)側, 赤が守る自ゴール=y=-3(小)側が最後方。 */
+/* オフサイドライン＝守備側の後方から2番目の守備者のY（Unity BoardCalculator.GetOffsideLine 準拠）。
+   青が守る自ゴール=y=4(大)側, 赤が守る自ゴール=y=-3(小)側が最後方。
+   ★ハーフウェイクランプの向きに注意：ラインは常に「守備側の陣地」内に留める。
+   青守備(赤の攻撃)はライン下限0、赤守備(青の攻撃)はライン上限1。
+   （旧実装はb/rでクランプが逆で、赤守備ラインが常にy=0以上へ引き上げられ、
+   　赤DFラインの手前で受けた通常のパスまで100%オフサイド誤判定される実バグだった） */
 function offsideLineFor(defTeam){
   const defs=pieces.filter(p=>p.team===defTeam);
   if(defs.length===0) return null;
@@ -1402,17 +1417,15 @@ function offsideLineFor(defTeam){
     ? defs.slice().sort((a,b)=>b.y-a.y)   // 青ゴール(大y)に近い順
     : defs.slice().sort((a,b)=>a.y-b.y);  // 赤ゴール(小y)に近い順
   const line=(sorted[1]||sorted[0]).y;      // 後方から2番目（GK＝最後方の次）
-  return defTeam==='b' ? Math.min(line,1) : Math.max(line,0); // ハーフウェイラインで上限/下限をかける
+  return defTeam==='b' ? Math.max(line,0) : Math.min(line,1);
 }
-/* パス成立時のオフサイド判定：受け手が相手陣で守備ラインより前なら成立確率を返す。
-   受け手は静止して受けるため before=after=受け手Y（表対角=前100/線上50/後0）。 */
+/* パス成立時のオフサイド判定（Unity StateBattleCalculate.IsOffside 準拠）：
+   before=パサー位置 / after=着地位置。後方・横パスはマスタ側で0%/条件付き50%になるため、
+   自陣かどうかの前置きチェックは不要（ラインのクランプが自陣免除を兼ねる）。 */
 function isOffsidePass(passer, receiver){
-  const dir=attackDir(passer.team);
-  const inOpponentHalf = dir<0 ? (receiver.y<0) : (receiver.y>0);
-  if(!inOpponentHalf) return false;                       // 自陣半分は対象外
   const line=offsideLineFor(passer.team==='b'?'r':'b');
   if(line==null) return false;
-  return rollPercent(calcOffside(line, receiver.y, receiver.y, dir));
+  return rollPercent(calcOffside(line, passer.y, receiver.y, attackDir(passer.team)));
 }
 
 function isAttackGoalArea(team,x,y){
@@ -3560,22 +3573,43 @@ function placeLooseBallDefensive(x,y,baseMsg,lastTeam=lastHadBallTeam){
   return r.cleared;
 }
 
-/* ===== オフサイド 成立後処理（項目1）=====
-   受け手をターン開始位置(sx,sy)へ戻し（移動も取り消し）、成立地点にこぼれ球を配置。
-   次ターン、そのマスに入った駒が既存の拾得ロジックで拾う。演出は成立地点に追従表示。 */
+/* ===== オフサイド 成立後処理 =====
+   Unity StateBattleStaging.OnOffsideAsync 準拠の簡略版（Web版はGKリスタート同様、全体再配置は省略）：
+   受け手をターン開始位置(sx,sy)へ戻し、オフサイド地点に最も近い相手チームの駒がボールを獲得して再開（間接FK相当）。
+   ★旧実装の「成立地点にこぼれ球」は戻さないこと：受け手自身が同ターン末の pickupLooseBall で拾い直して
+   オフサイドが実質無効化される（カットインだけ出て進行が変わらない）実バグの原因だった。 */
 async function handleOffside(receiver, atX, atY, sourceTeam=lastHadBallTeam){
   receiver.x=receiver.sx; receiver.y=receiver.sy;         // 位置戻し（移動取り消し）
-  placeLooseBall(atX, atY, `⚠ オフサイド：${label(receiver)} の動きが無効化されました`, sourceTeam);
-  resetBattleDelayCount();
+  log(`⚠ オフサイド：${label(receiver)} の動きが無効化されました`);
   await showCutinAtPiece('offside', 1100, atX, atY);
+  const kicker=nearestOffsideKicker(receiver.team==='b'?'r':'b', atX, atY);
+  if(kicker){
+    setBallToPiece(kicker,true);
+    log(`→ ${label(kicker)} のボールで再開`);
+  }else{
+    placeLooseBall(atX, atY, '→ こぼれ球', sourceTeam); // 相手駒が1体もいない場合の保険（通常起こらない）
+  }
+  resetBattleDelayCount();
+  render();
+}
+/* Unity GetNearCells 準拠：オフサイド地点(同マスは除く)から近い順で最初に見つかる相手チーム駒 */
+function nearestOffsideKicker(team, x, y){
+  const cands=pieces.filter(p=>p.team===team && !(p.x===x&&p.y===y));
+  const pool=cands.length ? cands : pieces.filter(p=>p.team===team);
+  let best=null, bestD=Infinity;
+  for(const p of pool){
+    const d=(p.x-x)*(p.x-x)+(p.y-y)*(p.y-y);
+    if(d<bestD){ best=p; bestD=d; }
+  }
+  return best;
 }
 
 function isFreeBallCatchOffside(team,catchPiece){
-  const dir=attackDir(team);
-  const inOpponentHalf = dir<0 ? (catchPiece.sy<0) : (catchPiece.sy>0);
-  if(!inOpponentHalf) return false;
+  // Unity IsFreeBallCatchOffside 準拠：ターン開始位置がラインを越えていれば成立（確率抽選なし）。
+  // 自陣チェックはラインのクランプ（守備側陣地内に留まる）が兼ねるため不要。
   const line=offsideLineFor(team==='b'?'r':'b');
   if(line==null) return false;
+  const dir=attackDir(team);
   return dir<0 ? (catchPiece.sy<line) : (catchPiece.sy>line);
 }
 

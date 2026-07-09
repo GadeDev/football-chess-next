@@ -281,11 +281,14 @@ const T_FAILED: Record<string, number[]> = {
   FK: [60, 65, 75, 60, 85],
   CK: [50, 55, 65, 70, 75],
 };
-const T_OFFSIDE = [
-  [100, 100, 100],
-  [100, 50, 0],
-  [100, 50, 0],
-];
+// DrawingOffsideMaster（配信マスタ正式値）: キー=ボールの移動方向、値=before×afterのライン相対。
+// T=ライン越え/M=ライン上/B=手前。-1=起こり得ない組合せ（0扱い）。後方パス(OffsideDown)は全て0%。
+const T_OFFSIDE: Record<string, Record<string, number>> = {
+  OffsideUp: { TT: 100, TM: -1, TB: -1, MT: 100, MM: -1, MB: -1, BT: 100, BM: 0, BB: 0 },
+  OffsideSide: { TT: 50, TM: -1, TB: -1, MT: -1, MM: 0, MB: -1, BT: -1, BM: -1, BB: 0 },
+  OffsideDown: { TT: 0, TM: 0, TB: 0, MT: -1, MM: -1, MB: 0, BT: -1, BM: -1, BB: 0 },
+};
+const REL_OFFSIDE_KEY = ["T", "M", "B"] as const;
 const T_FOUL: Record<number, number> = { 1: 10, 2: 35, 3: 60 };
 const PASSIVE_TACTICS_DEBUFF = { PassCut: -20, Tackle: -20 };
 const BUFF = {
@@ -659,15 +662,22 @@ export function relLine(offsideLine: number, y: number, dir: -1 | 1): 0 | 1 | 2 
 }
 
 export function calcOffside(offsideLine: number, beforeY: number, afterY: number, dir: -1 | 1): number {
-  return clampProb(T_OFFSIDE[relLine(offsideLine, beforeY, dir)][relLine(offsideLine, afterY, dir)]);
+  // Unity DrawingRepository.GetOffsideEntry 準拠：ボールの移動方向（前進/横/後方）でキーを選び、
+  // before(蹴り出し位置)×after(着地位置)のライン相対位置で確率を引く。
+  const forward = dir < 0 ? beforeY - afterY : afterY - beforeY;
+  const key = forward > 0 ? "OffsideUp" : forward < 0 ? "OffsideDown" : "OffsideSide";
+  const cell = REL_OFFSIDE_KEY[relLine(offsideLine, beforeY, dir)] + REL_OFFSIDE_KEY[relLine(offsideLine, afterY, dir)];
+  return clampProb(Math.max(T_OFFSIDE[key][cell], 0));
 }
 
+// Unity BoardCalculator.GetOffsideLine 準拠。ハーフウェイクランプはラインを常に守備側陣地内へ留める向き
+// （青守備=下限0 / 赤守備=上限1。旧実装はb/rで逆になっており、通常のパスまで100%オフサイド誤判定される実バグだった）。
 export function offsideLineFor(state: FootballChessGameState, defTeam: Team): number | null {
   const defenders = state.pieces.filter((piece) => piece.team === defTeam);
   if (defenders.length === 0) return null;
   const sorted = defTeam === "b" ? defenders.slice().sort((a, b) => b.y - a.y) : defenders.slice().sort((a, b) => a.y - b.y);
   const line = (sorted[1] ?? sorted[0]).y;
-  return defTeam === "b" ? Math.min(line, 1) : Math.max(line, 0);
+  return defTeam === "b" ? Math.max(line, 0) : Math.min(line, 1);
 }
 
 export function isAttackGoalArea(team: Team, x: number, y: number): boolean {
@@ -1267,12 +1277,11 @@ function hasPassDefensiveContact(state: FootballChessGameState, passPiece: Piece
 }
 
 function isOffsidePass(state: FootballChessGameState, passer: Piece, receiver: Piece): boolean {
-  const dir = attackDir(passer.team);
-  const inOpponentHalf = dir < 0 ? receiver.y < 0 : receiver.y > 0;
-  if (!inOpponentHalf) return false;
+  // Unity StateBattleCalculate.IsOffside 準拠：before=パサー位置 / after=着地位置。
+  // 自陣チェックはラインのクランプ（守備側陣地内に留まる）が兼ねるため不要。
   const line = offsideLineFor(state, opponentTeam(passer.team));
   if (line === null) return false;
-  return rollPercent(state, calcOffside(line, receiver.y, receiver.y, dir));
+  return rollPercent(state, calcOffside(line, passer.y, receiver.y, attackDir(passer.team)));
 }
 
 function handleOffside(
@@ -1284,11 +1293,20 @@ function handleOffside(
   events: TurnEvent[],
   logs: string[],
 ): void {
+  // Unity StateBattleStaging.OnOffsideAsync 準拠の簡略版：受け手をターン開始位置へ戻し、
+  // オフサイド地点に最も近い相手チームの駒がボールを獲得して再開（間接FK相当）。
+  // ★旧実装の「成立地点にこぼれ球」は戻さないこと：受け手自身が同ターン末の拾得で拾い直して
+  // オフサイドが実質無効化される実バグの原因だった。
   const from = coordOf(receiver);
   const resetTo = { x: receiver.sx, y: receiver.sy };
   receiver.x = receiver.sx;
   receiver.y = receiver.sy;
-  setBallToCell(state, x, y, sourceTeam, true);
+  const kicker = nearestOffsideKicker(state, opponentTeam(receiver.team), x, y);
+  if (kicker) {
+    setBallToPiece(state, kicker, true);
+  } else {
+    setBallToCell(state, x, y, sourceTeam, true);
+  }
   resetBattleDelayCount(state);
   pushEvent(events, {
     type: "offside",
@@ -1296,17 +1314,33 @@ function handleOffside(
     pieceId: receiver.id,
     from,
     to: { x, y },
-    details: { sourceTeam, resetTo },
+    details: { sourceTeam, resetTo, kickerId: kicker?.id ?? null },
   });
   logs.push(`${teamName(receiver.team)} offside at (${x},${y})`);
 }
 
+// Unity GetNearCells 準拠：オフサイド地点(同マスは除く)から近い順で最初に見つかる相手チーム駒
+function nearestOffsideKicker(state: FootballChessGameState, team: Team, x: number, y: number): Piece | undefined {
+  const cands = state.pieces.filter((piece) => piece.team === team && !(piece.x === x && piece.y === y));
+  const pool = cands.length > 0 ? cands : state.pieces.filter((piece) => piece.team === team);
+  let best: Piece | undefined;
+  let bestD = Infinity;
+  for (const piece of pool) {
+    const d = (piece.x - x) * (piece.x - x) + (piece.y - y) * (piece.y - y);
+    if (d < bestD) {
+      best = piece;
+      bestD = d;
+    }
+  }
+  return best;
+}
+
 function isFreeBallCatchOffside(state: FootballChessGameState, team: Team, catchPiece: Piece): boolean {
-  const dir = attackDir(team);
-  const inOpponentHalf = dir < 0 ? catchPiece.sy < 0 : catchPiece.sy > 0;
-  if (!inOpponentHalf) return false;
+  // Unity IsFreeBallCatchOffside 準拠：ターン開始位置がラインを越えていれば成立（確率抽選なし）。
+  // 自陣チェックはラインのクランプ（守備側陣地内に留まる）が兼ねるため不要。
   const line = offsideLineFor(state, opponentTeam(team));
   if (line === null) return false;
+  const dir = attackDir(team);
   return dir < 0 ? catchPiece.sy < line : catchPiece.sy > line;
 }
 
