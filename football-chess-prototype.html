@@ -1893,67 +1893,145 @@ function bestRedMoveToward(p,x,y){
   })[0];
 }
 
-/* 相手AI：Unity版の Attack / Defence / BallCatch の優先順位へ寄せた予約生成 */
+/* ===== 相手AI（2026-07-10全面強化）=====
+   Unity StmBattleAICommandCalculate の Attack / Defence / BallCatch 構造を踏襲しつつ、
+   ゲーム本体と同じ確率関数（calcShoot／経路・着地パス／タックル／オフサイド）で
+   各行動を期待値スコア化して選ぶ。乱数は「上位2択から85/15で選ぶ」ゆらぎのみ。
+   賢さの中身：①シュート/パス/スルーパス/ドリブルの定量比較 ②オフサイド率・着地被タックル率で割引
+   ③受け手のシュート期待が高ければパス→シュートを連鎖仕込み ④守備は突入タックル＋パスコースのマーク
+   ⑤非保持駒はオンサイドを保ちつつパスコースを作る */
+function aiPickTop(options){
+  const s=options.filter(o=>o&&o.score>0).sort((a,b)=>b.score-a.score);
+  if(!s.length) return null;
+  return (s.length>=2 && Math.random()<0.15) ? s[1] : s[0];
+}
+function aiOffsideProb(passer,targetY){
+  const line=offsideLineFor('b');
+  return line==null ? 0 : calcOffside(line,passer.y,targetY,attackDir('r'));
+}
+// そのマスで保持した場合の被タックル期待（同マス青の最良タックル成功率%）
+function aiTackleRiskAt(piece,x,y){
+  const enemies=piecesAt(x,y).filter(q=>q.team==='b');
+  if(!enemies.length) return 0;
+  return Math.max(...enemies.map(e=>calcTackleSuccess({...piece,x,y},e)));
+}
+function aiPlanHolder(p){
+  const options=[];
+  // シュート：成功率そのもの＋ゴール直結ボーナス
+  const sh=calcShoot(p);
+  if(sh.area!=='-') options.push({score:sh.prob*1.2, act:{type:'shoot',pieceId:p.id,tx:p.x,ty:p.y,team:'r'}});
+  // 通常パス：実質成功率（経路×着地×(1-オフサイド率)×被タックル割引）＋前進価値＋受け手のシュート期待
+  redPassTargets(p).forEach(q=>{
+    const base=calcPassDisplayProbability(p,q.x,q.y);
+    if(base==null) return;
+    const off=aiOffsideProb(p,q.y);
+    const risk=aiTackleRiskAt(q,q.x,q.y);
+    const succ=base*(100-off)/100*(100-risk*0.6)/100;
+    if(succ<28) return; // 通る見込みの薄いパスは選ばない
+    const gain=Math.max(0,(redGoalDistance(p.x,p.y)-redGoalDistance(q.x,q.y))*8);
+    const qShoot=calcShoot(q);
+    const chainShoot=(qShoot.area!=='-'&&qShoot.prob>=45)?q:null; // パス→シュート連鎖の候補
+    options.push({score:succ*0.6+gain+(chainShoot?qShoot.prob*0.5:0),
+      act:{type:'pass',pieceId:p.id,targetId:q.id,tx:q.x,ty:q.y,team:'r'}, chainShoot});
+  });
+  // スルーパス：前方の空きマスへ。着地への回収レース（赤の方が近い時だけ）
+  BALL_LIMIT.forEach(([dx,dy])=>{
+    const x=p.x+dx, y=p.y+dy;
+    const c=cellAt(x,y);
+    if(!c||c.t==='selfgoal'||c.t==='oppgoal'||y<=p.y) return;
+    if(piecesAt(x,y).length) return; // 空きマス限定
+    const prob=calcFlyingPass(p,x,y);
+    if(prob<40) return;
+    const mates=aiTeamPieces().filter(q=>q.id!==p.id&&q.posType!=='gk');
+    const redNear=mates.length?Math.min(...mates.map(q=>manhattan(q.x,q.y,x,y))):9;
+    const blueNear=Math.min(...pieces.filter(q=>q.team==='b').map(q=>manhattan(q.x,q.y,x,y)),9);
+    if(redNear>blueNear) return; // 回収負けしそうなスペースには出さない
+    const gain=Math.max(0,(redGoalDistance(p.x,p.y)-redGoalDistance(x,y))*8);
+    options.push({score:prob*0.45+gain+(blueNear-redNear)*6,
+      act:{type:'throughpass',pieceId:p.id,tx:x,ty:y,team:'r'}});
+  });
+  // ドリブル：前進価値＋攻撃エリア到達ボーナス−被タックル期待
+  redMoveTargets(p).forEach(([x,y])=>{
+    const risk=aiTackleRiskAt(p,x,y);
+    const gain=Math.max(0,(redGoalDistance(p.x,p.y)-redGoalDistance(x,y))*10);
+    options.push({score:(100-risk)*0.35+gain+(isRedAttackingArea(x,y)?14:0),
+      act:{type:'dribble',pieceId:p.id,tx:x,ty:y,team:'r'}});
+  });
+  const top=aiPickTop(options);
+  if(!top) return;
+  oppCommands.push(top.act);
+  // パス→シュートの連鎖仕込み（受け手のシュート期待が高い場合。パス失敗時は実行側の保持チェックで自動中止）
+  if(top.act.type==='pass'&&top.chainShoot){
+    oppCommands.push({type:'shoot',pieceId:top.chainShoot.id,tx:top.chainShoot.x,ty:top.chainShoot.y,team:'r'});
+  }
+}
 function planOpponentAI(){
   oppCommands=[];
   const holder=ballHolder();
   const redPieces=aiTeamPieces();
+  // --- Attack：赤がボール保持 ---
   if(holder && holder.team==='r'){
-    redPieces.forEach(p=>{
-      const isHolder = holder.id===p.id;
-      if(isHolder){
-        if(isRedAttackingArea(p.x,p.y) && calcShoot(p).prob>=35){
-          oppCommands.push({type:'shoot',pieceId:p.id,tx:p.x,ty:p.y,team:'r'});
-          return;
-        }
-        const to=bestRedPassTarget(p);
-        if(to){
-          oppCommands.push({type:'pass',pieceId:p.id,targetId:to.id,tx:to.x,ty:to.y,team:'r'});
-          return;
-        }
-        const mv=bestRedAttackMove(p);
-        if(mv){ oppCommands.push({type:'dribble',pieceId:p.id,tx:mv[0],ty:mv[1],team:'r'}); }
-        return;
+    aiPlanHolder(holder);
+    // 非保持駒：オンサイドを保って前進。1体は「次のパス先」を作る（保持駒のパス範囲内へ）
+    let supportAssigned=false;
+    const line=offsideLineFor('b');
+    redPieces.filter(p=>p.id!==holder.id&&p.posType!=='gk').forEach(p=>{
+      let best=null, bestScore=0;
+      redMoveTargets(p).forEach(([x,y])=>{
+        let s=(redGoalDistance(p.sx,p.sy)-redGoalDistance(x,y))*10;
+        if(line!=null && y>line) s-=25;                        // オフサイドポジションは減点
+        if(!supportAssigned && isPassRangeRed(holder,x,y)) s+=18; // パスコース形成（1体だけ強く）
+        s-=piecesAt(x,y).length*6;                              // 混雑回避
+        if(s>bestScore){ bestScore=s; best=[x,y]; }
+      });
+      if(best){
+        if(isPassRangeRed(holder,best[0],best[1])) supportAssigned=true;
+        oppCommands.push({type:'move',pieceId:p.id,tx:best[0],ty:best[1],team:'r'});
       }
-      if(p.posType==='gk') return;
-      const mv=bestRedAttackMove(p);
-      if(mv && Math.random()<0.75) oppCommands.push({type:'move',pieceId:p.id,tx:mv[0],ty:mv[1],team:'r'});
     });
     return;
   }
+  // --- Defence：青がボール保持 ---
   if(holder && holder.team==='b'){
-    redPieces.forEach(p=>{
-      if(p.posType==='gk') return;
-      const mv=bestRedMoveToward(p,holder.x,holder.y);
-      if(mv && Math.random()<0.7) oppCommands.push({type:'move',pieceId:p.id,tx:mv[0],ty:mv[1],team:'r'});
-    });
+    let chargers=0;
+    redPieces.filter(p=>p.posType!=='gk')
+      .sort((a,b)=>manhattan(a.x,a.y,holder.x,holder.y)-manhattan(b.x,b.y,holder.x,holder.y))
+      .forEach((p,i)=>{
+        const moves=redMoveTargets(p);
+        if(!moves.length) return;
+        // 保持駒のマスへ直接入れるなら突入（＝ターン末タックル。最大2体で挟む）
+        const direct=moves.find(([x,y])=>x===holder.x&&y===holder.y);
+        if(direct && chargers<2){ chargers++; oppCommands.push({type:'move',pieceId:p.id,tx:direct[0],ty:direct[1],team:'r'}); return; }
+        if(i<4){ // 最寄り4体はホルダーへ寄せる
+          const mv=bestRedMoveToward(p,holder.x,holder.y);
+          if(mv) oppCommands.push({type:'move',pieceId:p.id,tx:mv[0],ty:mv[1],team:'r'});
+          return;
+        }
+        if(i<7){ // 中間の駒は青のパス先候補（最も赤ゴールに近い脅威）をマーク
+          const threats=pieces.filter(q=>q.team==='b'&&q.id!==holder.id&&isPassRangeRed(holder,q.x,q.y));
+          if(threats.length){
+            const tgt=threats.slice().sort((a,b)=>manhattan(a.x,a.y,0,-3)-manhattan(b.x,b.y,0,-3))[0];
+            const mv=bestRedMoveToward(p,tgt.x,tgt.y);
+            if(mv) oppCommands.push({type:'move',pieceId:p.id,tx:mv[0],ty:mv[1],team:'r'});
+          }
+        }
+      });
     return;
   }
+  // --- BallCatch：こぼれ球 ---
   if(ball.target==='cell'){
     const bp=ballPos();
-    redPieces.slice().sort((a,b)=>manhattan(a.x,a.y,bp.x,bp.y)-manhattan(b.x,b.y,bp.x,bp.y)).forEach((p,i)=>{
+    // 近い順＋同距離ならコスト高優先（拾得はコスト最高が勝つため）
+    redPieces.slice().sort((a,b)=>{
+      const ad=manhattan(a.x,a.y,bp.x,bp.y), bd=manhattan(b.x,b.y,bp.x,bp.y);
+      if(ad!==bd) return ad-bd;
+      return pieceCost(b)-pieceCost(a);
+    }).forEach((p,i)=>{
       if(p.posType==='gk' && i>0) return;
       const mv=bestRedMoveToward(p,bp.x,bp.y);
       if(mv && i<4) oppCommands.push({type:'move',pieceId:p.id,tx:mv[0],ty:mv[1],team:'r'});
     });
-    return;
   }
-  redPieces.forEach(p=>{
-    const isHolder = holder && holder.id===p.id;
-    const r=Math.random();
-    if(isHolder){
-      if(isRedAttackingArea(p.x,p.y) && r<0.5){ oppCommands.push({type:'shoot',pieceId:p.id,tx:p.x,ty:p.y,team:'r'}); return; }
-      const passT=redPassTargets(p);
-      if(passT.length && r<0.75){ const to=pick(passT); oppCommands.push({type:'pass',pieceId:p.id,targetId:to.id,tx:to.x,ty:to.y,team:'r'}); return; }
-      const mv=redMoveTargets(p);
-      if(mv.length){ const fwd=mv.filter(([x,y])=>y>p.sy); const [x,y]=pick(fwd.length?fwd:mv); oppCommands.push({type:'dribble',pieceId:p.id,tx:x,ty:y,team:'r'}); return; }
-    }else{
-      if(r<0.6){
-        const mv=redMoveTargets(p);
-        if(mv.length){ const fwd=mv.filter(([x,y])=>y>p.sy); const [x,y]=pick(fwd.length?fwd:mv); oppCommands.push({type:'move',pieceId:p.id,tx:x,ty:y,team:'r'}); return; }
-      }
-    }
-  });
 }
 function makeDefaultPiece(p,team){
   if(team==='b'){
