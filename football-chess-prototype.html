@@ -4129,6 +4129,36 @@ async function ogRestoreSession(){
   }catch{ /* オフラインでもゲストとして起動継続 */ }
   ogApplyUser();
 }
+/* Universo Futbol ポータル(/api/auth/launch)からのSSOハンドオフを消費する。
+   形式: URL fragment `#uf_sso=<base64url JSON>`（access_token を含む。fragmentなのでサーバーには送られない）。
+   GrassrootsFootball / FCMS の consumeUniversoSsoFromHash と同じキー名・エンコード方式。 */
+async function ogHandleUfSsoFromHash(){
+  const raw=location.hash.replace(/^#/,'');
+  if(!raw) return false;
+  const params=new URLSearchParams(raw);
+  const encoded=params.get('uf_sso');
+  if(!encoded) return false;
+  params.delete('uf_sso');
+  try{
+    const rest=params.toString();
+    history.replaceState(null,'',location.pathname+location.search+(rest?'#'+rest:''));
+  }catch{}
+  let accessToken='';
+  try{
+    const b64=encoded.replace(/-/g,'+').replace(/_/g,'/');
+    const bin=atob(b64+'='.repeat((4-(b64.length%4))%4));
+    const bytes=Uint8Array.from(bin,ch=>ch.charCodeAt(0));
+    const payload=JSON.parse(new TextDecoder().decode(bytes));
+    if(payload&&typeof payload.access_token==='string') accessToken=payload.access_token;
+  }catch{}
+  if(!accessToken) return false;
+  try{
+    const r=await ogApi('/auth/uf-sso','POST',{access_token:accessToken});
+    if(r.ok){ ogAuth={token:r.token,user:r.user}; ogSaveSession(); ogApplyUser(); ogToast('UniversoFutbol会員でログインしました',true); }
+    else ogToast(r.error||'UniversoFutbolログインに失敗しました');
+  }catch{ ogToast('UniversoFutbolログインに失敗しました'); }
+  return true;
+}
 async function ogHandleSsoFromUrl(){
   const t=new URLSearchParams(location.search).get('sso');
   if(!t) return false;
@@ -4275,7 +4305,7 @@ function ogBoot(){
   // ?room= 付き共有URLは従来どおり直接試合画面（自動参加）へ（セッションだけ裏で復元）
   if(roomCodeFromUrl()){ ogRestoreSession(); return; }
   ogShowTitle();
-  (async()=>{ await ogHandleSsoFromUrl(); await ogRestoreSession(); })();
+  (async()=>{ if(!(await ogHandleUfSsoFromHash())) await ogHandleSsoFromUrl(); await ogRestoreSession(); })();
 }
 
 buildTeams();
