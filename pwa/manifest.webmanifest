@@ -1,8 +1,7 @@
 {
   "name": "Football Chess",
   "short_name": "FootballChess",
-  "description": "サッカー×チェスの同時ターン制対戦ゲーム（UniversoFutbol）",
-  "lang": "ja",
+  "description": "A simultaneous-turn football strategy game by UniversoFutbol.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
