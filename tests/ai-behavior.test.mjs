@@ -66,6 +66,64 @@ test("守備: 保持者が遠くても、ゴール側に居ない駒は帰陣コ
   assert.ok(r.reactive >= 3, `青キックオフ時の守備反応が少なすぎる（${r.reactive}件）`);
 });
 
+test("攻撃: 自陣停滞中（遅延カウント進行）は必ず前進の手を選ぶ", () => {
+  // ユーザー指摘「プレイヤーが動かないとAIが自陣から出てこず時間稼ぎになる」の回帰固定
+  for (const seed of [3, 17, 101]) {
+    const { run, seedRandom } = loadPrototype();
+    seedRandom(seed);
+    const r = JSON.parse(run(`
+      (()=>{
+        buildKickoffForTeam('r');
+        battleDelayCounts.r=2; // 遅延成立(3)寸前
+        oppCommands=[];
+        planOpponentAI();
+        const h=ballHolder();
+        const act=oppCommands.find(c=>c.pieceId===h.id||c.type==='pass'||c.type==='throughpass');
+        return JSON.stringify({fromY:h.sy,act:act?{type:act.type,ty:act.ty}:null});
+      })()
+    `));
+    assert.ok(r.act, `seed=${seed}: 保持駒の行動が無い`);
+    assert.ok(
+      r.act.ty > r.fromY,
+      `seed=${seed}: 遅延寸前なのに前進していない（${JSON.stringify(r.act)} from y=${r.fromY}）`,
+    );
+  }
+});
+
+test("守備: GK脇に張るSS駒（1トップ）を常時マークする", () => {
+  const { run, seedRandom } = loadPrototype();
+  seedRandom(5);
+  // 青保持（守備局面）: SS駒をGK前の空きマス(0,-1)に張り付かせる
+  const def = JSON.parse(run(`
+    (()=>{
+      buildKickoffForTeam('b');
+      const ss=pieces.find(p=>p.team==='b'&&p.posType==='fw');
+      ss.x=0; ss.y=-1; ss.sx=0; ss.sy=-1; ss.cost=3;
+      oppCommands=[];
+      planOpponentAI();
+      const marked=oppCommands.some(c=>c.type==='move'&&c.tx===0&&c.ty===-1);
+      return JSON.stringify({marked});
+    })()
+  `));
+  assert.ok(def.marked, "守備局面で張り付きSS駒のマスにマークが入っていない");
+  // 赤保持（攻撃局面）でも見張りを残す
+  const atk = JSON.parse(run(`
+    (()=>{
+      buildKickoffForTeam('r');
+      const ss=pieces.find(p=>p.team==='b'&&p.posType==='fw');
+      ss.x=0; ss.y=-1; ss.sx=0; ss.sy=-1; ss.cost=3;
+      oppCommands=[];
+      planOpponentAI();
+      const guard=oppCommands.some(c=>c.type==='move'&&c.tx===0&&c.ty===-1);
+      // 「既に同マスで待機（移動コマンドなし）」のケースも許容するため、
+      // マスに乗る移動 or そのマスへ近づく移動のどちらかがあればよい
+      const closing=oppCommands.some(c=>c.type==='move'&&Math.abs(c.tx-0)+Math.abs(c.ty-(-1))<=1);
+      return JSON.stringify({guard,closing});
+    })()
+  `));
+  assert.ok(atk.guard||atk.closing, "攻撃局面で張り付きSS駒への見張りが残っていない");
+});
+
 test("攻撃: 受け手の隣の強い駒（SS級）リスク関数が働いている", () => {
   const { run } = loadPrototype();
   const result = run(`

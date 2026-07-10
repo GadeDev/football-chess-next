@@ -2158,6 +2158,19 @@ function aiPlanHolder(p){
     options.push({score:(100-risk)*0.35+gain+(isRedAttackingArea(x,y)?14:0)-reach*0.18,
       act:{type:'dribble',pieceId:p.id,tx:x,ty:y,team:'r'}});
   });
+  // 自陣停滞の解消（2026-07-10。ユーザー指摘「プレイヤーが動かないとAIが自陣から出てこず
+  // 遅延行為になる」対策）：赤が自陣(y<=0)保持のままだと3ターンで相手ボールになるため、
+  // 遅延カウントが進むほど「敵陣へ持ち出す手」を強く加点し、停滞・後戻りを減点する。
+  if(isOwnField('r',p.x,p.y)){
+    const pressure=25+(battleDelayCounts.r||0)*40;
+    for(const o of options){
+      if(o.act.type==='shoot') continue;
+      const ty=o.act.ty??p.y;
+      if(ty>=1) o.score+=pressure;            // 敵陣へ持ち出す（遅延カウントがリセットされる）
+      else if(ty>p.y) o.score+=pressure*0.4;  // 前進もそこそこ加点
+      else o.score-=pressure*0.8;             // 停滞・後戻りは選ばせない
+    }
+  }
   const top=aiPickTop(options);
   if(!top) return;
   oppCommands.push(top.act);
@@ -2166,6 +2179,15 @@ function aiPlanHolder(p){
     oppCommands.push({type:'shoot',pieceId:top.chainShoot.id,tx:top.chainShoot.x,ty:top.chainShoot.y,team:'r'});
   }
 }
+/* 赤陣深く（最終ライン付近 y<=-1）に張っている青駒＝「SS1トップ張り付き」対策の常時マーク対象。
+   GKの脇のマスに高ランクFWを置かれると、パス→至近シュートでほぼ確実に失点するため、
+   攻守どちらの局面でもマークを絶やさない（2026-07-10。ユーザー指摘への対策）。
+   採点＝ランク（SS級優先）＋ゴールへの近さ。 */
+function aiDeepThreats(){
+  return pieces.filter(q=>q.team==='b'&&q.y<=-1)
+    .map(q=>({q,score:pieceCost(q)*14+Math.max(0,(6-manhattan(q.x,q.y,0,-3))*6)}))
+    .sort((a,b)=>b.score-a.score);
+}
 function planOpponentAI(){
   oppCommands=[];
   const holder=ballHolder();
@@ -2173,10 +2195,30 @@ function planOpponentAI(){
   // --- Attack：赤がボール保持 ---
   if(holder && holder.team==='r'){
     aiPlanHolder(holder);
+    // 攻撃時も、赤陣深くに張る青駒（SS1トップ等）には見張りを残す（最大2体）。
+    // 見張りは脅威のマスに乗る（着地パスカット＋タックル圏）。届かなければ寄せる。
+    // これが無いと全員が攻め上がり、カウンターの縦1本で張り付きFWに合わされて失点する
+    const guardIds=new Set();
+    let guards=0;
+    for(const {q} of aiDeepThreats()){
+      if(guards>=2) break;
+      const marker=redPieces.filter(p=>p.id!==holder.id&&p.posType!=='gk'&&!guardIds.has(p.id))
+        .sort((a,b)=>{
+          const ad=manhattan(a.x,a.y,q.x,q.y), bd=manhattan(b.x,b.y,q.x,q.y);
+          if(ad!==bd) return ad-bd;
+          return pieceCost(b)-pieceCost(a);
+        })[0];
+      if(!marker) break;
+      guardIds.add(marker.id); guards++;
+      if(marker.x===q.x&&marker.y===q.y) continue; // 既に同マス＝動かず見張り続ける
+      const direct=redMoveTargets(marker).find(([x,y])=>x===q.x&&y===q.y);
+      const mv=direct||bestRedMoveToward(marker,q.x,q.y);
+      if(mv&&!(mv[0]===marker.x&&mv[1]===marker.y)) oppCommands.push({type:'move',pieceId:marker.id,tx:mv[0],ty:mv[1],team:'r'});
+    }
     // 非保持駒：オンサイドを保って前進。1体は「次のパス先」を作る（保持駒のパス範囲内へ）
     let supportAssigned=false;
     const line=offsideLineFor('b');
-    redPieces.filter(p=>p.id!==holder.id&&p.posType!=='gk').forEach(p=>{
+    redPieces.filter(p=>p.id!==holder.id&&p.posType!=='gk'&&!guardIds.has(p.id)).forEach(p=>{
       let best=null, bestScore=0;
       redMoveTargets(p).forEach(([x,y])=>{
         let s=(redGoalDistance(p.sx,p.sy)-redGoalDistance(x,y))*10;
@@ -2244,6 +2286,21 @@ function planOpponentAI(){
         if(chargers>=2) return;
         if(canStep(p,holder.x,holder.y)){ chargers++; plan(p,holder.x,holder.y); }
       });
+
+    // ②' 深い位置の張り付きFW（SS1トップ等）の常時マーク（最大2体）：
+    //    パス範囲かどうかに関わらず、赤陣深く(y<=-1)の青駒のマスに高ランク守備を乗せる
+    //    （着地パスカット＋ターン末タックル圏）。届かない場合は最寄りの駒を寄せておく
+    let deepMarks=0;
+    for(const {q} of aiDeepThreats()){
+      if(deepMarks>=2) break;
+      if(q.id===holder.id) continue; // 保持者本人は①②が対応
+      if(piecesAt(q.x,q.y).some(r=>r.team==='r')) continue; // 既にマーク済み
+      const cand=free().filter(p=>canStep(p,q.x,q.y)).sort((a,b)=>pieceCost(b)-pieceCost(a))[0];
+      if(cand){ plan(cand,q.x,q.y); deepMarks++; continue; }
+      const near=free().sort((a,b)=>manhattan(a.x,a.y,q.x,q.y)-manhattan(b.x,b.y,q.x,q.y))[0];
+      const mv=near&&bestRedMoveToward(near,q.x,q.y);
+      if(mv&&!(mv[0]===near.x&&mv[1]===near.y)){ plan(near,mv[0],mv[1]); deepMarks++; }
+    }
 
     // ③ 受け手マーク：保持者のパス範囲にいる青駒を脅威度順に、受け手のマスへ乗って潰す。
     //    脅威度 = そこからのシュート期待 + ランク(コスト)×12 + ゴールへの近さ。SS級の受け手を最優先。
