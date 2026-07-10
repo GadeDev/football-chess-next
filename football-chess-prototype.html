@@ -2216,6 +2216,14 @@ for(const dict of Object.values(L10N)){ Object.assign(dict.online,{roomTurnTpl:'
 Object.assign(L10N.ja.online,{roomTurnTpl:'{room} / {team} / TURN {turn}',roomSpectateTpl:'{room} / 観戦',sentWaitingTpl:'{team} 送信済み / 相手待ち{deadline}',opponentSentTpl:'{team} 送信済み / 入力してください{deadline}',waitingConnectionTpl:'{room} / {team} / 相手接続待ち',deadlineTpl:' / 残り{time}',reconnectFailedTpl:'{room} 再接続失敗 / 参加で再試行',disconnectedRetryTpl:'{room} 切断 / {seconds}秒後に再接続 {attempt}/{max}',reconnectingTpl:'{room} 再接続中… {attempt}/{max}',creating:'ROOM作成中…',connectingTpl:'{room} 接続中…',spectateConnectingTpl:'{room} 観戦接続中…',connectionErrorTpl:'{room} 接続エラー / 再接続待ち',resolving:'解決中…',winnerTpl:'{room} / {team} 勝利',rematchWaitingTpl:'{room} / 再戦待ち',noRoom:'先にROOMを作成/参加してください',urlsCopied:'参加URL/観戦URLをコピーしました',urlsLogged:'参加URL/観戦URLをログに表示しました',leavingTpl:'{room} 退出中…',resigning:'投了送信中…',rematchSending:'再戦希望を送信しました'});
 for(const dict of Object.values(L10N)){ dict.matchLog={pieceMoved:'{team} piece {piece} → ({x},{y}) {action}',throughTo:'{team} through pass → ({x},{y})',passCompleted:'{team} pass completed → {receiver}',passFailed:'{team} pass failed',commandSkipped:'{team} {action} cancelled: {reason}',loosePicked:'{team} piece {piece} collected the loose ball',offside:'{team} offside',tackleSuccess:'{team} tackle successful',tackleFailed:'{team} tackle failed',foul:'{team} foul',goal:'{team} {kick}goal',shotMiss:'{team} shot missed',shotBlocked:'{team} shot blocked',gkSave:'{team} {kick}GK save',kickoff:'{team} kick-off',battleDelay:'{team} time wasting: restart from kick-off',passiveTactics:'{team} passive tactics penalty',additionalTime:'⏱ {half} additional time: {turns} turn(s)',halftime:'―― Half-time: {team} kick off the second half ――',fulltime:'―― Full time {blue} - {red} ――'}; }
 L10N.ja.matchLog={pieceMoved:'{team} 駒{piece} → ({x},{y}) {action}',throughTo:'{team} スルーパス → ({x},{y})',passCompleted:'{team} パス成功 → {receiver}',passFailed:'{team} パス失敗',commandSkipped:'{team} {action}中止：{reason}',loosePicked:'{team} 駒{piece} がこぼれ球を確保',offside:'{team} オフサイド',tackleSuccess:'{team} タックル成功',tackleFailed:'{team} タックル失敗',foul:'{team} ファウル',goal:'{team} {kick}ゴール',shotMiss:'{team} シュート失敗',shotBlocked:'{team} シュートブロック',gkSave:'{team} {kick}GKセーブ',kickoff:'{team} キックオフ',battleDelay:'{team} 遅延行為：キックオフに戻ります',passiveTactics:'{team} 消極的戦術ペナルティ',additionalTime:'⏱ {half}アディショナルタイム {turns}ターン',halftime:'―― ハーフタイム：後半は{team}ボールでキックオフ ――',fulltime:'―― フルタイム {blue} - {red} ――'};
+Object.assign(L10N.en.matchLog,{holderSelected:'Selected {piece} with the ball: move to dribble or select the ball to pass',alreadyMoved:'{piece} has already moved this turn',passQueuedPiece:'{piece} has a pass queued and may still move',pieceSelected:'Selected {piece}: choose a highlighted cell',looseSelected:'Selected loose ball: {piece} will collect it',noPassHolder:'No controllable ball holder can pass',chainStopped:'This piece is challenged; no more kicks this turn',ballSelected:'Ball selected: choose a blue target to pass{shootHint}',shootHint:' or select the ball again to shoot',moveQueued:'Queued {piece} → ({x},{y}) {action}',carryContinues:'Ball carried. You may continue with a pass',carryStopped:'The piece was challenged, so the passing chain stops',passQueued:'Queued pass {from} → {to} (chain {count})',throughQueued:'Queued through pass {from} → ({x},{y})',receiverContinues:'{piece} received the ball. Continue passing or select elsewhere to finish',enemyEndsChain:'An opponent occupies {piece}’s target cell; the chain stops',shootUnavailable:'Shooting is only available from the attacking PA/VA',shootQueued:'Queued shot by {piece} ({area} {probability}%)'});
+Object.assign(L10N.ja.matchLog,{holderSelected:'{piece}（ボール保持）を選択：黄マスへドリブル／ボールをタップでパス',alreadyMoved:'{piece} はこのターン移動済み',passQueuedPiece:'{piece} はこのターンパス予約済み（通常移動も予約できます）',pieceSelected:'{piece} を選択：黄色いマスへ移動を予約',looseSelected:'こぼれ球を選択：{piece} が確保して行動します',noPassHolder:'パスできるボール保持駒がいません',chainStopped:'相手駒と競っているため、このターンは追加キックできません',ballSelected:'ボール選択：青い丸のマスへパス{shootHint}',shootHint:'／再度ボールをタップしシュートも選択可',moveQueued:'仕込み：{piece} を ({x},{y}) へ{action}予約',carryContinues:'ボールを運びました。続けてこの駒からパスでつなげます',carryStopped:'相手駒と競ったため、追加キックは止まります',passQueued:'仕込み：{from}→{to} へパス予約（連鎖{count}）',throughQueued:'仕込み：{from} → ({x},{y}) へスルーパス予約',receiverContinues:'{piece} が受けました。続けてパス、または他を選択して終了',enemyEndsChain:'{piece} の着地マスに敵がいるため連鎖終了',shootUnavailable:'シュート可能エリア外です（敵PA/VAで撃てます）',shootQueued:'仕込み：{piece} のシュート予約（{area} {probability}%）'});
+Object.assign(L10N.en.matchLog,{cellFull:'{team} {piece} cancelled: cell ({x},{y}) is full',possessionChanged:'{team} {piece} {action} cancelled because possession changed',ballLost:'{team} {piece} {action} cancelled because the ball was lost',resolvedMove:'{team} {piece} → ({x},{y}) {action}',passCutAt:'{team} pass cut at ({x},{y}) by {position} ({probability}%)',pieceKeepsBall:'{piece} takes possession',passResult:'{team} pass {from}→{to} ({probability}%) {result}',landingCut:'Pass cut at the target cell',throughCutAt:'{team} through pass cut at ({x},{y}) by {position} ({probability}%)',gkThroughCut:'{team} through pass caught by the goal-area GK',throughResult:'{team} through pass {from}→({x},{y}) ({probability}%) {result}',goalFor:'⚽ Goal!',goalAgainst:'⚽ Opponent goal!',kickoffFor:'{team} kick-off',offsideCancelled:'⚠ Offside: {piece}’s move was cancelled',restartWith:'Restart with {piece}',looseWon:'{piece} collected the loose ball (cost {cost})',success:'SUCCESS',failure:'FAILED'});
+Object.assign(L10N.ja.matchLog,{cellFull:'{team} {piece} の移動は中止（({x},{y})が満員）',possessionChanged:'{team} {piece} は保持チームが変わったため{action}を中止',ballLost:'{team} {piece} はボールを失ったため{action}を中止',resolvedMove:'{team} {piece} → ({x},{y}) {action}',passCutAt:'{team}パス → ({x},{y}) で{position}にカット（カット率{probability}%）',pieceKeepsBall:'{piece} が保持',passResult:'{team}パス {from}→{to}（着地{probability}%）{result}',landingCut:'着地マスでパスカット',throughCutAt:'{team}スルーパス → ({x},{y}) で{position}にカット（カット率{probability}%）',gkThroughCut:'{team}スルーパス → ゴールエリアのGKにカット',throughResult:'{team}スルーパス {from}→({x},{y})（着地{probability}%）{result}',goalFor:'⚽ ゴール！',goalAgainst:'⚽ 相手ゴール！',kickoffFor:'{team}ボールでキックオフ',offsideCancelled:'⚠ オフサイド：{piece} の動きが無効化されました',restartWith:'{piece} のボールで再開',looseWon:'こぼれ球を {piece} が確保（コスト{cost}）',success:'成功',failure:'失敗'});
+Object.assign(L10N.en.matchLog,{inputTimeout:'Input time expired; the unsubmitted side will take no action',reconnectFailed:'Automatic reconnection to {room} failed. Join to retry',reconnectError:'Reconnect failed: {error}',disconnected:'Disconnected from {room}. Trying to reconnect',onlineError:'Online processing error: {error}',joinedTeam:'Joined {room} as {team}',joinedSpectator:'Joined {room} as a spectator',leftRoom:'Left the room',teamLeft:'{team} left the room',inputReceived:'Received {team} input',resigned:'{loser} resigned. {winner} wins',rematchRequested:'Rematch request sent',opponentRematch:'{team} wants a rematch',rematchStarted:'―― Rematch started ――',cannotResignSpectator:'Spectators cannot resign',cannotRematchSpectator:'Spectators cannot request a rematch',rematchAfterMatch:'Rematch is available after full time',cannotInputSpectator:'Spectators cannot enter moves',alreadySent:'Moves already sent',turnReplay:'―― Turn {turn} replay ――',matchResult:'―― Full time　You {self} - {opp} Opponent ――',turnStartInput:'―― {half}{at} Turn {turn}: enter your moves ――',halftimeSimple:'―― Half-time ――',secondHalfKickoff:'Second half starts with {team} kick-off'});
+Object.assign(L10N.ja.matchLog,{inputTimeout:'入力期限に達したため、未送信側は操作なしで解決します',reconnectFailed:'{room} の自動再接続に失敗しました。参加で再試行できます',reconnectError:'再接続失敗: {error}',disconnected:'{room} から切断されました。自動再接続を試します',onlineError:'オンライン処理エラー: {error}',joinedTeam:'{room} に {team} で参加しました',joinedSpectator:'{room} に観戦で参加しました',leftRoom:'ROOMから退出しました',teamLeft:'{team} が退出しました',inputReceived:'{team} の入力を受信',resigned:'{loser} が投了しました。{winner} の勝利',rematchRequested:'再戦希望を送信しました',opponentRematch:'{team} が再戦を希望しています',rematchStarted:'―― 再戦開始 ――',cannotResignSpectator:'観戦中は投了できません',cannotRematchSpectator:'観戦中は再戦希望を送れません',rematchAfterMatch:'再戦は試合終了後に使えます',cannotInputSpectator:'観戦中は入力できません',alreadySent:'送信済みです',turnReplay:'―― ターン {turn} 実行（リプレイ）――',matchResult:'―― 試合終了（フルタイム）　あなた {self} - {opp} 相手 ――',turnStartInput:'―― {half}{at} ターン {turn} 開始：行動を仕込んでください ――',halftimeSimple:'―― ハーフタイム ――',secondHalfKickoff:'後半は{team}ボールでキックオフ'});
+for(const dict of Object.values(L10N)){ dict.confirmResign='Resign this match?'; }
+L10N.ja.confirmResign='投了しますか？';
 for(const dict of Object.values(L10N)){ Object.assign(dict,{rsWin:dict.result.rsWin,rsLose:dict.result.rsLose,rsDraw:dict.result.rsDraw,rsRematch:dict.result.rematch,rsHome:dict.result.rsHome,rsGoal:dict.result.rsGoal,rsOppWants:dict.result.rsOppWants,rsRematchSent:dict.result.rsRematchSent,notInput:'Input is not available now',enemyPiece:'You cannot control the opponent\'s piece',selectionCleared:'Selection cleared',replaying:'Replay in progress…',finished:'The match is over',offline:'Offline',creating:'Creating room…',roomRequired:'Enter a room code',copied:'Copied!',turn:'Turn',pass:'Pass',throughPass:'Through pass',shoot:'Shoot',move:'Move',dribble:'Dribble',offside:'Offside',tackleSuccess:'Tackle successful',tackleFailed:'Tackle failed',foul:'Foul',looseBall:'Loose ball',kickoff:'Kick-off',halftime:'Half-time',fulltime:'Full time'}); }
 Object.assign(L10N.ja,{notInput:'入力待ちではありません',enemyPiece:'相手の駒は操作できません',selectionCleared:'選択を解除しました',replaying:'再生中です…',finished:'試合は終了しています',offline:'オンライン接続がありません',creating:'ROOM作成中…',roomRequired:'ROOM CODEを入力してください',copied:'コピーしました!',turn:'ターン',pass:'パス',throughPass:'スルーパス',shoot:'シュート',move:'移動',dribble:'ドリブル',offside:'オフサイド',tackleSuccess:'タックル成功',tackleFailed:'タックル失敗',foul:'ファウル',looseBall:'こぼれ球',kickoff:'キックオフ',halftime:'ハーフタイム',fulltime:'フルタイム'});
 for(const dict of Object.values(L10N)){ Object.assign(dict.match,{notInput:dict.notInput,enemyPiece:dict.enemyPiece,selectionCleared:dict.selectionCleared,replaying:dict.replaying,finished:dict.finished,spectating:dict.match.spectating}); Object.assign(dict.online,{offline:dict.offline,creating:dict.creating,roomRequired:dict.roomRequired}); Object.assign(dict.action||(dict.action={}),{pass:dict.pass,throughPass:dict.throughPass,shoot:dict.shoot,move:dict.move,dribble:dict.dribble,offside:dict.offside,tackleSuccess:dict.tackleSuccess,tackleFailed:dict.tackleFailed,foul:dict.foul,looseBall:dict.looseBall,kickoff:dict.kickoff}); }
@@ -2855,10 +2863,10 @@ function selectPieceItem(p){
   state.popup=null;
   state.selected=p; state.mode='move'; state.ballSelected=false; state.expanded=null;
   const isHolder = chainHolder() && chainHolder().id===p.id;
-  if(isHolder) log(`${label(p)}（ボール保持）を選択：黄マスへドリブル／ボールをタップでパス`);
-  else if(chainMovedIds.has(p.id)) log(`${label(p)} はこのターン移動済み`);
-  else if(chainPassedIds.has(p.id)) log(`${label(p)} はこのターンパス予約済み（ボールを置いた移動も予約できます）`);
-  else log(`${label(p)} を選択：黄色いマスへ移動を予約`);
+  if(isHolder) logKey('holderSelected',{piece:label(p)});
+  else if(chainMovedIds.has(p.id)) logKey('alreadyMoved',{piece:label(p)});
+  else if(chainPassedIds.has(p.id)) logKey('passQueuedPiece',{piece:label(p)});
+  else logKey('pieceSelected',{piece:label(p)});
   render();
 }
 /* 扇から「ボール」を選択：
@@ -2872,19 +2880,19 @@ function selectBallItem(x,y){
   const own=piecesAt(x,y).filter(p=>p.team===localPlayerTeam());
   if(own.length){
     const picker=own.slice().sort((a,b)=>pieceCost(b)-pieceCost(a))[0];
-    log(`こぼれ球を選択：${label(picker)} が確保して行動します`);
+    logKey('looseSelected',{piece:label(picker)});
     selectPieceItem(picker);
   }else{ playFeedback('cancel'); clearSelection(); render(); }
 }
 /* ボールトークンのタップ＝パスモード（保持駒のパス範囲を表示）。 */
 function selectBall(){
   const h=chainHolder();
-  if(!h || h.team!==localPlayerTeam()){ playFeedback('error'); log('パスできるボール保持駒がいません'); return; }
-  if(!canChainKick(h)){ playFeedback('error'); log('相手駒と競っているため、このターンは追加キックできません'); return; }
+  if(!h || h.team!==localPlayerTeam()){ playFeedback('error'); logKey('noPassHolder'); return; }
+  if(!canChainKick(h)){ playFeedback('error'); logKey('chainStopped'); return; }
   playFeedback('select');
   state.popup=null; state.selected=h; state.expanded=null;
   state.mode='pass'; state.ballSelected=true;
-  log(`ボール選択：青い丸のマス（味方/空マス）へパス${calcShoot(h).area!=='-'?'／再度ボールをタップしシュートも選択可':''}`);
+  logKey('ballSelected',{shootHint:calcShoot(h).area!=='-'?t('matchLog.shootHint'):''});
   render();
 }
 // 行動選択は盤上ポップアップ（駒タップ=移動／ボールタップ=パス）へ移行。旧UIの再描画呼び出しは無効化。
@@ -2937,13 +2945,13 @@ function movePiece(p,x,y,carryBall){
   playFeedback(carryBall?'dribble':'move');
   chainMovedIds.add(p.id);
   p.moved=true;
-  log(`仕込み：${label(p)} を (${x},${y}) へ${carryBall?'ドリブル':'移動'}予約`);
+  logKey('moveQueued',{piece:label(p),x,y,action:t(carryBall?'action.dribble':'action.move')});
   if(carryBall){
     // ドリブル＝ボールごと運ぶ。連鎖の起点（論理ボール位置）も移る。続けてその駒からパス/ドリブル可
     chainHolderId=p.id;
     if(chainBallCanMove && piecesAt(x,y).some(q=>q.team!==p.team)) chainBallCanMove=false;
     // ただし「移動済み」なのでこの駒の再移動は不可、パスは可（敵同居時はUnity同様に追加キック不可）
-    log(chainBallCanMove ? '→ ボールを運びました。続けてこの駒からパスでつなげます' : '→ 相手駒と競ったため、追加キックは止まります');
+    logKey(chainBallCanMove?'carryContinues':'carryStopped');
   }
   clearSelection(); render();
 }
@@ -2956,7 +2964,7 @@ function doPassToPiece(from,to){
   chainHolderId=to.id;
   chainPassCount++;
   if(piecesAt(to.x,to.y).some(q=>q.team!==to.team)) chainBallCanMove=false;
-  log(`仕込み：${label(from)}→${label(to)} へパス予約（連鎖${chainPassCount}）`);
+  logKey('passQueued',{from:label(from),to:label(to),count:chainPassCount});
   // 受け手がまだ移動を仕込んでいなければ、続けてその駒を選択しパスモードに（無限連鎖）
   continueChainFrom(to);
 }
@@ -2973,7 +2981,7 @@ function doPassToCell(from,x,y){
   chainHolderId=null;
   chainPassCount++;
   chainBallCanMove=false;
-  log(`仕込み：${label(from)} → (${x},${y}) へスルーパス予約`);
+  logKey('throughQueued',{from:label(from),x,y});
   clearSelection(); render();
 }
 /* 連鎖継続：受け手を自動選択してパスモードへ。
@@ -2986,21 +2994,21 @@ function continueChainFrom(to){
     // 連鎖継続＝新しい保持駒のボールが選択された状態にする（続けてパス先が表示される）
     state.popup=null; state.selected=to; state.mode='pass'; state.expanded=null; state.ballSelected=true;
     render();
-    log(`→ ${label(to)} が受けました。続けてボールでパス／他をタップで終了`);
+    logKey('receiverContinues',{piece:label(to)});
   }else{
-    if(enemyAtLanding) log(`→ ${label(to)} の着地マスに敵がいるため連鎖終了（実行で奪取判定）`);
+    if(enemyAtLanding) logKey('enemyEndsChain',{piece:label(to)});
     clearSelection(); render();
   }
 }
 function tryShoot(p){
   const r=calcShoot(p);
-  if(r.area==='-'){ playFeedback('error'); log('シュート可能エリア外です（敵PA/VAで撃てます）'); return; }
+  if(r.area==='-'){ playFeedback('error'); logKey('shootUnavailable'); return; }
   clearMyCommands(p.id, c=>isBallCommand(c)||c.type==='dribble');
   myCommands.push({type:'shoot', pieceId:p.id, tx:p.x, ty:p.y, team:localPlayerTeam()});
   playFeedback('shoot');
   chainHolderId=null; // シュートで連鎖終了
   chainBallCanMove=false;
-  log(`仕込み：${label(p)} のシュート予約（${r.area} ${r.prob}%）`);
+  logKey('shootQueued',{piece:label(p),area:r.area,probability:r.prob});
   clearSelection(); render();
 }
 
@@ -3364,7 +3372,7 @@ async function playServerResolution(resolution,snapshot,reason){
   online.waiting=false;
   clearSelection();
   render();
-  if(reason==='timeout') log('入力期限に達したため、未送信側は操作なしで解決します');
+  if(reason==='timeout') logKey('inputTimeout');
   await showCutin('turnEnd',700); // 入力終了→リプレイ再生の区切り（Unity準拠）
   let snapshotRevealed=false;
   const events=(resolution?.events||[]).filter(e=>e.type!=='turn.completed');
@@ -3456,7 +3464,7 @@ function scheduleOnlineReconnect(roomCode,role){
   clearOnlineReconnect();
   if(online.reconnectAttempts>=ONLINE_RECONNECT_DELAYS.length){
     setOnlineStatusKey('reconnectFailedTpl',{room:roomCode},'err');
-    log(`${roomCode} の自動再接続に失敗しました。参加で再試行できます`);
+    logKey('reconnectFailed',{room:roomCode});
     return false;
   }
   const delay=ONLINE_RECONNECT_DELAYS[online.reconnectAttempts];
@@ -3470,7 +3478,7 @@ function scheduleOnlineReconnect(roomCode,role){
     setOnlineStatusKey('reconnectingTpl',{room:roomCode,attempt,max:ONLINE_RECONNECT_DELAYS.length},'wait');
     connectOnlineRoom(roomCode,role,null,{reconnect:true}).catch(err=>{
       console.error(err);
-      log(`再接続失敗: ${onlineErrorText(err)||'不明なエラー'}`);
+      logKey('reconnectError',{error:onlineErrorText(err)||'-'});
       scheduleOnlineReconnect(roomCode,role);
     });
   },delay);
@@ -3539,7 +3547,7 @@ async function connectOnlineRoom(roomCode,role,snapshot,options={}){
         const reconnectRole=onlineReconnectRole(role);
         online.connected=false; online.enabled=false; online.role=null; online.waiting=false;
         const code=online.roomCode||roomCode;
-        log(`${code} から切断されました${onlineCloseDetail(ev)}。自動再接続を試します`);
+        logKey('disconnected',{room:code});
         scheduleOnlineReconnect(code,reconnectRole);
       }
       render();
@@ -3550,7 +3558,7 @@ async function connectOnlineRoom(roomCode,role,snapshot,options={}){
       console.error(err);
       const message=onlineErrorText(err)||'オンライン処理エラー';
       setOnlineStatus(`${message} / ログ確認`,'err');
-      log(`オンライン処理エラー: ${message}`);
+      logKey('onlineError',{error:message});
     });
   };
 }
@@ -3567,11 +3575,11 @@ async function handleOnlineEnvelope(envelope){
     applySnapshotToLocal(payload.snapshot);
     if(online.enabled){
       setOnlineStatusKey('roomTurnTpl',{room:online.roomCode,team:localTeamLabel(),turn:state.turn},'live');
-      log(`${online.roomCode} に ${localTeamLabel()} で参加しました`);
+      logKey('joinedTeam',{room:online.roomCode,team:localTeamLabel()});
     }else{
       state.phase='replay';
       setOnlineStatusKey('roomSpectateTpl',{room:online.roomCode},'live');
-      log(`${online.roomCode} に観戦で参加しました`);
+      logKey('joinedSpectator',{room:online.roomCode});
     }
     applyOnlinePresence(payload.presence);
     render();
@@ -3584,7 +3592,7 @@ async function handleOnlineEnvelope(envelope){
   if(envelope.type==='seat.left'){
     if(payload.clientId===online.clientId){
       myCommands=[]; oppCommands=[];
-      log('ROOMから退出しました');
+      logKey('leftRoom');
       goOffline('OFFLINE','');
       render();
       return;
@@ -3593,7 +3601,7 @@ async function handleOnlineEnvelope(envelope){
     online.waiting=false;
     if(wasWaiting){ myCommands=[]; oppCommands=[]; }
     if(payload.snapshot) applySnapshotToLocal(payload.snapshot);
-    if(payload.role==='b'||payload.role==='r') log(`${eventTeamName(payload.role)} が退出しました`);
+    if(payload.role==='b'||payload.role==='r') logKey('teamLeft',{team:eventTeamName(payload.role)});
     applyOnlinePresence(payload.presence);
     render();
     return;
@@ -3609,7 +3617,7 @@ async function handleOnlineEnvelope(envelope){
     if(payload.team===localPlayerTeam()) online.waiting=true;
     if(payload.bothReady) setOnlineStatusKey('resolving',{},'wait');
     else setOnlineStatusKey('sentWaitingTpl',{team:who,deadline:deadlineSuffix(payload.inputDeadlineAt)},'wait');
-    log(`${who} の入力を受信`);
+    logKey('inputReceived',{team:who});
     return;
   }
   if(envelope.type==='match.turn.resolved'){
@@ -3621,7 +3629,7 @@ async function handleOnlineEnvelope(envelope){
     online.waiting=false;
     myCommands=[]; oppCommands=[];
     const loser=eventTeamName(payload.team), winner=eventTeamName(payload.winner);
-    log(`${loser} が投了しました。${winner} の勝利`);
+    logKey('resigned',{loser,winner});
     setOnlineStatusKey('winnerTpl',{room:online.roomCode,team:winner},'live');
     render();
     return;
@@ -3629,7 +3637,7 @@ async function handleOnlineEnvelope(envelope){
   if(envelope.type==='match.rematch.requested'){
     if(payload.snapshot) applySnapshotToLocal(payload.snapshot);
     const who=eventTeamName(payload.team);
-    log(payload.team===localPlayerTeam()?'再戦希望を送信しました':`${who} が再戦を希望しています`);
+    logKey(payload.team===localPlayerTeam()?'rematchRequested':'opponentRematch',{team:who});
     if(payload.team!==localPlayerTeam()){
       online.opponentWantsRematch=true; // リザルト演出の再戦ボタン注記に反映（既存受信の流用・新規通信なし）
       updateResultRematchNote();
@@ -3644,7 +3652,7 @@ async function handleOnlineEnvelope(envelope){
     applySnapshotToLocal(payload.snapshot);
     myCommands=[]; oppCommands=[]; online.waiting=false;
     if(online.connected && !online.enabled) state.phase='replay';
-    log('―― 再戦開始 ――');
+    logKey('rematchStarted');
     if(online.enabled) setOnlineStatusKey('roomTurnTpl',{room:online.roomCode,team:localTeamLabel(),turn:state.turn},'live');
     else setOnlineStatusKey('roomSpectateTpl',{room:online.roomCode},'live');
     render();
@@ -3694,14 +3702,14 @@ function leaveOnlineRoom(){
   renderOnlineStatus();
 }
 function resignOnlineMatch(){
-  if(!online.enabled||!(online.role==='b'||online.role==='r')){ log('観戦中は投了できません'); return; }
+  if(!online.enabled||!(online.role==='b'||online.role==='r')){ logKey('cannotResignSpectator'); return; }
   if(state.matchOver){ log('試合は終了しています'); return; }
-  if(!confirm('投了しますか？')) return;
+  if(!confirm(t('confirmResign'))) return;
   if(sendOnlineControl('match.resign')) setOnlineStatusKey('resigning',{},'wait');
 }
 function requestOnlineRematch(){
-  if(!online.enabled||!(online.role==='b'||online.role==='r')){ log('観戦中は再戦希望を送れません'); return; }
-  if(!state.matchOver){ log('再戦は試合終了後に使えます'); return; }
+  if(!online.enabled||!(online.role==='b'||online.role==='r')){ logKey('cannotRematchSpectator'); return; }
+  if(!state.matchOver){ logKey('rematchAfterMatch'); return; }
   if(sendOnlineControl('match.rematch.request')) setOnlineStatusKey('rematchSending',{},'wait');
 }
 function autoJoinOnlineRoomFromUrl(){
@@ -3722,7 +3730,7 @@ function autoJoinOnlineRoomFromUrl(){
 function submitOnlineIntent(){
   if(online.connected && !online.enabled){
     playFeedback('error');
-    log('観戦中は入力できません');
+    logKey('cannotInputSpectator');
     return;
   }
   if(!online.enabled||!online.ws||online.ws.readyState!==WebSocket.OPEN){
@@ -3730,7 +3738,7 @@ function submitOnlineIntent(){
     log('オンライン接続がありません');
     return;
   }
-  if(online.waiting){ playFeedback('error'); log('送信済みです'); return; }
+  if(online.waiting){ playFeedback('error'); logKey('alreadySent'); return; }
   const team=localPlayerTeam();
   online.ws.send(JSON.stringify({type:'match.intent',team,commands:myCommands}));
   playFeedback('submit');
@@ -3833,7 +3841,7 @@ async function resolveSimultaneousTurn(){
   pieces.filter(p=>p.team==='r').forEach(p=>{ p.sx=p.x; p.sy=p.y; });
   planOpponentAI();
 
-  log(`―― ターン ${state.turn} 実行（リプレイ）――`);
+  logKey('turnReplay',{turn:state.turn});
   // Unity BattleSequence.TurnElement 準拠：入力終了（決定/時間切れ）で「ターンエンド」帯→リプレイ再生
   await showCutin('turnEnd',800);
 
@@ -3895,7 +3903,7 @@ async function resolveSimultaneousTurn(){
 
   if(state.matchOver){
     state.phase='ended';
-    log(`―― 試合終了（フルタイム）　あなた ${state.scoreSelf} - ${state.scoreOpp} 相手 ――`);
+    logKey('matchResult',{self:state.scoreSelf,opp:state.scoreOpp});
     render();
     // リザルト演出（第3弾）：FULL TIMEカットイン→勝敗ワード→振り返り→再戦/HOME。
     // 最終得点などのリプレイ演出はここまでのawaitで再生済み（演出を飲み込まない）
@@ -3906,7 +3914,7 @@ async function resolveSimultaneousTurn(){
   state.phase='input';
   // Unity準拠：新しいターンの入力開始で「ターンスタート」帯（タイマーは帯の後のrender()で始動）
   await showCutin('turnStart',800);
-  log(`―― ${state.half}${state.turn>REGULAR_TURNS?' AT':''} ターン ${state.turn} 開始：行動を仕込んでください ――`);
+  logKey('turnStartInput',{half:state.half==='後半'?t('match.secondHalf'):t('match.firstHalf'),at:state.turn>REGULAR_TURNS?' AT':'',turn:state.turn});
   render();
 }
 
@@ -3930,13 +3938,13 @@ async function playHalftimeCurtain(){
   setTimeout(()=>dim.remove(),500);
 }
 async function halftime(){
-  log('―― ハーフタイム ――');
+  logKey('halftimeSimple');
   await playHalftimeCurtain();
   const kickoffTeam=opponentTeam(firstKickTeam);
   buildKickoffForTeam(kickoffTeam);
   render();
   await showCutin('kickoff',900);
-  log(`後半は${teamLabel(kickoffTeam)}ボールでキックオフ`);
+  logKey('secondHalfKickoff',{team:eventTeamName(kickoffTeam)});
 }
 /* ターンを1つ進め、AT抽選・前半終了(ハーフタイム)・試合終了を処理する。 */
 async function advanceMatchClock(){
@@ -3995,7 +4003,7 @@ async function execPlainMovesTogether(cmds){
     if(!p) continue; // 既に奪われた等（execCommandと同じ扱い）
     const {total,own}=virtualCount(cmd.tx,cmd.ty,p.team,p.id);
     if(total>=MAX_PER_CELL||own>=MAX_PER_CELL){
-      log(`${p.team==='b'?'青':'赤'} ${label(p)} の移動は中止（(${cmd.tx},${cmd.ty})が満員）`);
+      logKey('cellFull',{team:eventTeamName(p.team),piece:label(p),x:cmd.tx,y:cmd.ty});
       continue;
     }
     const vp=virtualPos.get(p.id);
@@ -4009,7 +4017,7 @@ async function execPlainMovesTogether(cmds){
   jobs.forEach(j=>{
     replayHiddenPieceIds.delete(j.p.id);
     j.p.x=j.to.x; j.p.y=j.to.y;
-    log(`${j.p.team==='b'?'青':'赤'} ${label(j.p)} → (${j.to.x},${j.to.y}) 移動`);
+    logKey('resolvedMove',{team:eventTeamName(j.p.team),piece:label(j.p),x:j.to.x,y:j.to.y,action:t('action.move')});
   });
 }
 
@@ -4019,21 +4027,21 @@ async function execCommand(cmd,turnStartHasBallTeam=ballHolder()?.team||null){
   if(isBallCommand(cmd)){
     const currentHasBallTeam=ballHolder()?.team||null;
     if(currentHasBallTeam!==turnStartHasBallTeam){
-      log(`${p.team==='b'?'青':'赤'} ${label(p)} はターン中に保持チームが変わったため ${cmd.type} を中止`);
+      logKey('possessionChanged',{team:eventTeamName(p.team),piece:label(p),action:localizeLegacyText(cmd.type)});
       return;
     }
   }
   if(isBallCommand(cmd)||cmd.type==='dribble'){
     const holder=ballHolder();
     if(!holder||holder.id!==p.id){
-      log(`${p.team==='b'?'青':'赤'} ${label(p)} はボールを失っていたため ${cmd.type} を中止`);
+      logKey('ballLost',{team:eventTeamName(p.team),piece:label(p),action:localizeLegacyText(cmd.type)});
       return;
     }
   }
   if(cmd.type==='move'||cmd.type==='dribble'){
     // 実行時の満員再チェック（サーバーのisMovable再検証と同じ規則。1マス3体を超えさせない）
     if(!cellHasRoomFor(p,cmd.tx,cmd.ty)){
-      log(`${p.team==='b'?'青':'赤'} ${label(p)} の${cmd.type==='dribble'?'ドリブル':'移動'}は中止（(${cmd.tx},${cmd.ty})が満員）`);
+      logKey('cellFull',{team:eventTeamName(p.team),piece:label(p),x:cmd.tx,y:cmd.ty});
       return;
     }
     // carryはcmd.type（予約時に確定した種別）だけで決める。movePiece側の原則と統一。
@@ -4059,7 +4067,7 @@ async function execCommand(cmd,turnStartHasBallTeam=ballHolder()?.team||null){
     replayHiddenPieceIds.delete(p.id);
     p.x=cmd.tx; p.y=cmd.ty;
     if(carry) markBallMoved();
-    log(`${p.team==='b'?'青':'赤'} ${label(p)} → (${cmd.tx},${cmd.ty}) ${carry?'ドリブル':'移動'}`);
+    logKey('resolvedMove',{team:eventTeamName(p.team),piece:label(p),x:cmd.tx,y:cmd.ty,action:t(carry?'action.dribble':'action.move')});
     // Unity版では得点はシュート/PK/FK等の解決でのみ発生する。
     // PA/GAへドリブル到達しただけではゴールにしない。
     if(carry){
@@ -4081,16 +4089,16 @@ async function execCommand(cmd,turnStartHasBallTeam=ballHolder()?.team||null){
     if(path.cut){
       await animateBallFlight({x:p.x,y:p.y},path.cutAt,p.team,{kind:'pass'});
       await showCutinAtPiece('passCut',950,path.cutAt.x,path.cutAt.y,passiveSub);
-      log(`${p.team==='b'?'青':'赤'}パス → (${path.cutAt.x},${path.cutAt.y}) で${path.cutter.posType.toUpperCase()}にカット！（カット率${path.cutProb}%）`);
+      logKey('passCutAt',{team:eventTeamName(p.team),x:path.cutAt.x,y:path.cutAt.y,position:path.cutter.posType.toUpperCase(),probability:path.cutProb});
       setBallToPiece(path.cutter,true);
       resetBattleDelayCount();
-      log(`→ ${label(path.cutter)} が保持`);
+      logKey('pieceKeepsBall',{piece:label(path.cutter)});
       render(); return;
     }
     // 2. 着地マスでの着地パスカット判定
     const prob=calcLandingPass(p,to,to.x,to.y);
     const ok=rollPercent(prob);
-    log(`${p.team==='b'?'青':'赤'}パス ${p.posType.toUpperCase()}→${to.posType.toUpperCase()}（着地${prob}%）${ok?'成功':'失敗'}`);
+    logKey('passResult',{team:eventTeamName(p.team),from:p.posType.toUpperCase(),to:to.posType.toUpperCase(),probability:prob,result:t(`matchLog.${ok?'success':'failure'}`)});
     await animateBallFlight({x:p.x,y:p.y},{x:to.x,y:to.y},p.team,{kind:'pass'});
     if(ok){
       // パス成立→相手陣で守備ラインより前ならオフサイド成立（成立後は位置戻し＋こぼれ球）
@@ -4102,8 +4110,8 @@ async function execCommand(cmd,turnStartHasBallTeam=ballHolder()?.team||null){
     else {
       await showCutinAtPiece('passCut',950,to.x,to.y,passiveSub);
       const cutter=goalAreaPassCutGK(p.team,to.x,to.y)||highestCostPiece(piecesAt(to.x,to.y).filter(q=>q.team!==p.team));
-      log('→ 着地マスでパスカット');
-      if(cutter){ setBallToPiece(cutter,true); log(`→ ${label(cutter)} が保持`); }
+      logKey('landingCut');
+      if(cutter){ setBallToPiece(cutter,true); logKey('pieceKeepsBall',{piece:label(cutter)}); }
       else placeLooseBallDefensive(to.x,to.y,'→ こぼれ球',p.team);
       resetBattleDelayCount();
     }
@@ -4119,26 +4127,26 @@ async function execCommand(cmd,turnStartHasBallTeam=ballHolder()?.team||null){
     if(path.cut){
       await animateBallFlight({x:p.x,y:p.y},path.cutAt,p.team,{kind:'pass'});
       await showCutinAtPiece('passCut',950,path.cutAt.x,path.cutAt.y,thruPassiveSub);
-      log(`${p.team==='b'?'青':'赤'}スルーパス → (${path.cutAt.x},${path.cutAt.y}) で${path.cutter.posType.toUpperCase()}にカット！（カット率${path.cutProb}%）`);
+      logKey('throughCutAt',{team:eventTeamName(p.team),x:path.cutAt.x,y:path.cutAt.y,position:path.cutter.posType.toUpperCase(),probability:path.cutProb});
       setBallToPiece(path.cutter,true);
       resetBattleDelayCount();
-      log(`→ ${label(path.cutter)} が保持`);
+      logKey('pieceKeepsBall',{piece:label(path.cutter)});
       render(); return;
     }
     const goalAreaGK=goalAreaPassCutGK(p.team,cmd.tx,cmd.ty);
     if(goalAreaGK){
       await animateBallFlight({x:p.x,y:p.y},{x:cmd.tx,y:cmd.ty},p.team,{kind:'pass'});
       await showCutinAtPiece('passCut',950,cmd.tx,cmd.ty);
-      log(`${p.team==='b'?'青':'赤'}スルーパス → ゴールエリアのGKにカット！`);
+      logKey('gkThroughCut',{team:eventTeamName(p.team)});
       setBallToPiece(goalAreaGK,true);
       resetBattleDelayCount();
-      log(`→ ${label(goalAreaGK)} が保持`);
+      logKey('pieceKeepsBall',{piece:label(goalAreaGK)});
       render(); return;
     }
     // 2. 着地マス（空マス）の通過成功率で判定
     const prob=calcFlyingPass(p,cmd.tx,cmd.ty);
     const ok=rollPercent(prob);
-    log(`${p.team==='b'?'青':'赤'}スルーパス ${p.posType.toUpperCase()}→(${cmd.tx},${cmd.ty})（着地${prob}%）${ok?'成功':'失敗'}`);
+    logKey('throughResult',{team:eventTeamName(p.team),from:p.posType.toUpperCase(),x:cmd.tx,y:cmd.ty,probability:prob,result:t(`matchLog.${ok?'success':'failure'}`)});
     await animateBallFlight({x:p.x,y:p.y},{x:cmd.tx,y:cmd.ty},p.team,{kind:'pass'});
     if(ok){
       setBallToCell(cmd.tx,cmd.ty,p.team,true);
@@ -4148,8 +4156,8 @@ async function execCommand(cmd,turnStartHasBallTeam=ballHolder()?.team||null){
     else {
       await showCutinAtPiece('passCut',950,cmd.tx,cmd.ty,thruPassiveSub);
       const cutter=goalAreaPassCutGK(p.team,cmd.tx,cmd.ty)||highestCostPiece(piecesAt(cmd.tx,cmd.ty).filter(q=>q.team!==p.team));
-      log('→ 着地マスでカット');
-      if(cutter){ setBallToPiece(cutter,true); log(`→ ${label(cutter)} が保持`); }
+      logKey('landingCut');
+      if(cutter){ setBallToPiece(cutter,true); logKey('pieceKeepsBall',{piece:label(cutter)}); }
       else placeLooseBallDefensive(cmd.tx,cmd.ty,'→ こぼれ球',p.team);
       resetBattleDelayCount();
     }
@@ -4271,12 +4279,12 @@ async function scoreGoal(team){
   turnStopped=true;
   if(team==='r'){state.scoreOpp++;}else{state.scoreSelf++;}
   await playGoalCelebration(team); // 第4弾：従来のgoalカットイン(1.3s)を内包した約2秒の祝祭
-  log(team==='b'?'⚽ ゴール！':'⚽ 相手ゴール！');
+  logKey(team==='b'?'goalFor':'goalAgainst');
   const kickoffTeam=team==='b'?'r':'b';
   buildKickoffForTeam(kickoffTeam,{keepTurnStopped:true});
   render();
   await showCutin('kickoff',900);
-  log(`${kickoffTeam==='b'?'青':'赤'}ボールでキックオフ`);
+  logKey('kickoffFor',{team:eventTeamName(kickoffTeam)});
 }
 
 /* ===== こぼれ球（フリーボール）共通処理：PENDING項目3 =====
@@ -4312,7 +4320,7 @@ function placeLooseBallDefensive(x,y,baseMsg,lastTeam=lastHadBallTeam){
    ★旧実装の「成立地点にこぼれ球」は戻さないこと：受け手自身が同ターン末の pickupLooseBall で拾い直して
    オフサイドが実質無効化される（カットインだけ出て進行が変わらない）実バグの原因だった。 */
 async function handleOffside(receiver, atX, atY, sourceTeam=lastHadBallTeam){
-  log(`⚠ オフサイド：${label(receiver)} の動きが無効化されました`);
+  logKey('offsideCancelled',{piece:label(receiver)});
   await showCutinAtPiece('offside', 1100, atX, atY);
   // 位置戻し（移動取り消し）はワープさせず、オンライン再生（replayServerOffsideReset）と同じ滑走アニメで戻す
   const resetFrom={x:receiver.x,y:receiver.y}, resetTo={x:receiver.sx,y:receiver.sy};
@@ -4329,7 +4337,7 @@ async function handleOffside(receiver, atX, atY, sourceTeam=lastHadBallTeam){
     // ボールもワープさせず、オフサイド地点からキッカーへ飛ばして受け渡す
     await animateBallFlight({x:atX,y:atY},{x:kicker.x,y:kicker.y},kicker.team,{kind:'pass',duration:300,arc:16});
     setBallToPiece(kicker,true);
-    log(`→ ${label(kicker)} のボールで再開`);
+    logKey('restartWith',{piece:label(kicker)});
   }else{
     placeLooseBall(atX, atY, '→ こぼれ球', sourceTeam); // 相手駒が1体もいない場合の保険（通常起こらない）
   }
@@ -4369,7 +4377,7 @@ async function pickupLooseBall(){
   const winner=highestCostPiece(here);
   if(!winner) return;
   setBallToPiece(winner,true);
-  log(`こぼれ球を ${label(winner)} が確保（コスト${winner.cost}）`);
+  logKey('looseWon',{piece:label(winner),cost:winner.cost});
   if(sourceTeam===winner.team && isFreeBallCatchOffside(winner.team,winner)){
     await handleOffside(winner,bx,by,sourceTeam);
   }
