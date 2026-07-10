@@ -124,6 +124,26 @@ test("守備: GK脇に張るSS駒（1トップ）を常時マークする", () =
   assert.ok(atk.guard||atk.closing, "攻撃局面で張り付きSS駒への見張りが残っていない");
 });
 
+test("ヘッダー相手名: 明示COM対戦は「COM」、秘匿フォールバックはペルソナ名", () => {
+  const { run, seedRandom } = loadPrototype();
+  seedRandom(9);
+  // 明示的なCOM対戦（モード選択→COM対戦 相当＝予約なしのresetBtn）→「COM」表示
+  const explicit = JSON.parse(run(`
+    (()=>{ comPersonaNext=null; document.getElementById('resetBtn').click();
+      return JSON.stringify({opp:headerTeamNames()[1],stealth:comPersona.stealth}); })()
+  `));
+  assert.equal(explicit.opp, "COM");
+  assert.equal(explicit.stealth, false);
+  // オンラインマッチングからの秘匿フォールバック（aiOpponentNameで予約）→ペルソナ名表示
+  const stealth = JSON.parse(run(`
+    (()=>{ const n=aiOpponentName(); document.getElementById('resetBtn').click();
+      return JSON.stringify({flash:n,opp:headerTeamNames()[1],stealth:comPersona.stealth}); })()
+  `));
+  assert.equal(stealth.stealth, true);
+  assert.equal(stealth.opp, stealth.flash, "成立演出の名前とヘッダー名が一致すること");
+  assert.notEqual(stealth.opp, "COM", "秘匿フォールバックでCOMと表示してはいけない");
+});
+
 test("攻撃: 受け手の隣の強い駒（SS級）リスク関数が働いている", () => {
   const { run } = loadPrototype();
   const result = run(`

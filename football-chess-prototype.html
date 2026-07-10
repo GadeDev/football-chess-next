@@ -2743,7 +2743,10 @@ function headerTeamNames(){
     const opp=players[opponentTeam(online.role)];
     return [my, shortOnlineName(opp&&opp.displayName,t('opp'))];
   }
-  return [my, comPersona?shortOnlineName(comPersona.name,t('opp')):t('opp')];
+  // COM対戦：明示的に選んだCOM対戦は「COM」表示（オンラインとの差別化）。
+  // オンラインマッチングからの秘匿フォールバック（stealth）はペルソナ名のまま（COMと明示しない方針）
+  if(comPersona) return [my, comPersona.stealth?shortOnlineName(comPersona.name,t('opp')):'COM'];
+  return [my, t('opp')];
 }
 function isMoveCommand(c){ return c.type==='move'||c.type==='dribble'; }
 function isNormalMoveCommand(c){ return c.type==='move'; }
@@ -4088,8 +4091,9 @@ document.getElementById('resetBtn').addEventListener('click',ev=>{
   if(ev.isTrusted) playFeedback('cancel');
   goOffline('OFFLINE','');
   // COMペルソナを抽選（マッチングフォールバックで名前を先に見せた場合はその予約を使う）。
-  // フォーメーション＝ペルソナ由来なので、buildTeams()より前に確定させること
-  comPersona=comPersonaNext||pickComPersona();
+  // フォーメーション＝ペルソナ由来なので、buildTeams()より前に確定させること。
+  // stealth: フォールバック由来ならペルソナ名を表示（秘匿）、明示的なCOM対戦なら「COM」と表示
+  comPersona={...(comPersonaNext||pickComPersona()), stealth:!!comPersonaNext};
   comPersonaNext=null;
   buildTeams();myCommands=[];oppCommands=[];state={turn:1,half:'前半',scoreSelf:0,scoreOpp:0,selected:null,mode:'idle',expanded:null,atFirst:null,atSecond:null,matchOver:false,ballSelected:false,popup:null,phase:'input'};log('配置をリセットしました');render();
 });
@@ -5456,6 +5460,8 @@ const COM_PERSONAS=[
   {formationId:6,name:'Sora11'},  // 3-4-3 超攻撃
 ];
 let comPersona=null;      // 進行中のCOM試合のペルソナ（試合中は固定。resetBtnで再抽選）
+                          // .stealth=true はオンラインマッチングからの秘匿フォールバック
+                          // （ペルソナ名を表示。明示的なCOM対戦では「COM」と表示＝オンラインとの差別化。2026-07-10ユーザー指定）
 let comPersonaNext=null;  // マッチングフォールバックで先に名前を見せた場合の予約
 function pickComPersona(){ return COM_PERSONAS[Math.floor(Math.random()*COM_PERSONAS.length)]; }
 /* COM(赤)の編成定義。ペルソナのフォーメーション＋そのフォーメーションの既定コスト（合計16.0） */
