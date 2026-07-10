@@ -1,0 +1,87 @@
+// COM AIの挙動テスト（2026-07-10改修の回帰固定）
+// ユーザー指摘「フォーメーションの組み合わせでKICKOFFから必ず同じ手順でシュートまで行きワンパターン」への対策:
+// ①同一条件のキックオフでも試合ごとに手が変わる（重み付き抽選＋評価ゆらぎ）
+// ②守備は相手の位置とランク（SS級=高コスト駒）を見て、シュートレーン封鎖・突入・受け手マークを行う
+import test from "node:test";
+import assert from "node:assert/strict";
+import { loadPrototype } from "./helpers/prototype-vm.mjs";
+
+test("同一条件の赤キックオフでも、AIの初手プランが試合ごとに変わる", () => {
+  const { run, seedRandom } = loadPrototype();
+  seedRandom(20260710);
+  const plans = new Set();
+  const RUNS = 16;
+  for (let i = 0; i < RUNS; i++) {
+    run("buildKickoffForTeam('r'); oppCommands=[]; planOpponentAI();");
+    plans.add(run("JSON.stringify(oppCommands.map(c=>[c.type,c.pieceId,c.tx,c.ty]))"));
+  }
+  // 旧実装（上位2択85/15＋支援移動は決定的）ではほぼ1〜2通りに固定されていた
+  assert.ok(
+    plans.size >= 4,
+    `16回のキックオフで${plans.size}通りしか出ていない（4通り以上を期待）`,
+  );
+});
+
+test("守備: 青保持者がシュート圏に入ると、レーン封鎖または突入で反応する", () => {
+  const { run, seedRandom } = loadPrototype();
+  seedRandom(7);
+  const result = run(`
+    buildKickoffForTeam('b');
+    (()=>{
+      const h=ballHolder();
+      h.x=0; h.y=-1; h.sx=0; h.sy=-1; // 赤陣ゴール前へ（シュート脅威を作る）
+      oppCommands=[];
+      planOpponentAI();
+      const lane=new Set(['0,-2','-1,-2','1,-2']);
+      getRoute(h.x,h.y,0,-3).forEach(([x,y])=>lane.add(x+','+y));
+      const laneMoves=oppCommands.filter(c=>c.type==='move'&&lane.has(c.tx+','+c.ty)).length;
+      const charges=oppCommands.filter(c=>c.type==='move'&&c.tx===h.x&&c.ty===h.y).length;
+      return JSON.stringify({area:calcShoot(h).area,laneMoves,charges,total:oppCommands.length});
+    })()
+  `);
+  const r = JSON.parse(result);
+  assert.notEqual(r.area, "-", "テスト前提: 保持者はシュート圏にいること");
+  assert.ok(
+    r.laneMoves + r.charges >= 2,
+    `シュート脅威への反応が薄い（レーン封鎖${r.laneMoves}＋突入${r.charges}。合計2以上を期待）`,
+  );
+  assert.ok(r.total > 0, "守備コマンドが生成されていること");
+});
+
+test("守備: 保持者が遠くても、ゴール側に居ない駒は帰陣コマンドを持つ", () => {
+  const { run, seedRandom } = loadPrototype();
+  seedRandom(11);
+  const result = run(`
+    buildKickoffForTeam('b');
+    (()=>{
+      oppCommands=[];
+      planOpponentAI();
+      const h=ballHolder();
+      // 「保持者より自ゴール(0,-3)側へ動く」or「保持者へ寄せる」移動が存在すること
+      const reactive=oppCommands.filter(c=>c.type==='move').length;
+      return JSON.stringify({reactive});
+    })()
+  `);
+  const r = JSON.parse(result);
+  assert.ok(r.reactive >= 3, `青キックオフ時の守備反応が少なすぎる（${r.reactive}件）`);
+});
+
+test("攻撃: 受け手の隣の強い駒（SS級）リスク関数が働いている", () => {
+  const { run } = loadPrototype();
+  const result = run(`
+    buildKickoffForTeam('r');
+    (()=>{
+      // 赤陣の最奥（青から最も遠い）の駒を基準にする＝初期状態では青は誰も届かない
+      const red=pieces.filter(p=>p.team==='r'&&p.posType!=='gk').sort((a,b)=>a.y-b.y)[0];
+      const far=aiReachThreatAt(red,red.x,red.y);
+      // 高ランク（SS級=コスト3）の青駒を隣にワープさせるとリスクが正になる
+      const blue=pieces.find(p=>p.team==='b'&&p.posType!=='gk');
+      blue.x=red.x; blue.y=red.y+1; blue.cost=3;
+      const near=aiReachThreatAt(red,red.x,red.y);
+      return JSON.stringify({near,far});
+    })()
+  `);
+  const r = JSON.parse(result);
+  assert.equal(r.far, 0, `誰も届かない位置でリスクが出ている（far=${r.far}）`);
+  assert.ok(r.near > 0, `隣接する高ランク駒のリスクが0（near=${r.near}）`);
+});

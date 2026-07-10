@@ -2059,10 +2059,33 @@ function bestRedMoveToward(p,x,y){
    賢さの中身：①シュート/パス/スルーパス/ドリブルの定量比較 ②オフサイド率・着地被タックル率で割引
    ③受け手のシュート期待が高ければパス→シュートを連鎖仕込み ④守備は突入タックル＋パスコースのマーク
    ⑤非保持駒はオンサイドを保ちつつパスコースを作る */
+/* 行動選択（2026-07-10改修）：旧「上位2択から85/15」はスコア差が開くと毎試合同じ手になり
+   「キックオフから毎回同じ手順でシュートまで」というワンパターンの原因だった。
+   ①各候補に±5の評価ゆらぎを加える ②ベストの82%以上の候補（最大4つ）からスコア重みで抽選する。
+   良手の範囲内でだけ散らすので、弱くならずに試合ごとの展開が変わる。 */
 function aiPickTop(options){
-  const s=options.filter(o=>o&&o.score>0).sort((a,b)=>b.score-a.score);
+  const s=options.filter(o=>o&&o.score>0)
+    .map(o=>({...o,score:o.score+(Math.random()*10-5)}))
+    .sort((a,b)=>b.score-a.score);
   if(!s.length) return null;
-  return (s.length>=2 && Math.random()<0.15) ? s[1] : s[0];
+  const best=s[0].score;
+  const cands=s.filter(o=>o.score>=best*0.82).slice(0,4);
+  const weight=o=>Math.max(1,o.score-best*0.75);
+  let r=Math.random()*cands.reduce((n,o)=>n+weight(o),0);
+  for(const o of cands){ r-=weight(o); if(r<=0) return o; }
+  return cands[0];
+}
+/* 次ターンに(x,y)へ踏み込める青駒（GK除く）の最大タックル成功率。
+   同マスの即時リスク（aiTackleRiskAt）に加え、「近くの強い駒（高ランク＝SS級）に寄られる」
+   先読みリスクとしてパス受け手・ドリブル先の評価を割り引くのに使う（2026-07-10追加） */
+function aiReachThreatAt(piece,x,y){
+  let worst=0;
+  pieces.filter(q=>q.team==='b'&&q.posType!=='gk').forEach(q=>{
+    if(q.x===x&&q.y===y) return; // 同マスは aiTackleRiskAt 側で評価済み
+    const canReach=moveLimitList(pieceCost(q)).some(([lx,ly])=>q.x+lx===x&&q.y+ly===y);
+    if(canReach) worst=Math.max(worst,calcTackleSuccess({...piece,x,y},q));
+  });
+  return worst;
 }
 function aiOffsideProb(passer,targetY){
   const line=offsideLineFor('b');
@@ -2085,7 +2108,8 @@ function aiPlanHolder(p){
     if(base==null) return;
     const off=aiOffsideProb(p,q.y);
     const risk=aiTackleRiskAt(q,q.x,q.y);
-    const succ=base*(100-off)/100*(100-risk*0.6)/100;
+    const reach=aiReachThreatAt(q,q.x,q.y); // 受け手の隣に強い駒（SS級）が居るパスは割り引く
+    const succ=base*(100-off)/100*(100-risk*0.6)/100*(100-reach*0.35)/100;
     if(succ<28) return; // 通る見込みの薄いパスは選ばない
     const gain=Math.max(0,(redGoalDistance(p.x,p.y)-redGoalDistance(q.x,q.y))*8);
     const qShoot=calcShoot(q);
@@ -2109,11 +2133,12 @@ function aiPlanHolder(p){
     options.push({score:prob*0.45+gain+(blueNear-redNear)*6,
       act:{type:'throughpass',pieceId:p.id,tx:x,ty:y,team:'r'}});
   });
-  // ドリブル：前進価値＋攻撃エリア到達ボーナス−被タックル期待
+  // ドリブル：前進価値＋攻撃エリア到達ボーナス−被タックル期待−踏み込まれリスク（近くの強い駒）
   redMoveTargets(p).forEach(([x,y])=>{
     const risk=aiTackleRiskAt(p,x,y);
+    const reach=aiReachThreatAt(p,x,y);
     const gain=Math.max(0,(redGoalDistance(p.x,p.y)-redGoalDistance(x,y))*10);
-    options.push({score:(100-risk)*0.35+gain+(isRedAttackingArea(x,y)?14:0),
+    options.push({score:(100-risk)*0.35+gain+(isRedAttackingArea(x,y)?14:0)-reach*0.18,
       act:{type:'dribble',pieceId:p.id,tx:x,ty:y,team:'r'}});
   });
   const top=aiPickTop(options);
@@ -2141,6 +2166,8 @@ function planOpponentAI(){
         if(line!=null && y>line) s-=25;                        // オフサイドポジションは減点
         if(!supportAssigned && isPassRangeRed(holder,x,y)) s+=18; // パスコース形成（1体だけ強く）
         s-=piecesAt(x,y).length*6;                              // 混雑回避
+        s-=aiReachThreatAt(p,x,y)*0.12;                         // 強い駒（SS級）の目前は避け気味に
+        s+=Math.random()*6-3;                                   // 展開のゆらぎ（毎試合同型の陣形回避）
         if(s>bestScore){ bestScore=s; best=[x,y]; }
       });
       if(best){
@@ -2150,31 +2177,82 @@ function planOpponentAI(){
     });
     return;
   }
-  // --- Defence：青がボール保持 ---
+  // --- Defence（2026-07-10全面改修）：青がボール保持 ---
+  // 旧実装は「近い順に寄せるだけ」で、シュートコースの封鎖も強い駒（SS級）の重点マークもなく、
+  // 特定フォーメーション同士だとキックオフから毎回同じ手順でシュートまで運ばれていた。
+  // 新実装は盤面反応型：①シュートレーン封鎖（脅威圏なら最優先。ゴール前遮蔽=確定ブロックを狙う）
+  // ②保持者への突入タックル（最大2体） ③パス受け手の脅威度マーク（そこからのシュート期待＋ランク
+  // ＋ゴールへの近さで採点し、受け手のマスに乗って着地カット＋ターン末タックル圏に置く。高ランク守備優先）
+  // ④残りはボールと自ゴール(0,-3)の間へ帰陣。
+  // 注意：Unityの解決順で通常移動はシュートより後に処理されるため、封鎖・マークは「次のターンの
+  // シュート/パスを防ぐ」先回り。保持者がシュート圏に入ってからでは遅いので接近段階（ゴールまで
+  // マンハッタン5以内）から発動する。
   if(holder && holder.team==='b'){
+    const usedIds=new Set();
+    const plan=(p,x,y)=>{ usedIds.add(p.id); oppCommands.push({type:'move',pieceId:p.id,tx:x,ty:y,team:'r'}); };
+    const canStep=(p,x,y)=>redMoveTargets(p).some(([mx,my])=>mx===x&&my===y);
+    const defenders=redPieces.filter(p=>p.posType!=='gk');
+    const free=()=>defenders.filter(p=>!usedIds.has(p.id));
+    const holderShoot=calcShoot(holder);
+    const goalDist=manhattan(holder.x,holder.y,0,-3);
+
+    // ① シュートレーン封鎖：保持者→自ゴールの経路＋ゴール前(±1,-2)の空きマスへ、届く駒のうち
+    //    高ランク（＝ブロック/カット抽選に強い）を優先して置く。シュート圏内=2体、接近中=1体
+    const laneSlots=holderShoot.area!=='-'?2:(goalDist<=5?1:0);
+    if(laneSlots>0){
+      const laneCells=[];
+      getRoute(holder.x,holder.y,0,-3).forEach(([x,y])=>laneCells.push([x,y]));
+      [[0,-2],[-1,-2],[1,-2]].forEach(c=>laneCells.push(c)); // ゴール前遮蔽（確定ブロック）候補
+      const seen=new Set();
+      const blockables=laneCells.filter(([x,y])=>{
+        const k=x+','+y;
+        if(seen.has(k)) return false; seen.add(k);
+        const c=cellAt(x,y);
+        if(!c||c.t==='selfgoal'||c.t==='oppgoal') return false;
+        if(x===holder.x&&y===holder.y) return false;
+        return !piecesAt(x,y).some(q=>q.team==='r'); // 既に赤が立っていれば不要
+      }).sort((a,b)=>manhattan(a[0],a[1],0,-3)-manhattan(b[0],b[1],0,-3)); // ゴールに近い順
+      let placed=0;
+      for(const [x,y] of blockables){
+        if(placed>=laneSlots) break;
+        const cand=free().filter(p=>canStep(p,x,y)).sort((a,b)=>pieceCost(b)-pieceCost(a))[0];
+        if(cand){ plan(cand,x,y); placed++; }
+      }
+    }
+
+    // ② 突入タックル：保持者のマスへ直接入れる駒から近い順に最大2体（ターン末タックルで奪取を狙う）
     let chargers=0;
-    redPieces.filter(p=>p.posType!=='gk')
-      .sort((a,b)=>manhattan(a.x,a.y,holder.x,holder.y)-manhattan(b.x,b.y,holder.x,holder.y))
-      .forEach((p,i)=>{
-        const moves=redMoveTargets(p);
-        if(!moves.length) return;
-        // 保持駒のマスへ直接入れるなら突入（＝ターン末タックル。最大2体で挟む）
-        const direct=moves.find(([x,y])=>x===holder.x&&y===holder.y);
-        if(direct && chargers<2){ chargers++; oppCommands.push({type:'move',pieceId:p.id,tx:direct[0],ty:direct[1],team:'r'}); return; }
-        if(i<4){ // 最寄り4体はホルダーへ寄せる
-          const mv=bestRedMoveToward(p,holder.x,holder.y);
-          if(mv) oppCommands.push({type:'move',pieceId:p.id,tx:mv[0],ty:mv[1],team:'r'});
-          return;
-        }
-        if(i<7){ // 中間の駒は青のパス先候補（最も赤ゴールに近い脅威）をマーク
-          const threats=pieces.filter(q=>q.team==='b'&&q.id!==holder.id&&isPassRangeRed(holder,q.x,q.y));
-          if(threats.length){
-            const tgt=threats.slice().sort((a,b)=>manhattan(a.x,a.y,0,-3)-manhattan(b.x,b.y,0,-3))[0];
-            const mv=bestRedMoveToward(p,tgt.x,tgt.y);
-            if(mv) oppCommands.push({type:'move',pieceId:p.id,tx:mv[0],ty:mv[1],team:'r'});
-          }
-        }
+    free().sort((a,b)=>manhattan(a.x,a.y,holder.x,holder.y)-manhattan(b.x,b.y,holder.x,holder.y))
+      .forEach(p=>{
+        if(chargers>=2) return;
+        if(canStep(p,holder.x,holder.y)){ chargers++; plan(p,holder.x,holder.y); }
       });
+
+    // ③ 受け手マーク：保持者のパス範囲にいる青駒を脅威度順に、受け手のマスへ乗って潰す。
+    //    脅威度 = そこからのシュート期待 + ランク(コスト)×12 + ゴールへの近さ。SS級の受け手を最優先。
+    const threats=pieces.filter(q=>q.team==='b'&&q.id!==holder.id&&isPassRangeRed(holder,q.x,q.y))
+      .map(q=>{
+        const s=calcShoot(q);
+        return {q,score:(s.area!=='-'?s.prob:0)+pieceCost(q)*12+Math.max(0,(7-manhattan(q.x,q.y,0,-3))*4)};
+      })
+      .sort((a,b)=>b.score-a.score)
+      .slice(0,3);
+    for(const {q} of threats){
+      if(piecesAt(q.x,q.y).some(r=>r.team==='r')) continue; // 既にマーク済み
+      const cand=free().filter(p=>canStep(p,q.x,q.y)).sort((a,b)=>pieceCost(b)-pieceCost(a))[0];
+      if(cand) plan(cand,q.x,q.y);
+    }
+
+    // ④ 帰陣：残りのうちボールより自ゴール側に居ない駒は、保持者と自ゴールの中間へ戻る。
+    //    既にゴール側に居る駒はその場を維持（無駄な密集と空け渡しを防ぐ）
+    const midX=Math.round(holder.x/2), midY=Math.round((holder.y-3)/2);
+    free().forEach(p=>{
+      const goalSide=p.y<holder.y; // 赤の自ゴールは y=-3 側
+      const press=manhattan(p.x,p.y,holder.x,holder.y)<=3;
+      if(goalSide&&!press) return;
+      const mv=press&&goalSide?bestRedMoveToward(p,holder.x,holder.y):bestRedMoveToward(p,midX,midY);
+      if(mv&&!(mv[0]===p.x&&mv[1]===p.y)) plan(p,mv[0],mv[1]);
+    });
     return;
   }
   // --- BallCatch：こぼれ球 ---
