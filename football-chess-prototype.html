@@ -783,19 +783,19 @@ body.replaying .boardWrap::after{content:"";position:absolute;inset:0;}
       <button class="ogBackBtn" id="ogSubBackBtn" data-i18n="common.back">← 戻る</button>
       <div class="ogSectionTitle" data-i18n="subscription.title">サブスクリプション</div>
       <div class="ogSubCard">
-        <div class="plan">UniversoFutbol サブスクリプション</div>
-        <div class="price">月額 ¥2,000 <span class="demo">※現在はデモ（実際の請求は発生しません。本番はUniversoFutbol共通サブスクに連動）</span></div>
+        <div class="plan" data-i18n="subscription.plan">UniversoFutbol サブスクリプション</div>
+        <div class="price"><span data-i18n="subscription.price">月額 ¥2,000</span> <span class="demo" data-i18n="subscription.demoNote">※現在はデモ（実際の請求は発生しません。本番はUniversoFutbol共通サブスクに連動）</span></div>
         <ul class="benefits">
-          <li>UniversoFutbolの全コンテンツで共通のサブスクリプション</li>
-          <li>駒のランク変更（コスト変更）の解放（Unity版と同じプレミアム特典）</li>
-          <li>広告なしでプレイ</li>
-          <li>今後追加: 限定フォーメーション・リプレイ保存 など</li>
+          <li data-i18n="subscription.benefitAll">UniversoFutbolの全コンテンツで共通のサブスクリプション</li>
+          <li data-i18n="subscription.benefitRank">駒のランク変更（コスト変更）の解放（Unity版と同じプレミアム特典）</li>
+          <li data-i18n="subscription.benefitNoAds">広告なしでプレイ</li>
+          <li data-i18n="subscription.benefitFuture">今後追加: 限定フォーメーション・リプレイ保存 など</li>
         </ul>
         <div class="status" id="ogSubStatus"></div>
         <button class="subBtn" id="ogSubBtn" data-i18n="subscription.joinDemo">プレミアムに加入する（デモ）</button>
         <button class="subCancel" id="ogSubCancelBtn" data-i18n="subscription.cancel">解約する</button>
         <button class="subBtn" id="ogSubLoginBtn" data-i18n="subscription.loginToJoin">ログインして加入する</button>
-        <div class="note">決済はUniversoFutbol側で一元化されます（月額¥2,000・全コンテンツ共通）。デモ加入は30日で自動的に切れます。</div>
+        <div class="note" data-i18n="subscription.billingNote">決済はUniversoFutbol側で一元化されます（月額¥2,000・全コンテンツ共通）。デモ加入は30日で自動的に切れます。</div>
       </div>
     </div>
     <div class="ogPage" id="ogPageSettings" style="display:none">
@@ -847,23 +847,23 @@ body.replaying .boardWrap::after{content:"";position:absolute;inset:0;}
 <!-- フレンド対戦オーバーレイ（footballchessmaniacs FriendMatchScreen相当：部屋を作る/部屋に入る・ID/URLコピー・参加待ち） -->
 <div id="friendOverlay" style="display:none">
   <div class="panel">
-    <button class="closeX" id="frCloseBtn" aria-label="閉じる">×</button>
+    <button class="closeX" id="frCloseBtn" data-i18n-attr="aria-label:common.close" aria-label="閉じる">×</button>
     <div class="frTitle" data-i18n="friend.title">フレンド対戦</div>
     <div class="frMenu" id="frMenu">
       <button class="frBig" id="frCreateBtn" data-i18n="friend.create">部屋を作る</button>
       <button class="frBig sub" id="frJoinModeBtn" data-i18n="friend.joinRoom">部屋に入る</button>
     </div>
     <div class="frHosting" id="frHosting" style="display:none">
-      <div class="frLabel">ルームID</div>
+      <div class="frLabel" data-i18n="friend.roomId">ルームID</div>
       <div class="frCode" id="frRoomCode">FC-XXXX-XXXX</div>
       <div class="frCopyRow">
         <button class="frCopy" id="frCopyIdBtn" data-i18n="friend.copyId">IDをコピー</button>
         <button class="frCopy" id="frCopyUrlBtn" data-i18n="friend.copyUrl">URLをコピー</button>
       </div>
-      <div class="frWait"><span class="mmSpinner small"></span>相手の参加を待っています…</div>
+      <div class="frWait"><span class="mmSpinner small"></span><span data-i18n="friend.waiting">相手の参加を待っています…</span></div>
     </div>
     <div class="frJoining" id="frJoining" style="display:none">
-      <div class="frLabel">ルームIDを入力</div>
+      <div class="frLabel" data-i18n="friend.enterRoomId">ルームIDを入力</div>
       <input id="frJoinInput" maxlength="12" placeholder="FC-XXXX-XXXX" autocomplete="off">
       <button class="frBig" id="frJoinBtn" data-i18n="common.join">参加</button>
     </div>
@@ -876,7 +876,7 @@ body.replaying .boardWrap::after{content:"";position:absolute;inset:0;}
   <div class="panel">
     <div class="mmSpinner"></div>
     <div class="mmTitle" data-i18n="matching.searching">対戦相手を探しています…</div>
-    <div class="mmElapsed" id="mmElapsed">0秒</div>
+    <div class="mmElapsed" id="mmElapsed">0s</div>
     <div class="mmName" id="mmMyName"></div>
     <button class="mmCom" id="mmComBtn" style="display:none" data-i18n="matching.playCom">相手が見つかりません。COMと対戦する</button>
     <button class="mmCancel" id="mmCancelBtn" data-i18n="common.cancel">キャンセル</button>
@@ -886,7 +886,7 @@ body.replaying .boardWrap::after{content:"";position:absolute;inset:0;}
 <!-- ログインダイアログ（Unity TitleMainのログイン相当。本番はUniversoFutbol SSOに差し替え: AUTH_UNIVERSOFUTBOL.md） -->
 <div id="ogLogin" style="display:none">
   <div class="panel">
-    <button class="closeX" id="ogLoginClose" aria-label="閉じる">×</button>
+    <button class="closeX" id="ogLoginClose" data-i18n-attr="aria-label:common.close" aria-label="閉じる">×</button>
     <div class="ttl" data-i18n="auth.accountTitle">UniversoFutbol アカウント</div>
     <button class="ufLogin" id="ogUfLoginBtn" data-i18n="auth.universoLogin">UniversoFutbolでログイン（Google対応）</button>
     <div class="orSep" data-i18n="common.or">または</div>
@@ -894,13 +894,13 @@ body.replaying .boardWrap::after{content:"";position:absolute;inset:0;}
       <button id="ogLoginModeLogin" class="mode active" data-i18n="auth.login">ログイン</button>
       <button id="ogLoginModeReg" class="mode" data-i18n="auth.register">新規登録</button>
     </div>
-    <label>ユーザー名（2〜16文字）</label>
+    <label data-i18n="auth.username">ユーザー名（2〜16文字）</label>
     <input id="ogLoginName" maxlength="16" autocomplete="username">
-    <label>パスワード（8文字以上）</label>
+    <label data-i18n="auth.password">パスワード（8文字以上）</label>
     <input id="ogLoginPass" type="password" maxlength="64" autocomplete="current-password">
     <button class="submit" id="ogLoginSubmit" data-i18n="auth.login">ログイン</button>
     <button class="guest" id="ogLoginGuest" data-i18n="auth.continueGuest">ゲストで続ける</button>
-    <div class="note">本番では universofutbol.com の会員アカウントでそのままログインできるようになります（現在はデモ用アカウント。パスワードは使い回さないでください）。</div>
+    <div class="note" data-i18n="auth.demoNote">本番では universofutbol.com の会員アカウントでそのままログインできるようになります（現在はデモ用アカウント。パスワードは使い回さないでください）。</div>
   </div>
 </div>
 
@@ -2197,18 +2197,23 @@ function buildTeams(){
 const EN={
   you:'YOU',opp:'OPP',nav:{online:'Online match',menu:'Menu'},common:{back:'← Back',join:'Join',cancel:'Cancel',close:'Close',or:'or'},
   online:{create:'Create room',leave:'Leave',resign:'Resign'},match:{firstHalf:'1ST HALF',secondHalf:'2ND HALF',endTurn:'TURN END (Confirm)',offsideDemo:'Offside demo',spectating:'SPECTATING',sent:'Sent'},
-  home:{teamFormation:'Team formation',formations:'Formations',saveSlots:'Save slots',comMatch:'COM match',onlineMatch:'Online match',autoMatch:'Auto matching'},tutorial:{open:'How to play',title:'Learn with video',restart:'Restart',pause:'Pause',play:'Play',next:'Next',intro:'Football Chess',move:'Move',pass:'Pass',defend:'Defend',shoot:'Shoot',intro1:'Both teams plan their moves at the same time.',intro2:'End the turn to resolve every move together.',move1:'Select a piece and choose a highlighted cell.',move2:'Read the opponent and move into useful space.',pass1:'Select the ball and pass to a teammate.',pass2:'A free receiver can continue the passing chain.',defend1:'Move defenders onto the ball holder to challenge.',defend2:'Position and piece cost affect the result.',shoot1:'From the attacking area, select the holder and shoot.',shoot2:'Score more goals before full time to win.'},
+  home:{teamFormation:'Team formation',formations:'Formations',saveSlots:'Save slots',comMatch:'COM match',onlineMatch:'Online match',autoMatch:'Auto matching',formationChangedTpl:'Changed to {name} {style}',slotEmpty:'(empty)',save:'Save',load:'Load',slotSavedTpl:'Saved to SLOT{slot}',slotLoadedTpl:'Loaded SLOT{slot}'},tutorial:{open:'How to play',title:'Learn with video',restart:'Restart',pause:'Pause',play:'Play',next:'Next',intro:'Football Chess',move:'Move',pass:'Pass',defend:'Defend',shoot:'Shoot',intro1:'Both teams plan their moves at the same time.',intro2:'End the turn to resolve every move together.',move1:'Select a piece and choose a highlighted cell.',move2:'Read the opponent and move into useful space.',pass1:'Select the ball and pass to a teammate.',pass2:'A free receiver can continue the passing chain.',defend1:'Move defenders onto the ball holder to challenge.',defend2:'Position and piece cost affect the result.',shoot1:'From the attacking area, select the holder and shoot.',shoot2:'Score more goals before full time to win.'},
   settings:{title:'Settings',playerName:'Player name (also used online)',clubName:'Club name',account:'Account',sound:'Sound effects',haptic:'Haptic feedback',language:'Language',note:'Your formation and player name are saved on this browser.'},
-  subscription:{title:'Subscription',short:'Subscription',joinDemo:'Join premium (demo)',cancel:'Cancel subscription',loginToJoin:'Log in to join'},
-  friend:{open:'🤝 Friend match (invite code/URL)',title:'Friend match',create:'Create room',joinRoom:'Join a room',copyId:'Copy ID',copyUrl:'Copy URL'},
-  matching:{searching:'Looking for an opponent…',playCom:'No opponent found. Play COM instead'},
-  auth:{login:'Log in',register:'Register',loginRegister:'Log in / Register',logout:'Log out',accountTitle:'UniversoFutbol account',universoLogin:'Log in with UniversoFutbol (Google supported)',continueGuest:'Continue as guest'},
+  subscription:{title:'Subscription',short:'Subscription',plan:'UniversoFutbol subscription',price:'¥2,000 / month',demoNote:'Demo only. No charge is made; production will use the shared UniversoFutbol subscription.',benefitAll:'One subscription for all UniversoFutbol content',benefitRank:'Unlock piece rank and cost changes',benefitNoAds:'Play without ads',benefitFuture:'Coming later: exclusive formations and replay storage',billingNote:'Billing will be managed by UniversoFutbol. Demo access expires automatically after 30 days.',joinDemo:'Join premium (demo)',cancel:'Cancel subscription',loginToJoin:'Log in to join'},
+  friend:{open:'🤝 Friend match (invite code/URL)',title:'Friend match',create:'Create room',joinRoom:'Join a room',copyId:'Copy ID',copyUrl:'Copy URL',roomId:'Room ID',waiting:'Waiting for your opponent…',enterRoomId:'Enter a room ID'},
+  matching:{searching:'Looking for an opponent…',playCom:'No opponent found. Play COM instead',elapsedTpl:'{seconds}s',myNameTpl:'Name: {name}'},
+  auth:{login:'Log in',register:'Register',loginRegister:'Log in / Register',logout:'Log out',accountTitle:'UniversoFutbol account',universoLogin:'Log in with UniversoFutbol (Google supported)',continueGuest:'Continue as guest',username:'Username (2–16 characters)',password:'Password (8 characters or more)',demoNote:'Production will use your universofutbol.com account. This is a demo account; do not reuse a password.'},
   cost:{title:'Change rank'},result:{rematch:'REMATCH',rsWin:'WIN',rsLose:'LOSE',rsDraw:'DRAW',rsHome:'HOME',rsGoal:'GOAL',rsOppWants:'Opponent wants a rematch',rsRematchSent:'Rematch request sent'},
   ogCostHint:'Tap a piece to change its rank',ogCostCurrentBadge:'Current',ogCostOverLabel:'Over limit',ogCostPremiumMsg:'Rank change is a premium feature',ogCostPremiumBtn:'About Premium',ogCostTitleTpl:'{pos} rank — current {rank} (cost {cost})',ogCostPreviewTpl:'TEAM COST {total} / {max}',ogCostToastTpl:'Changed {pos} to rank {rank} (TEAM COST {total}/{max})',
   lang_ja:'日本語',lang_en:'English',lang_ko:'한국어',lang_es:'Español',lang_pt:'Português',lang_de:'Deutsch',lang_zhCN:'简体中文'
 };
-const JA={...EN,you:'あなた',opp:'あいて',nav:{online:'オンライン対戦',menu:'メニュー'},common:{back:'← 戻る',join:'参加',cancel:'キャンセル',close:'閉じる',or:'または',selectionCleared:'選択を解除しました'},online:{create:'ROOM作成',leave:'退出',resign:'投了'},match:{firstHalf:'前半',secondHalf:'後半',endTurn:'TURN END（決定）',offsideDemo:'オフサイド実演',spectating:'観戦中',sent:'送信済み'},home:{teamFormation:'チーム編成',formations:'フォーメーション',saveSlots:'保存スロット',comMatch:'COM対戦',onlineMatch:'オンライン対戦',autoMatch:'自動マッチング'},tutorial:{...EN.tutorial,open:'遊び方',title:'動画で遊び方',restart:'最初から',pause:'一時停止',play:'再生',next:'次へ',intro:'Football Chessとは',move:'移動',pass:'パス',defend:'守備',shoot:'シュート',intro1:'両チームが同時に行動を考えます。',intro2:'TURN ENDを押すと、すべての行動が一斉に解決されます。',move1:'駒を選び、光っている移動先を選びます。',move2:'相手の狙いを読み、有利なスペースへ動かします。',pass1:'ボールを選び、味方の駒へパスします。',pass2:'フリーで受けた選手から、さらにパスを続けられます。',defend1:'ボール保持者と同じマスへ守備者を動かして競り合います。',defend2:'人数、位置、駒のコストによって結果が変わります。',shoot1:'攻撃エリアでは、ボール保持者を選んでシュートできます。',shoot2:'試合終了までに多く得点したチームの勝利です。'},settings:{title:'設定',playerName:'プレイヤー名（オンライン対戦の表示名と共通）',clubName:'クラブ名',account:'アカウント',sound:'効果音',haptic:'触覚フィードバック',language:'言語',note:'編成とプレイヤー名はこの端末（ブラウザ）に保存されます。'},subscription:{title:'サブスクリプション',short:'サブスク',joinDemo:'プレミアムに加入する（デモ）',cancel:'解約する',loginToJoin:'ログインして加入する'},friend:{open:'🤝 フレンド対戦（招待コード/URLで友達と対戦）',title:'フレンド対戦',create:'部屋を作る',joinRoom:'部屋に入る',copyId:'IDをコピー',copyUrl:'URLをコピー'},matching:{searching:'対戦相手を探しています…',playCom:'相手が見つかりません。COMと対戦する'},auth:{login:'ログイン',register:'新規登録',loginRegister:'ログイン / 新規登録',logout:'ログアウト',accountTitle:'UniversoFutbol アカウント',universoLogin:'UniversoFutbolでログイン（Google対応）',continueGuest:'ゲストで続ける'},cost:{title:'ランク変更'},result:{rematch:'再戦',rsWin:'WIN',rsLose:'LOSE',rsDraw:'DRAW',rsHome:'HOME',rsGoal:'ゴール',rsOppWants:'相手が再戦を希望しています',rsRematchSent:'再戦希望を送信しました'},ogCostHint:'駒をタップでランク変更',ogCostCurrentBadge:'現在',ogCostOverLabel:'コスト超過',ogCostPremiumMsg:'ランク変更はプレミアム限定です',ogCostPremiumBtn:'プレミアムについて',ogCostTitleTpl:'{pos} のランク　現在 {rank}（コスト{cost}）',ogCostPreviewTpl:'TEAM COST {total} / {max}',ogCostToastTpl:'{pos} をランク{rank}に変更（TEAM COST {total}/{max}）'};
+const JA={...EN,you:'あなた',opp:'あいて',nav:{online:'オンライン対戦',menu:'メニュー'},common:{back:'← 戻る',join:'参加',cancel:'キャンセル',close:'閉じる',or:'または',selectionCleared:'選択を解除しました'},online:{create:'ROOM作成',leave:'退出',resign:'投了'},match:{firstHalf:'前半',secondHalf:'後半',endTurn:'TURN END（決定）',offsideDemo:'オフサイド実演',spectating:'観戦中',sent:'送信済み'},home:{teamFormation:'チーム編成',formations:'フォーメーション',saveSlots:'保存スロット',comMatch:'COM対戦',onlineMatch:'オンライン対戦',autoMatch:'自動マッチング'},tutorial:{...EN.tutorial,open:'遊び方',title:'動画で遊び方',restart:'最初から',pause:'一時停止',play:'再生',next:'次へ',intro:'Football Chessとは',move:'移動',pass:'パス',defend:'守備',shoot:'シュート',intro1:'両チームが同時に行動を考えます。',intro2:'TURN ENDを押すと、すべての行動が一斉に解決されます。',move1:'駒を選び、光っている移動先を選びます。',move2:'相手の狙いを読み、有利なスペースへ動かします。',pass1:'ボールを選び、味方の駒へパスします。',pass2:'フリーで受けた選手から、さらにパスを続けられます。',defend1:'ボール保持者と同じマスへ守備者を動かして競り合います。',defend2:'人数、位置、駒のコストによって結果が変わります。',shoot1:'攻撃エリアでは、ボール保持者を選んでシュートできます。',shoot2:'試合終了までに多く得点したチームの勝利です。'},settings:{title:'設定',playerName:'プレイヤー名（オンライン対戦の表示名と共通）',clubName:'クラブ名',account:'アカウント',sound:'効果音',haptic:'触覚フィードバック',language:'言語',note:'編成とプレイヤー名はこの端末（ブラウザ）に保存されます。'},subscription:{...EN.subscription,title:'サブスクリプション',short:'サブスク',plan:'UniversoFutbol サブスクリプション',price:'月額 ¥2,000',demoNote:'※現在はデモ（実際の請求は発生しません。本番はUniversoFutbol共通サブスクに連動）',benefitAll:'UniversoFutbolの全コンテンツで共通のサブスクリプション',benefitRank:'駒のランク変更（コスト変更）の解放',benefitNoAds:'広告なしでプレイ',benefitFuture:'今後追加: 限定フォーメーション・リプレイ保存 など',billingNote:'決済はUniversoFutbol側で一元化されます。デモ加入は30日で自動的に切れます。',joinDemo:'プレミアムに加入する（デモ）',cancel:'解約する',loginToJoin:'ログインして加入する'},friend:{...EN.friend,open:'🤝 フレンド対戦（招待コード/URLで友達と対戦）',title:'フレンド対戦',create:'部屋を作る',joinRoom:'部屋に入る',copyId:'IDをコピー',copyUrl:'URLをコピー',roomId:'ルームID',waiting:'相手の参加を待っています…',enterRoomId:'ルームIDを入力'},matching:{...EN.matching,searching:'対戦相手を探しています…',playCom:'相手が見つかりません。COMと対戦する',elapsedTpl:'{seconds}秒',myNameTpl:'表示名：{name}'},auth:{...EN.auth,login:'ログイン',register:'新規登録',loginRegister:'ログイン / 新規登録',logout:'ログアウト',accountTitle:'UniversoFutbol アカウント',universoLogin:'UniversoFutbolでログイン（Google対応）',continueGuest:'ゲストで続ける',username:'ユーザー名（2〜16文字）',password:'パスワード（8文字以上）',demoNote:'本番ではuniversofutbol.comの会員アカウントを利用します。現在はデモ用アカウントのため、パスワードは使い回さないでください。'},cost:{title:'ランク変更'},result:{rematch:'再戦',rsWin:'WIN',rsLose:'LOSE',rsDraw:'DRAW',rsHome:'HOME',rsGoal:'ゴール',rsOppWants:'相手が再戦を希望しています',rsRematchSent:'再戦希望を送信しました'},ogCostHint:'駒をタップでランク変更',ogCostCurrentBadge:'現在',ogCostOverLabel:'コスト超過',ogCostPremiumMsg:'ランク変更はプレミアム限定です',ogCostPremiumBtn:'プレミアムについて',ogCostTitleTpl:'{pos} のランク　現在 {rank}（コスト{cost}）',ogCostPreviewTpl:'TEAM COST {total} / {max}',ogCostToastTpl:'{pos} をランク{rank}に変更（TEAM COST {total}/{max}）'};
 const L10N={ja:JA,en:EN,ko:{...EN,settings:{...EN.settings,title:'설정',language:'언어'},home:{...EN.home,teamFormation:'팀 편성',onlineMatch:'온라인 대전'},friend:{...EN.friend,title:'친구 대전'},lang_ja:'日本語'},es:{...EN,settings:{...EN.settings,title:'Ajustes',language:'Idioma'},home:{...EN.home,teamFormation:'Formación'},friend:{...EN.friend,title:'Partida con amigo'},lang_ja:'Japonés'},pt:{...EN,settings:{...EN.settings,title:'Configurações',language:'Idioma'},home:{...EN.home,teamFormation:'Formação'},friend:{...EN.friend,title:'Partida com amigo'},lang_ja:'Japonês'},de:{...EN,settings:{...EN.settings,title:'Einstellungen',language:'Sprache'},home:{...EN.home,teamFormation:'Teamaufstellung'},friend:{...EN.friend,title:'Freundschaftsspiel'},lang_ja:'Japanisch'},'zh-CN':{...EN,settings:{...EN.settings,title:'设置',language:'语言'},home:{...EN.home,teamFormation:'球队编成'},friend:{...EN.friend,title:'好友对战'},lang_ja:'日语'}};
+Object.assign(L10N.ja.home,{formationChangedTpl:'{name} {style} に変更しました',slotEmpty:'（空き）',save:'保存',load:'呼出',slotSavedTpl:'SLOT{slot} に保存しました',slotLoadedTpl:'SLOT{slot} を呼び出しました'});
+for(const dict of Object.values(L10N)){ Object.assign(dict.online,{teamBlue:'Blue',teamRed:'Red',emptySeat:'Empty',disconnected:'Disconnected',spectatorCountTpl:'Spectators {count}',abnormalClose:'Abnormal close'}); }
+Object.assign(L10N.ja.online,{teamBlue:'青',teamRed:'赤',emptySeat:'空席',disconnected:'未接続',spectatorCountTpl:'観戦 {count}',abnormalClose:'異常終了'});
+for(const dict of Object.values(L10N)){ Object.assign(dict.online,{roomTurnTpl:'{room} / {team} / TURN {turn}',roomSpectateTpl:'{room} / Spectating',sentWaitingTpl:'{team} sent / Waiting for opponent{deadline}',opponentSentTpl:'{team} sent / Enter your moves{deadline}',waitingConnectionTpl:'{room} / {team} / Waiting for opponent',deadlineTpl:' / {time} remaining',reconnectFailedTpl:'{room} reconnect failed / Join to retry',disconnectedRetryTpl:'{room} disconnected / Reconnecting in {seconds}s {attempt}/{max}',reconnectingTpl:'{room} reconnecting… {attempt}/{max}',creating:'Creating room…',connectingTpl:'{room} connecting…',spectateConnectingTpl:'{room} connecting as spectator…',connectionErrorTpl:'{room} connection error / Waiting to reconnect',resolving:'Resolving…',winnerTpl:'{room} / {team} wins',rematchWaitingTpl:'{room} / Waiting for rematch',noRoom:'Create or join a room first',urlsCopied:'Player/spectator URLs copied',urlsLogged:'Player/spectator URLs shown in the log',leavingTpl:'{room} leaving…',resigning:'Sending resignation…',rematchSending:'Sending rematch request…'}); }
+Object.assign(L10N.ja.online,{roomTurnTpl:'{room} / {team} / TURN {turn}',roomSpectateTpl:'{room} / 観戦',sentWaitingTpl:'{team} 送信済み / 相手待ち{deadline}',opponentSentTpl:'{team} 送信済み / 入力してください{deadline}',waitingConnectionTpl:'{room} / {team} / 相手接続待ち',deadlineTpl:' / 残り{time}',reconnectFailedTpl:'{room} 再接続失敗 / 参加で再試行',disconnectedRetryTpl:'{room} 切断 / {seconds}秒後に再接続 {attempt}/{max}',reconnectingTpl:'{room} 再接続中… {attempt}/{max}',creating:'ROOM作成中…',connectingTpl:'{room} 接続中…',spectateConnectingTpl:'{room} 観戦接続中…',connectionErrorTpl:'{room} 接続エラー / 再接続待ち',resolving:'解決中…',winnerTpl:'{room} / {team} 勝利',rematchWaitingTpl:'{room} / 再戦待ち',noRoom:'先にROOMを作成/参加してください',urlsCopied:'参加URL/観戦URLをコピーしました',urlsLogged:'参加URL/観戦URLをログに表示しました',leavingTpl:'{room} 退出中…',resigning:'投了送信中…',rematchSending:'再戦希望を送信しました'});
 for(const dict of Object.values(L10N)){ Object.assign(dict,{rsWin:dict.result.rsWin,rsLose:dict.result.rsLose,rsDraw:dict.result.rsDraw,rsRematch:dict.result.rematch,rsHome:dict.result.rsHome,rsGoal:dict.result.rsGoal,rsOppWants:dict.result.rsOppWants,rsRematchSent:dict.result.rsRematchSent,notInput:'Input is not available now',enemyPiece:'You cannot control the opponent\'s piece',selectionCleared:'Selection cleared',replaying:'Replay in progress…',finished:'The match is over',offline:'Offline',creating:'Creating room…',roomRequired:'Enter a room code',copied:'Copied!',turn:'Turn',pass:'Pass',throughPass:'Through pass',shoot:'Shoot',move:'Move',dribble:'Dribble',offside:'Offside',tackleSuccess:'Tackle successful',tackleFailed:'Tackle failed',foul:'Foul',looseBall:'Loose ball',kickoff:'Kick-off',halftime:'Half-time',fulltime:'Full time'}); }
 Object.assign(L10N.ja,{notInput:'入力待ちではありません',enemyPiece:'相手の駒は操作できません',selectionCleared:'選択を解除しました',replaying:'再生中です…',finished:'試合は終了しています',offline:'オンライン接続がありません',creating:'ROOM作成中…',roomRequired:'ROOM CODEを入力してください',copied:'コピーしました!',turn:'ターン',pass:'パス',throughPass:'スルーパス',shoot:'シュート',move:'移動',dribble:'ドリブル',offside:'オフサイド',tackleSuccess:'タックル成功',tackleFailed:'タックル失敗',foul:'ファウル',looseBall:'こぼれ球',kickoff:'キックオフ',halftime:'ハーフタイム',fulltime:'フルタイム'});
 for(const dict of Object.values(L10N)){ Object.assign(dict.match,{notInput:dict.notInput,enemyPiece:dict.enemyPiece,selectionCleared:dict.selectionCleared,replaying:dict.replaying,finished:dict.finished,spectating:dict.match.spectating}); Object.assign(dict.online,{offline:dict.offline,creating:dict.creating,roomRequired:dict.roomRequired}); Object.assign(dict.action||(dict.action={}),{pass:dict.pass,throughPass:dict.throughPass,shoot:dict.shoot,move:dict.move,dribble:dict.dribble,offside:dict.offside,tackleSuccess:dict.tackleSuccess,tackleFailed:dict.tackleFailed,foul:dict.foul,looseBall:dict.looseBall,kickoff:dict.kickoff}); }
@@ -2356,7 +2361,7 @@ function updateRoomUrl(roomCode,role='auto'){
 function localPlayerTeam(){ return online.enabled && (online.role==='b'||online.role==='r') ? online.role : 'b'; }
 function isOnlineSpectator(){ return online.connected && !online.enabled; }
 function remoteOpponentTeam(){ return localPlayerTeam()==='b' ? 'r' : 'b'; }
-function localTeamLabel(){ return localPlayerTeam()==='b' ? '青' : '赤'; }
+function localTeamLabel(){ return localPlayerTeam()==='b' ? t('online.teamBlue') : t('online.teamRed'); }
 function onlineErrorText(value){
   if(!value) return '';
   if(typeof value==='string') return value;
@@ -2369,7 +2374,7 @@ function onlineCloseDetail(ev){
   const parts=[];
   if(Number.isFinite(ev.code)) parts.push(`code ${ev.code}`);
   if(ev.reason) parts.push(ev.reason);
-  if(ev.wasClean===false) parts.push('異常終了');
+  if(ev.wasClean===false) parts.push(t('online.abnormalClose'));
   return parts.length ? `（${parts.join(' / ')}）` : '';
 }
 function onlineRoomErrorText(payload){
@@ -2381,6 +2386,7 @@ function setOnlineStatus(text,kind=''){
   online.status=text; online.statusKind=kind;
   renderOnlineStatus();
 }
+function setOnlineStatusKey(key,params={},kind=''){ setOnlineStatus(tFmt(`online.${key}`,params),kind); }
 function syncOnlineDisplayName(options={}){
   const input=document.getElementById('onlineNameInput');
   const next=normalizeOnlineDisplayName(input?.value||online.displayName);
@@ -2412,20 +2418,21 @@ function renderOnlineRoster(){
     const seat=players[team]||null;
     const isMe=online.role===team && online.connected;
     const connected=!!seat?.connected;
-    const label=team==='b'?'青':'赤';
-    const name=seat ? shortOnlineName(seat.displayName,label) : '空席';
+    const label=team==='b'?t('online.teamBlue'):t('online.teamRed');
+    const name=seat ? shortOnlineName(seat.displayName,label) : t('online.emptySeat');
     const mark=pending.has(team)?' ✓':'';
     const classes=['onlineSeat',team];
     if(!connected) classes.push('off');
     if(pending.has(team)) classes.push('pending');
     if(isMe) classes.push('me');
     const cost=Number.isFinite(seat?.teamCost) ? ` / COST ${Number(seat.teamCost).toFixed(1)}` : '';
-    const title=escapeOnlineText(`${label}: ${seat?.displayName||'空席'}${cost}${connected?'':' / 未接続'}`);
+    const title=escapeOnlineText(`${label}: ${seat?.displayName||t('online.emptySeat')}${cost}${connected?'':` / ${t('online.disconnected')}`}`);
     return `<div class="${classes.join(' ')}" title="${title}"><span class="onlineDot"></span><span>${escapeOnlineText(label)} ${escapeOnlineText(name)}${mark}</span></div>`;
   };
   const spectators=Number.isFinite(presence.spectators) ? presence.spectators : 0;
+  const spectatorText=tFmt('online.spectatorCountTpl',{count:spectators});
   el.innerHTML=seatHtml('b')+seatHtml('r')+
-    `<div class="onlineSeat spec" title="観戦 ${spectators}"><span class="onlineDot"></span><span>観戦 ${spectators}</span></div>`;
+    `<div class="onlineSeat spec" title="${escapeOnlineText(spectatorText)}"><span class="onlineDot"></span><span>${escapeOnlineText(spectatorText)}</span></div>`;
 }
 function renderOnlineStatus(){
   const el=document.getElementById('onlineStatus'); if(!el) return;
@@ -2447,8 +2454,8 @@ function renderOnlineStatus(){
   const btn=document.getElementById('endTurnBtn');
   if(btn){
     btn.disabled=isOnlineSpectator();
-    if(online.connected && !online.enabled) btn.textContent='観戦中';
-    else btn.textContent=online.enabled ? (online.waiting?'送信済み':'TURN END（決定）') : 'TURN END（決定）';
+    if(online.connected && !online.enabled) btn.textContent=t('match.spectating');
+    else btn.textContent=online.enabled ? (online.waiting?t('match.sent'):t('match.endTurn')) : t('match.endTurn');
   }
   // ヘッダーは常に自分視点（あなた/あいて）。視点変換で自分=青見えのため、論理色の「赤/青」表記は出さない
   const names=document.querySelectorAll('.teamName');
@@ -3039,7 +3046,7 @@ function applySnapshotToLocal(snapshot){
   clearSelection();
   resetChain();
 }
-function eventTeamName(team){ return team==='b'?'青':(team==='r'?'赤':''); }
+function eventTeamName(team){ return team==='b'?t('online.teamBlue'):(team==='r'?t('online.teamRed'):''); }
 function commandTypeLabel(type){
   return ({move:'移動',dribble:'ドリブル',pass:'パス',throughpass:'スルーパス',shoot:'シュート'}[type])||type||'操作';
 }
@@ -3383,21 +3390,21 @@ async function playServerResolution(resolution,snapshot,reason){
     return;
   }
   await showCutin('turnStart',700); // 次ターンの入力開始（Unity準拠）
-  setOnlineStatus(`${online.roomCode} / ${localTeamLabel()} / TURN ${state.turn}`,'live');
+  setOnlineStatusKey('roomTurnTpl',{room:online.roomCode,team:localTeamLabel(),turn:state.turn},'live');
   render();
 }
 function deadlineSuffix(inputDeadlineAt){
   if(!inputDeadlineAt) return '';
   const remaining=Math.max(0, Math.ceil((new Date(inputDeadlineAt).getTime()-Date.now())/1000));
   const m=Math.floor(remaining/60), s=String(remaining%60).padStart(2,'0');
-  return ` / 残り${m}:${s}`;
+  return tFmt('online.deadlineTpl',{time:`${m}:${s}`});
 }
 function applyOnlinePresence(presence){
   if(!presence||!online.roomCode) return;
   online.presence=presence;
   frOnPresenceUpdate(); // フレンド待機中なら両席が埋まった時点でオーバーレイを閉じて対戦へ
   if(online.connected && !online.enabled){
-    setOnlineStatus(`${online.roomCode} / 観戦`,'live');
+    setOnlineStatusKey('roomSpectateTpl',{room:online.roomCode},'live');
     return;
   }
   if(!online.enabled) return;
@@ -3405,13 +3412,13 @@ function applyOnlinePresence(presence){
   const my=localPlayerTeam(), opp=remoteOpponentTeam();
   const oppSeat=presence.players&&presence.players[opp];
   if(pending.includes(my) && !pending.includes(opp)){
-    setOnlineStatus(`${localTeamLabel()} 送信済み / 相手待ち${deadlineSuffix(presence.inputDeadlineAt)}`,'wait');
+    setOnlineStatusKey('sentWaitingTpl',{team:localTeamLabel(),deadline:deadlineSuffix(presence.inputDeadlineAt)},'wait');
   }else if(pending.includes(opp) && !pending.includes(my)){
-    setOnlineStatus(`${eventTeamName(opp)} 送信済み / 入力してください${deadlineSuffix(presence.inputDeadlineAt)}`,'wait');
+    setOnlineStatusKey('opponentSentTpl',{team:eventTeamName(opp),deadline:deadlineSuffix(presence.inputDeadlineAt)},'wait');
   }else if(!oppSeat||!oppSeat.connected){
-    setOnlineStatus(`${online.roomCode} / ${localTeamLabel()} / 相手接続待ち`,'wait');
+    setOnlineStatusKey('waitingConnectionTpl',{room:online.roomCode,team:localTeamLabel()},'wait');
   }else if(!online.waiting){
-    setOnlineStatus(`${online.roomCode} / ${localTeamLabel()} / TURN ${state.turn}`,'live');
+    setOnlineStatusKey('roomTurnTpl',{room:online.roomCode,team:localTeamLabel(),turn:state.turn},'live');
   }
 }
 function onlineSocketUrl(roomCode,role){
@@ -3445,7 +3452,7 @@ function scheduleOnlineReconnect(roomCode,role){
   if(online.leaving||!roomCode) return false;
   clearOnlineReconnect();
   if(online.reconnectAttempts>=ONLINE_RECONNECT_DELAYS.length){
-    setOnlineStatus(`${roomCode} 再接続失敗 / 参加で再試行`,'err');
+    setOnlineStatusKey('reconnectFailedTpl',{room:roomCode},'err');
     log(`${roomCode} の自動再接続に失敗しました。参加で再試行できます`);
     return false;
   }
@@ -3453,11 +3460,11 @@ function scheduleOnlineReconnect(roomCode,role){
   const attempt=online.reconnectAttempts+1;
   online.reconnectAttempts=attempt;
   const seconds=(delay/1000).toFixed(delay%1000?1:0);
-  setOnlineStatus(`${roomCode} 切断 / ${seconds}秒後に再接続 ${attempt}/${ONLINE_RECONNECT_DELAYS.length}`,'wait');
+  setOnlineStatusKey('disconnectedRetryTpl',{room:roomCode,seconds,attempt,max:ONLINE_RECONNECT_DELAYS.length},'wait');
   online.reconnectTimer=setTimeout(()=>{
     online.reconnectTimer=null;
     if(online.leaving) return;
-    setOnlineStatus(`${roomCode} 再接続中… ${attempt}/${ONLINE_RECONNECT_DELAYS.length}`,'wait');
+    setOnlineStatusKey('reconnectingTpl',{room:roomCode,attempt,max:ONLINE_RECONNECT_DELAYS.length},'wait');
     connectOnlineRoom(roomCode,role,null,{reconnect:true}).catch(err=>{
       console.error(err);
       log(`再接続失敗: ${onlineErrorText(err)||'不明なエラー'}`);
@@ -3480,7 +3487,7 @@ function goOffline(status='OFFLINE',kind=''){
 async function createOnlineRoom(){
   syncOnlineDisplayName({send:false});
   online.apiBase=defaultOnlineApiBase();
-  setOnlineStatus('ROOM作成中…','wait');
+  setOnlineStatusKey('creating',{},'wait');
   const res=await fetch(`${online.apiBase}/matches`,{method:'POST'});
   if(!res.ok) throw new Error(`room create failed: ${res.status}`);
   const data=await res.json();
@@ -3492,9 +3499,9 @@ async function joinOnlineRoom(){
   const rawInput=input?.value||'';
   const roomCode=normalizeOnlineRoomInput(rawInput);
   const requestedRole=onlineRoleFromText(rawInput);
-  if(!roomCode){ setOnlineStatus('ROOM CODEを入力してください','err'); return; }
+  if(!roomCode){ setOnlineStatus(t('online.roomRequired'),'err'); return; }
   online.apiBase=defaultOnlineApiBase();
-  setOnlineStatus(`${roomCode} ${requestedRole==='spectator'?'観戦接続中':'接続中'}…`,'wait');
+  setOnlineStatusKey(requestedRole==='spectator'?'spectateConnectingTpl':'connectingTpl',{room:roomCode},'wait');
   await connectOnlineRoom(roomCode,requestedRole,null);
 }
 async function connectOnlineRoom(roomCode,role,snapshot,options={}){
@@ -3515,10 +3522,10 @@ async function connectOnlineRoom(roomCode,role,snapshot,options={}){
   if(snapshot) applySnapshotToLocal(snapshot);
   const ws=new WebSocket(onlineSocketUrl(roomCode,requestedRole));
   online.ws=ws;
-  ws.onopen=()=>setOnlineStatus(`${roomCode} 接続中…`,'wait');
+  ws.onopen=()=>setOnlineStatusKey('connectingTpl',{room:roomCode},'wait');
   ws.onerror=ev=>{
     const detail=onlineErrorText(ev);
-    setOnlineStatus(`${roomCode} 接続エラー${detail?`（${detail}）`:''} / 再接続待ち`,'err');
+    setOnlineStatusKey('connectionErrorTpl',{room:roomCode},'err');
     log(`${roomCode} 接続エラー${detail?`（${detail}）`:''}`);
   };
   ws.onclose=ev=>{
@@ -3556,11 +3563,11 @@ async function handleOnlineEnvelope(envelope){
     online.enabled=online.role==='b'||online.role==='r';
     applySnapshotToLocal(payload.snapshot);
     if(online.enabled){
-      setOnlineStatus(`${online.roomCode} / ${localTeamLabel()} / TURN ${state.turn}`,'live');
+      setOnlineStatusKey('roomTurnTpl',{room:online.roomCode,team:localTeamLabel(),turn:state.turn},'live');
       log(`${online.roomCode} に ${localTeamLabel()} で参加しました`);
     }else{
       state.phase='replay';
-      setOnlineStatus(`${online.roomCode} / 観戦`,'live');
+      setOnlineStatusKey('roomSpectateTpl',{room:online.roomCode},'live');
       log(`${online.roomCode} に観戦で参加しました`);
     }
     applyOnlinePresence(payload.presence);
@@ -3597,7 +3604,8 @@ async function handleOnlineEnvelope(envelope){
   if(envelope.type==='match.intent.received'){
     const who=eventTeamName(payload.team);
     if(payload.team===localPlayerTeam()) online.waiting=true;
-    setOnlineStatus(payload.bothReady?'解決中…':`${who} 送信済み / 相手待ち${deadlineSuffix(payload.inputDeadlineAt)}`,'wait');
+    if(payload.bothReady) setOnlineStatusKey('resolving',{},'wait');
+    else setOnlineStatusKey('sentWaitingTpl',{team:who,deadline:deadlineSuffix(payload.inputDeadlineAt)},'wait');
     log(`${who} の入力を受信`);
     return;
   }
@@ -3611,7 +3619,7 @@ async function handleOnlineEnvelope(envelope){
     myCommands=[]; oppCommands=[];
     const loser=eventTeamName(payload.team), winner=eventTeamName(payload.winner);
     log(`${loser} が投了しました。${winner} の勝利`);
-    setOnlineStatus(`${online.roomCode} / ${winner} 勝利`,'live');
+    setOnlineStatusKey('winnerTpl',{room:online.roomCode,team:winner},'live');
     render();
     return;
   }
@@ -3623,7 +3631,7 @@ async function handleOnlineEnvelope(envelope){
       online.opponentWantsRematch=true; // リザルト演出の再戦ボタン注記に反映（既存受信の流用・新規通信なし）
       updateResultRematchNote();
     }
-    setOnlineStatus(`${online.roomCode} / 再戦待ち`,'wait');
+    setOnlineStatusKey('rematchWaitingTpl',{room:online.roomCode},'wait');
     render();
     return;
   }
@@ -3634,7 +3642,8 @@ async function handleOnlineEnvelope(envelope){
     myCommands=[]; oppCommands=[]; online.waiting=false;
     if(online.connected && !online.enabled) state.phase='replay';
     log('―― 再戦開始 ――');
-    setOnlineStatus(online.enabled?`${online.roomCode} / ${localTeamLabel()} / TURN ${state.turn}`:`${online.roomCode} / 観戦`,'live');
+    if(online.enabled) setOnlineStatusKey('roomTurnTpl',{room:online.roomCode,team:localTeamLabel(),turn:state.turn},'live');
+    else setOnlineStatusKey('roomSpectateTpl',{room:online.roomCode},'live');
     render();
     return;
   }
@@ -3644,22 +3653,22 @@ async function handleOnlineEnvelope(envelope){
   }
 }
 async function copyOnlineRoomUrl(){
-  if(!online.roomCode){ setOnlineStatus('先にROOMを作成/参加してください','err'); return; }
+  if(!online.roomCode){ setOnlineStatusKey('noRoom',{},'err'); return; }
   const playUrl=roomShareUrl(online.roomCode);
   const watchUrl=roomShareUrl(online.roomCode,'spectator');
   const shareText=`参加URL: ${playUrl}\n観戦URL: ${watchUrl}`;
   try{
     await navigator.clipboard.writeText(shareText);
-    setOnlineStatus('参加URL/観戦URLをコピーしました','live');
+    setOnlineStatusKey('urlsCopied',{},'live');
   }catch{
     log(`参加URL: ${playUrl}`);
     log(`観戦URL: ${watchUrl}`);
-    setOnlineStatus('参加URL/観戦URLをログに表示しました','wait');
+    setOnlineStatusKey('urlsLogged',{},'wait');
   }
 }
 function sendOnlineControl(type){
   if(!online.ws||online.ws.readyState!==WebSocket.OPEN){
-    setOnlineStatus('オンライン接続がありません','err');
+    setOnlineStatus(t('online.offline'),'err');
     log('オンライン接続がありません');
     return false;
   }
@@ -3678,19 +3687,19 @@ function leaveOnlineRoom(){
     return;
   }
   online.leaving=true;
-  if(sendOnlineControl('match.leave')) setOnlineStatus(`${online.roomCode} 退出中…`,'wait');
+  if(sendOnlineControl('match.leave')) setOnlineStatusKey('leavingTpl',{room:online.roomCode},'wait');
   renderOnlineStatus();
 }
 function resignOnlineMatch(){
   if(!online.enabled||!(online.role==='b'||online.role==='r')){ log('観戦中は投了できません'); return; }
   if(state.matchOver){ log('試合は終了しています'); return; }
   if(!confirm('投了しますか？')) return;
-  if(sendOnlineControl('match.resign')) setOnlineStatus('投了送信中…','wait');
+  if(sendOnlineControl('match.resign')) setOnlineStatusKey('resigning',{},'wait');
 }
 function requestOnlineRematch(){
   if(!online.enabled||!(online.role==='b'||online.role==='r')){ log('観戦中は再戦希望を送れません'); return; }
   if(!state.matchOver){ log('再戦は試合終了後に使えます'); return; }
-  if(sendOnlineControl('match.rematch.request')) setOnlineStatus('再戦希望を送信しました','wait');
+  if(sendOnlineControl('match.rematch.request')) setOnlineStatusKey('rematchSending',{},'wait');
 }
 function autoJoinOnlineRoomFromUrl(){
   const roomCode=roomCodeFromUrl();
@@ -3725,7 +3734,7 @@ function submitOnlineIntent(){
   online.waiting=true;
   state.phase='replay';
   clearSelection();
-  setOnlineStatus(`${localTeamLabel()} 送信済み / 相手待ち`,'wait');
+  setOnlineStatusKey('sentWaitingTpl',{team:localTeamLabel(),deadline:''},'wait');
   render();
 }
 
@@ -4690,7 +4699,7 @@ function ogRenderDeck(){
     b.addEventListener('click',()=>{
       ogDeck={formationId:fm.id,costs:fm.costs.slice()};
       ogSelectedPiece=-1; ogSaveDeck(); ogRenderDeck();
-      ogToast(`${fm.name} ${fm.sub} に変更しました`,true);
+      ogToast(tFmt('home.formationChangedTpl',{name:fm.name,style:fm.sub}),true);
     });
     fl.appendChild(b);
   });
@@ -4703,11 +4712,11 @@ function ogRenderDeck(){
     const row=document.createElement('div');
     row.className='ogSlot';
     const fm=saved?ogFormation(saved.formationId):null;
-    row.innerHTML=`<span class="lab ${saved?'':'empty'}">SLOT${i+1} ${saved?`${fm.name}(${ogDeckCost(saved).toFixed(1)})`:'（空き）'}</span>`;
-    const bs=document.createElement('button'); bs.className='save'; bs.textContent='保存';
-    bs.addEventListener('click',()=>{ try{ localStorage.setItem(OG_SLOT_KEY+i,JSON.stringify(ogDeck)); }catch{} ogToast(`SLOT${i+1} に保存しました`,true); ogRenderDeck(); });
-    const bl=document.createElement('button'); bl.className='load'; bl.textContent='呼出'; bl.disabled=!saved;
-    bl.addEventListener('click',()=>{ if(!saved)return; ogDeck={formationId:saved.formationId,costs:saved.costs.slice()}; ogSelectedPiece=-1; ogSaveDeck(); ogRenderDeck(); ogToast(`SLOT${i+1} を呼び出しました`,true); });
+    row.innerHTML=`<span class="lab ${saved?'':'empty'}">SLOT${i+1} ${saved?`${fm.name}(${ogDeckCost(saved).toFixed(1)})`:t('home.slotEmpty')}</span>`;
+    const bs=document.createElement('button'); bs.className='save'; bs.textContent=t('home.save');
+    bs.addEventListener('click',()=>{ try{ localStorage.setItem(OG_SLOT_KEY+i,JSON.stringify(ogDeck)); }catch{} ogToast(tFmt('home.slotSavedTpl',{slot:i+1}),true); ogRenderDeck(); });
+    const bl=document.createElement('button'); bl.className='load'; bl.textContent=t('home.load'); bl.disabled=!saved;
+    bl.addEventListener('click',()=>{ if(!saved)return; ogDeck={formationId:saved.formationId,costs:saved.costs.slice()}; ogSelectedPiece=-1; ogSaveDeck(); ogRenderDeck(); ogToast(tFmt('home.slotLoadedTpl',{slot:i+1}),true); });
     row.appendChild(bs); row.appendChild(bl);
     sl.appendChild(row);
   }
@@ -5029,9 +5038,9 @@ async function startMatchmaking(){
   mmActive=true;
   mmStart=Date.now();
   online.apiBase=defaultOnlineApiBase();
-  document.getElementById('mmElapsed').textContent='0秒';
+  document.getElementById('mmElapsed').textContent=tFmt('matching.elapsedTpl',{seconds:0});
   document.getElementById('mmComBtn').style.display='none';
-  document.getElementById('mmMyName').textContent=`表示名：${getOnlineDisplayName()}`;
+  document.getElementById('mmMyName').textContent=tFmt('matching.myNameTpl',{name:getOnlineDisplayName()});
   ogShow('matchingOverlay',true);
   const tick=async()=>{
     if(!mmActive) return;
@@ -5055,7 +5064,7 @@ async function startMatchmaking(){
       }
     }catch(e){ /* 一時的な失敗は次のポーリングで再試行 */ }
     const sec=Math.floor((Date.now()-mmStart)/1000);
-    document.getElementById('mmElapsed').textContent=`${sec}秒`;
+    document.getElementById('mmElapsed').textContent=tFmt('matching.elapsedTpl',{seconds:sec});
     if(sec>=30) document.getElementById('mmComBtn').style.display=''; // maniacs準拠：30秒でCOM提案
     mmTimer=setTimeout(tick,2000);
   };
