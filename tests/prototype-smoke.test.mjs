@@ -51,3 +51,34 @@ test("telemetry client does not include identity fields", () => {
   assert.match(block, /locale:currentLocale/);
   assert.doesNotMatch(block, /displayName|roomCode|authorization|onlineName/);
 });
+
+test("home offers a single match button that opens the mode selector", () => {
+  // 2026-07-10仕様変更：ホームは「対戦」ボタンだけ→オンライン/COM/フレンドのモード選択へ
+  for (const id of ["ogMatchBtn", "modeOverlay", "modeOnlineBtn", "modeComBtn", "modeFriendBtn"]) {
+    assert.match(html, new RegExp(`id="${id}"`));
+  }
+  // 旧・個別ボタン（KICK OFF=COM対戦/オンライン対戦/ホームのフレンド対戦リンク）は廃止済み
+  for (const id of ["ogKickoffBtn", "ogOnlineBtn", "ogFriendBtn"]) {
+    assert.doesNotMatch(html, new RegExp(`id="${id}"`));
+  }
+});
+
+test("online matchmaking falls back to a COM match after 15 seconds", () => {
+  assert.match(html, /const MM_COM_FALLBACK_SEC=15/);
+  assert.match(html, /mmFallbackTimer=setTimeout/);
+  assert.match(html, /startComMatch\(\);/);
+  // 旧・30秒COM提案ボタンは廃止済み
+  assert.doesNotMatch(html, /id="mmComBtn"/);
+});
+
+test("premium-only ranking page ships with locked states and session binding", () => {
+  for (const id of ["ogTabRanking", "ogPageRanking", "ogRankingBody"]) {
+    assert.match(html, new RegExp(`id="${id}"`));
+  }
+  const block = html.match(/async function ogRenderRanking\(\)[\s\S]*?\n}/)?.[0] ?? "";
+  assert.match(block, /ogIsPremium\(\)/);
+  assert.match(block, /ogIsLoggedIn\(\)/);
+  assert.match(block, /\/ranking\/top/);
+  // オンライン席とアカウントの紐付け（ランキング記録用のsessionパラメータ）
+  assert.match(html, /url\.searchParams\.set\('session',ogAuth\.token\)/);
+});

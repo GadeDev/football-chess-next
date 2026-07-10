@@ -35,6 +35,8 @@ interface PlayerSeat {
   clientId: string;
   displayName: string;
   teamCost?: number;
+  /* ログイン済みプレイヤーのアカウントID（ランキング記録用）。ゲストは null */
+  accountId?: string | null;
   connected: boolean;
   joinedAt: string;
   lastSeenAt: string;
@@ -72,6 +74,8 @@ interface MatchSnapshot {
   game: FootballChessGameState;
   pendingIntents: Partial<Record<Team, PendingIntent>>;
   rematchRequests: Partial<Record<Team, string>>;
+  /* この試合のランキング記録を送信済みか（フルタイム/投了で1回だけ記録。再戦でリセット） */
+  rankedRecorded?: boolean;
   lastResolution?: {
     turn: TurnInfo;
     resolvedAt: string;
@@ -548,6 +552,12 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
     return receiveTelemetry(request, env);
   }
 
+  // ランキング（プレミアム限定）。閲覧・掲載ともサブスク有効なアカウントのみ。
+  // 戦績の記録はMatchRoom（サーバー権威）からのみ行われ、クライアントが直接書き込むAPIは無い。
+  if (url.pathname === `${API_PREFIX}/ranking/top` && request.method === "GET") {
+    return json(await accountStub(env).rankingTop(bearerToken(request)));
+  }
+
   // マッチメイキング（自動対戦相手探し）：/matchmaking/join を2秒間隔でポーリング、/leave でキャンセル
   if (
     (url.pathname === `${API_PREFIX}/matchmaking/join` || url.pathname === `${API_PREFIX}/matchmaking/leave`) &&
@@ -616,12 +626,24 @@ export class MatchRoom extends DurableObject<Env> {
     const requestedRole = roleField(url.searchParams.get("role"));
     const requestedTeamDefinition = teamDefinitionField(url.searchParams.get("deck"));
     if (requestedTeamDefinition.error) return problem(400, requestedTeamDefinition.error);
+    // ログイン済みならセッショントークンから席とアカウントを紐付ける（ランキング記録用）。
+    // 無効トークンやゲストは null のまま（試合は従来どおり遊べる）
+    let accountId: string | null = null;
+    const sessionToken = url.searchParams.get("session") ?? "";
+    if (sessionToken) {
+      try {
+        accountId = await accountStub(this.env).sessionUserId(sessionToken);
+      } catch {
+        accountId = null;
+      }
+    }
     const assigned = await this.assignSeat(
       roomCode,
       clientId,
       displayName,
       requestedRole,
       requestedTeamDefinition.definition,
+      accountId,
     );
 
     const pair = new WebSocketPair();
@@ -738,6 +760,7 @@ export class MatchRoom extends DurableObject<Env> {
     snapshot.teamDefinitions = snapshot.game.teamDefinitions;
     snapshot.pendingIntents ??= {};
     snapshot.rematchRequests ??= {};
+    snapshot.rankedRecorded ??= false;
     snapshot.cleanupAt ??= null;
     snapshot.turn.additionalTurns ??= { first: null, second: null };
     snapshot.turn.additionalTurns.first ??= null;
@@ -915,6 +938,32 @@ export class MatchRoom extends DurableObject<Env> {
     const seed = snapshot.game?.rng?.seed || `match:${snapshot.roomCode}`;
     snapshot.game = createInitialGameState("b", seed, snapshot.teamDefinitions);
     snapshot.teamDefinitions = snapshot.game.teamDefinitions;
+    snapshot.rankedRecorded = false;
+  }
+
+  /* オンライン試合の確定結果（フルタイム/投了）をアカウント戦績へ記録する。
+     プレミアム限定ランキングの元データ。サーバー権威で1試合につき1回だけ送る。
+     winner 省略時はスコアから勝敗を判定（フルタイム用）。ゲスト同士なら何もしない。 */
+  private async recordRankedResult(snapshot: MatchSnapshot, winner?: Team): Promise<void> {
+    if (snapshot.rankedRecorded) return;
+    snapshot.rankedRecorded = true;
+    const bId = snapshot.players.b?.accountId ?? null;
+    const rId = snapshot.players.r?.accountId ?? null;
+    if (!bId && !rId) return;
+    const score = snapshot.game.score;
+    const result: Team | "draw" = winner ?? (score.b > score.r ? "b" : score.r > score.b ? "r" : "draw");
+    try {
+      await accountStub(this.env).recordRankedResult(bId, rId, result);
+    } catch (error) {
+      console.error(
+        JSON.stringify({
+          level: "error",
+          message: "Ranked result record failed",
+          roomCode: snapshot.roomCode,
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
+    }
   }
 
   private async assignSeat(
@@ -923,6 +972,7 @@ export class MatchRoom extends DurableObject<Env> {
     displayName: string,
     requestedRole: SeatRole | "auto",
     teamDefinition?: TeamPieceDefinition[],
+    accountId: string | null = null,
   ): Promise<{ role: SeatRole; snapshot: MatchSnapshot }> {
     const snapshot = await this.getSnapshot(roomCode, contentInfo(this.env));
     const now = new Date().toISOString();
@@ -949,6 +999,8 @@ export class MatchRoom extends DurableObject<Env> {
           clientId,
           displayName,
           teamCost: teamDefinition ? teamDefinitionCost(teamDefinition) : occupied?.teamCost,
+          // 同一クライアントの再接続でトークン未添付なら既存の紐付けを維持する
+          accountId: accountId ?? (occupied?.clientId === clientId ? (occupied.accountId ?? null) : null),
           connected: true,
           joinedAt: occupied?.clientId === clientId ? occupied.joinedAt : now,
           lastSeenAt: now,
@@ -1126,6 +1178,7 @@ export class MatchRoom extends DurableObject<Env> {
     snapshot.turn.inputDeadlineAt = null;
     snapshot.status = "finished";
     await this.ctx.storage.deleteAlarm();
+    await this.recordRankedResult(snapshot, winner); // 投了：投了した側の負けとして記録（ランキング用）
     this.appendEvent(snapshot, "match.resigned", {
       team,
       winner,
@@ -1182,6 +1235,7 @@ export class MatchRoom extends DurableObject<Env> {
     snapshot.teamDefinitions = snapshot.game.teamDefinitions;
     snapshot.pendingIntents = {};
     snapshot.rematchRequests = {};
+    snapshot.rankedRecorded = false; // 再戦は新しい試合としてランキング記録をやり直す
     delete snapshot.lastResolution;
     await this.ctx.storage.deleteAlarm();
     this.appendEvent(snapshot, "match.rematch.started", {
@@ -1259,6 +1313,10 @@ export class MatchRoom extends DurableObject<Env> {
     const resolution = this.resolveTurn(snapshot);
     snapshot.pendingIntents = {};
     this.advanceMatchClock(snapshot, resolution);
+    // advanceMatchClock 内でフルタイムに到達すると status が "finished" に変わる（TSは追跡できないためキャスト）
+    if ((snapshot.status as RoomStatus) === "finished") {
+      await this.recordRankedResult(snapshot); // フルタイム：スコアから勝敗を記録（ランキング用）
+    }
     snapshot.lastResolution = {
       turn: resolvedTurn,
       resolvedAt: new Date().toISOString(),

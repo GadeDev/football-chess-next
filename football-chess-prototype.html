@@ -512,20 +512,17 @@
 @keyframes mmSpin{to{transform:rotate(360deg);}}
 #matchingOverlay .mmTitle{color:#eaf4ff;font-size:15px;font-weight:800;}
 #matchingOverlay .mmElapsed{color:#8fb4da;font-size:12px;margin:6px 0 2px;}
-#matchingOverlay .mmName{color:#6f93b8;font-size:11px;margin-bottom:14px;}
-#matchingOverlay .mmCom{display:block;width:100%;border:none;border-radius:9px;margin-bottom:8px;
-  background:linear-gradient(180deg,#5db6ff,#1f7be0 60%,#1565c0);color:#fff;font-size:12.5px;font-weight:800;padding:11px 0;cursor:pointer;}
+#matchingOverlay .mmName{color:#6f93b8;font-size:11px;margin-bottom:10px;}
+#matchingOverlay .mmNote{color:#8fb4da;font-size:11px;line-height:1.5;margin-bottom:14px;}
 #matchingOverlay .mmCancel{display:block;width:100%;border:none;border-radius:9px;background:#28425f;color:#dfeaf6;font-size:12px;padding:10px 0;cursor:pointer;}
-/* フレンド対戦（maniacs FriendMatchScreen相当） */
-.ogFriendLink{display:block;width:100%;margin:12px 0 4px;border:1px solid rgba(255,215,0,.35);border-radius:10px;
-  background:rgba(255,215,0,.07);color:#ffe9a8;font-size:12.5px;font-weight:700;padding:12px 8px;cursor:pointer;}
-.ogFriendLink:active{filter:brightness(1.3);}
-#friendOverlay{position:fixed;inset:0;z-index:5400;background:rgba(2,6,12,.8);display:flex;align-items:center;justify-content:center;}
-#friendOverlay .panel{position:relative;background:#0c1f36;border:1px solid #2d5a8c;border-radius:12px;padding:24px 22px;width:min(86vw,340px);text-align:center;}
-#friendOverlay .frTitle{color:#eaf4ff;font-size:16px;font-weight:800;letter-spacing:.08em;margin-bottom:14px;}
-#friendOverlay .frBig{display:block;width:100%;border:1px solid rgba(90,180,255,.4);border-radius:10px;margin-bottom:10px;
+/* フレンド対戦（maniacs FriendMatchScreen相当）＋対戦モード選択（#modeOverlay。パネル/大ボタンの見た目を共用） */
+#friendOverlay,#modeOverlay{position:fixed;inset:0;z-index:5400;background:rgba(2,6,12,.8);display:flex;align-items:center;justify-content:center;}
+#friendOverlay .panel,#modeOverlay .panel{position:relative;background:#0c1f36;border:1px solid #2d5a8c;border-radius:12px;padding:24px 22px;width:min(86vw,340px);text-align:center;}
+#friendOverlay .frTitle,#modeOverlay .frTitle{color:#eaf4ff;font-size:16px;font-weight:800;letter-spacing:.08em;margin-bottom:14px;}
+#friendOverlay .frBig,#modeOverlay .frBig{display:block;width:100%;border:1px solid rgba(90,180,255,.4);border-radius:10px;margin-bottom:10px;
   background:rgba(68,136,204,.14);color:#fff;font-size:14px;font-weight:800;padding:14px 0;cursor:pointer;}
-#friendOverlay .frBig.sub{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.15);}
+#friendOverlay .frBig.sub,#modeOverlay .frBig.sub{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.15);}
+#modeOverlay .modeDesc{display:block;font-size:10.5px;font-weight:600;color:#9fc0e2;margin-top:4px;letter-spacing:0;}
 #friendOverlay .frLabel{color:#8fb4da;font-size:12px;margin-bottom:6px;}
 #friendOverlay .frCode{color:#5ab4ff;font-size:26px;font-weight:800;letter-spacing:.12em;font-family:ui-monospace,monospace;margin-bottom:12px;}
 #friendOverlay .frCopyRow{display:flex;gap:8px;justify-content:center;margin-bottom:14px;}
@@ -681,6 +678,20 @@ body.replaying .boardWrap::after{content:"";position:absolute;inset:0;}
 
 #ogPageSettings .accStatus{background:#0d2038;border:1px solid #29517c;border-radius:8px;color:#cfe4fa;font-size:12px;padding:9px 11px;margin-bottom:8px;line-height:1.6;}
 #ogPageSettings .accBtn{border:none;border-radius:8px;background:#28425f;color:#dfeaf6;font-size:12px;font-weight:700;padding:9px 14px;cursor:pointer;margin-right:8px;}
+
+/* ランキング（プレミアム限定）。#ogPageRanking はサブスク/設定と同じページ枠を使う */
+#ogRankingBody .rkLocked{background:rgba(9,26,48,.9);border:1px solid #23496f;border-radius:12px;padding:22px 16px;text-align:center;color:#cfe4fa;font-size:13px;line-height:1.8;}
+#ogRankingBody .rkLocked .rkLockIco{font-size:30px;display:block;margin-bottom:6px;}
+#ogRankingBody .rkLocked .subBtn{display:block;width:100%;border:none;border-radius:9px;background:linear-gradient(180deg,#ffe48a,#d6a01e 60%,#a8780f);color:#3a2c05;font-size:13px;font-weight:900;padding:11px 0;cursor:pointer;margin-top:12px;}
+#ogRankingBody .rkMe{background:rgba(38,72,112,.55);border:1px solid #3d76b4;border-radius:10px;color:#eaf4ff;font-size:12.5px;font-weight:700;padding:10px 12px;margin-bottom:10px;line-height:1.6;}
+#ogRankingBody .rkRow{display:flex;align-items:center;gap:10px;background:rgba(9,26,48,.9);border:1px solid #1d3d5f;border-radius:9px;padding:8px 12px;margin-bottom:6px;color:#dfeaf6;font-size:12.5px;}
+#ogRankingBody .rkRow.me{border-color:#5ab4ff;background:rgba(38,72,112,.5);}
+#ogRankingBody .rkRow .rkRank{width:34px;font-weight:900;color:#ffe48a;font-family:ui-monospace,monospace;text-align:right;}
+#ogRankingBody .rkRow .rkName{flex:1;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;}
+#ogRankingBody .rkRow .rkRating{font-weight:900;color:#5ab4ff;font-family:ui-monospace,monospace;}
+#ogRankingBody .rkRow .rkRecord{color:#8fb4da;font-size:10.5px;font-family:ui-monospace,monospace;}
+#ogRankingBody .rkNote{color:#6f93b8;font-size:10.5px;line-height:1.6;margin-top:10px;}
+#ogRankingBody .rkEmpty{color:#8fb4da;font-size:12px;text-align:center;padding:18px 0;line-height:1.8;}
 </style>
 <body>
 <div class="wrap">
@@ -776,8 +787,12 @@ body.replaying .boardWrap::after{content:"";position:absolute;inset:0;}
       <div id="ogFormationList"></div>
       <div class="ogSectionTitle small" data-i18n="home.saveSlots">保存スロット</div>
       <div id="ogSlotList"></div>
-      <!-- フレンド対戦（footballchessmaniacs FriendMatchScreen相当：招待コード/URLで友達と対戦） -->
-      <button class="ogFriendLink" id="ogFriendBtn" data-i18n="friend.open">🤝 フレンド対戦（招待コード/URLで友達と対戦）</button>
+      <!-- フレンド対戦の導線は「対戦」ボタン→モード選択（#modeOverlay）へ移設（2026-07-10） -->
+    </div>
+    <div class="ogPage" id="ogPageRanking" style="display:none">
+      <button class="ogBackBtn" id="ogRankingBackBtn" data-i18n="common.back">← 戻る</button>
+      <div class="ogSectionTitle" data-i18n="ranking.title">ランキング</div>
+      <div id="ogRankingBody"></div>
     </div>
 <div class="ogPage" id="ogPageSub" style="display:none">
       <button class="ogBackBtn" id="ogSubBackBtn" data-i18n="common.back">← 戻る</button>
@@ -815,13 +830,25 @@ body.replaying .boardWrap::after{content:"";position:absolute;inset:0;}
     </div>
   </div>
   <!-- 「編成」タブは削除（ホーム＝編成画面のため無意味。2026-07-10）。サブスク/設定は各ページの「← 戻る」でホームへ -->
-  <!-- KICK OFF=COM対戦／オンライン対戦=自動マッチング（footballchessmaniacsのModeSelect相当。フレンド対戦は試合画面の🌐ROOM共有） -->
+  <!-- 試合開始は単一の「対戦」ボタンに統合（2026-07-10仕様変更）→ #modeOverlay でオンライン/COM/フレンドを選ぶ。
+       オンライン対戦は15秒でマッチングしなければCOM対戦へ自動フォールバック（Unity版仕様） -->
   <div class="ogFooter">
-    <button class="ogKickoff" id="ogKickoffBtn">KICK OFF<span class="sub" data-i18n="home.comMatch">COM対戦</span></button>
-    <button class="ogKickoff online" id="ogOnlineBtn"><span data-i18n="home.onlineMatch">オンライン対戦</span><span class="sub" data-i18n="home.autoMatch">自動マッチング</span></button>
+    <button class="ogKickoff" id="ogMatchBtn"><span data-i18n="home.match">対戦</span><span class="sub" data-i18n="home.matchSub">モードを選ぶ</span></button>
     <button class="ogTab" id="ogTutorialBtn"><span aria-hidden="true">▶</span><span data-i18n="tutorial.open">遊び方</span></button>
+    <button class="ogTab" id="ogTabRanking"><span aria-hidden="true">🏆</span><span data-i18n="ranking.short">ランキング</span></button>
     <button class="ogTab" id="ogTabSub"><span class="ogTabIco"></span><span data-i18n="subscription.short">サブスク</span></button>
     <button class="ogTab" id="ogTabSettings"><span class="ogTabIco"></span><span data-i18n="settings.title">設定</span></button>
+  </div>
+</div>
+
+<!-- 対戦モード選択オーバーレイ（単一「対戦」ボタン→オンライン対戦/COM対戦/フレンド対戦。2026-07-10仕様変更） -->
+<div id="modeOverlay" style="display:none">
+  <div class="panel">
+    <button class="closeX" id="modeCloseBtn" data-i18n-attr="aria-label:common.close" aria-label="閉じる">×</button>
+    <div class="frTitle" data-i18n="mode.title">対戦モード</div>
+    <button class="frBig" id="modeOnlineBtn"><span data-i18n="home.onlineMatch">オンライン対戦</span><small class="modeDesc" data-i18n="mode.onlineDesc">自動マッチング。15秒で相手が見つからなければCOM対戦</small></button>
+    <button class="frBig sub" id="modeComBtn"><span data-i18n="home.comMatch">COM対戦</span><small class="modeDesc" data-i18n="mode.comDesc">コンピューターとすぐに対戦</small></button>
+    <button class="frBig sub" id="modeFriendBtn"><span data-i18n="friend.title">フレンド対戦</span><small class="modeDesc" data-i18n="mode.friendDesc">招待コード/URLで友達と対戦</small></button>
   </div>
 </div>
 
@@ -871,14 +898,14 @@ body.replaying .boardWrap::after{content:"";position:absolute;inset:0;}
   </div>
 </div>
 
-<!-- マッチング待機オーバーレイ（footballchessmaniacs Matching.tsx相当の簡略版。30秒でCOM対戦を提案） -->
+<!-- マッチング待機オーバーレイ（Unity版仕様：15秒でマッチングしなければCOM対戦へ自動フォールバック） -->
 <div id="matchingOverlay" style="display:none">
   <div class="panel">
     <div class="mmSpinner"></div>
     <div class="mmTitle" data-i18n="matching.searching">対戦相手を探しています…</div>
     <div class="mmElapsed" id="mmElapsed">0s</div>
     <div class="mmName" id="mmMyName"></div>
-    <button class="mmCom" id="mmComBtn" style="display:none" data-i18n="matching.playCom">相手が見つかりません。COMと対戦する</button>
+    <div class="mmNote" data-i18n="matching.comFallbackNote">15秒で相手が見つからない場合はCOMと対戦します</div>
     <button class="mmCancel" id="mmCancelBtn" data-i18n="common.cancel">キャンセル</button>
   </div>
 </div>
@@ -2200,13 +2227,13 @@ const EN={
   settings:{title:'Settings',playerName:'Player name (also used online)',clubName:'Club name',account:'Account',sound:'Sound effects',haptic:'Haptic feedback',language:'Language',note:'Your formation and player name are saved on this browser.'},
   subscription:{title:'Subscription',short:'Subscription',plan:'UniversoFutbol subscription',price:'¥2,000 / month',demoNote:'Demo only. No charge is made; production will use the shared UniversoFutbol subscription.',benefitAll:'One subscription for all UniversoFutbol content',benefitRank:'Unlock piece rank and cost changes',benefitNoAds:'Play without ads',benefitFuture:'Coming later: exclusive formations and replay storage',billingNote:'Billing will be managed by UniversoFutbol. Demo access expires automatically after 30 days.',joinDemo:'Join premium (demo)',cancel:'Cancel subscription',loginToJoin:'Log in to join'},
   friend:{open:'🤝 Friend match (invite code/URL)',title:'Friend match',create:'Create room',joinRoom:'Join a room',copyId:'Copy ID',copyUrl:'Copy URL',roomId:'Room ID',waiting:'Waiting for your opponent…',enterRoomId:'Enter a room ID'},
-  matching:{searching:'Looking for an opponent…',playCom:'No opponent found. Play COM instead',elapsedTpl:'{seconds}s',myNameTpl:'Name: {name}'},
+  matching:{searching:'Looking for an opponent…',elapsedTpl:'{seconds}s',myNameTpl:'Name: {name}'},
   auth:{login:'Log in',register:'Register',loginRegister:'Log in / Register',logout:'Log out',accountTitle:'UniversoFutbol account',universoLogin:'Log in with UniversoFutbol (Google supported)',continueGuest:'Continue as guest',username:'Username (2–16 characters)',password:'Password (8 characters or more)',demoNote:'Production will use your universofutbol.com account. This is a demo account; do not reuse a password.'},
   cost:{title:'Change rank'},result:{rematch:'REMATCH',rsWin:'WIN',rsLose:'LOSE',rsDraw:'DRAW',rsHome:'HOME',rsGoal:'GOAL',rsOppWants:'Opponent wants a rematch',rsRematchSent:'Rematch request sent'},
   ogCostHint:'Tap a piece to change its rank',ogCostCurrentBadge:'Current',ogCostOverLabel:'Over limit',ogCostPremiumMsg:'Rank change is a premium feature',ogCostPremiumBtn:'About Premium',ogCostTitleTpl:'{pos} rank — current {rank} (cost {cost})',ogCostPreviewTpl:'TEAM COST {total} / {max}',ogCostToastTpl:'Changed {pos} to rank {rank} (TEAM COST {total}/{max})',
   lang_ja:'日本語',lang_en:'English',lang_ko:'한국어',lang_es:'Español',lang_pt:'Português',lang_de:'Deutsch',lang_zhCN:'简体中文'
 };
-const JA={...EN,you:'あなた',opp:'あいて',nav:{online:'オンライン対戦',menu:'メニュー'},common:{back:'← 戻る',join:'参加',cancel:'キャンセル',close:'閉じる',or:'または',selectionCleared:'選択を解除しました'},online:{create:'ROOM作成',leave:'退出',resign:'投了'},match:{firstHalf:'前半',secondHalf:'後半',endTurn:'TURN END（決定）',offsideDemo:'オフサイド実演',spectating:'観戦中',sent:'送信済み'},home:{teamFormation:'チーム編成',formations:'フォーメーション',saveSlots:'保存スロット',comMatch:'COM対戦',onlineMatch:'オンライン対戦',autoMatch:'自動マッチング'},tutorial:{...EN.tutorial,open:'遊び方',title:'動画で遊び方',restart:'最初から',pause:'一時停止',play:'再生',next:'次へ',intro:'Football Chessとは',move:'移動',pass:'パス',defend:'守備',shoot:'シュート',intro1:'両チームが同時に行動を考えます。',intro2:'TURN ENDを押すと、すべての行動が一斉に解決されます。',move1:'駒を選び、光っている移動先を選びます。',move2:'相手の狙いを読み、有利なスペースへ動かします。',pass1:'ボールを選び、味方の駒へパスします。',pass2:'フリーで受けた選手から、さらにパスを続けられます。',defend1:'ボール保持者と同じマスへ守備者を動かして競り合います。',defend2:'人数、位置、駒のコストによって結果が変わります。',shoot1:'攻撃エリアでは、ボール保持者を選んでシュートできます。',shoot2:'試合終了までに多く得点したチームの勝利です。'},settings:{title:'設定',playerName:'プレイヤー名（オンライン対戦の表示名と共通）',clubName:'クラブ名',account:'アカウント',sound:'効果音',haptic:'触覚フィードバック',language:'言語',note:'編成とプレイヤー名はこの端末（ブラウザ）に保存されます。'},subscription:{...EN.subscription,title:'サブスクリプション',short:'サブスク',plan:'UniversoFutbol サブスクリプション',price:'月額 ¥2,000',demoNote:'※現在はデモ（実際の請求は発生しません。本番はUniversoFutbol共通サブスクに連動）',benefitAll:'UniversoFutbolの全コンテンツで共通のサブスクリプション',benefitRank:'駒のランク変更（コスト変更）の解放',benefitNoAds:'広告なしでプレイ',benefitFuture:'今後追加: 限定フォーメーション・リプレイ保存 など',billingNote:'決済はUniversoFutbol側で一元化されます。デモ加入は30日で自動的に切れます。',joinDemo:'プレミアムに加入する（デモ）',cancel:'解約する',loginToJoin:'ログインして加入する'},friend:{...EN.friend,open:'🤝 フレンド対戦（招待コード/URLで友達と対戦）',title:'フレンド対戦',create:'部屋を作る',joinRoom:'部屋に入る',copyId:'IDをコピー',copyUrl:'URLをコピー',roomId:'ルームID',waiting:'相手の参加を待っています…',enterRoomId:'ルームIDを入力'},matching:{...EN.matching,searching:'対戦相手を探しています…',playCom:'相手が見つかりません。COMと対戦する',elapsedTpl:'{seconds}秒',myNameTpl:'表示名：{name}'},auth:{...EN.auth,login:'ログイン',register:'新規登録',loginRegister:'ログイン / 新規登録',logout:'ログアウト',accountTitle:'UniversoFutbol アカウント',universoLogin:'UniversoFutbolでログイン（Google対応）',continueGuest:'ゲストで続ける',username:'ユーザー名（2〜16文字）',password:'パスワード（8文字以上）',demoNote:'本番ではuniversofutbol.comの会員アカウントを利用します。現在はデモ用アカウントのため、パスワードは使い回さないでください。'},cost:{title:'ランク変更'},result:{rematch:'再戦',rsWin:'WIN',rsLose:'LOSE',rsDraw:'DRAW',rsHome:'HOME',rsGoal:'ゴール',rsOppWants:'相手が再戦を希望しています',rsRematchSent:'再戦希望を送信しました'},ogCostHint:'駒をタップでランク変更',ogCostCurrentBadge:'現在',ogCostOverLabel:'コスト超過',ogCostPremiumMsg:'ランク変更はプレミアム限定です',ogCostPremiumBtn:'プレミアムについて',ogCostTitleTpl:'{pos} のランク　現在 {rank}（コスト{cost}）',ogCostPreviewTpl:'TEAM COST {total} / {max}',ogCostToastTpl:'{pos} をランク{rank}に変更（TEAM COST {total}/{max}）'};
+const JA={...EN,you:'あなた',opp:'あいて',nav:{online:'オンライン対戦',menu:'メニュー'},common:{back:'← 戻る',join:'参加',cancel:'キャンセル',close:'閉じる',or:'または',selectionCleared:'選択を解除しました'},online:{create:'ROOM作成',leave:'退出',resign:'投了'},match:{firstHalf:'前半',secondHalf:'後半',endTurn:'TURN END（決定）',offsideDemo:'オフサイド実演',spectating:'観戦中',sent:'送信済み'},home:{teamFormation:'チーム編成',formations:'フォーメーション',saveSlots:'保存スロット',comMatch:'COM対戦',onlineMatch:'オンライン対戦',autoMatch:'自動マッチング'},tutorial:{...EN.tutorial,open:'遊び方',title:'動画で遊び方',restart:'最初から',pause:'一時停止',play:'再生',next:'次へ',intro:'Football Chessとは',move:'移動',pass:'パス',defend:'守備',shoot:'シュート',intro1:'両チームが同時に行動を考えます。',intro2:'TURN ENDを押すと、すべての行動が一斉に解決されます。',move1:'駒を選び、光っている移動先を選びます。',move2:'相手の狙いを読み、有利なスペースへ動かします。',pass1:'ボールを選び、味方の駒へパスします。',pass2:'フリーで受けた選手から、さらにパスを続けられます。',defend1:'ボール保持者と同じマスへ守備者を動かして競り合います。',defend2:'人数、位置、駒のコストによって結果が変わります。',shoot1:'攻撃エリアでは、ボール保持者を選んでシュートできます。',shoot2:'試合終了までに多く得点したチームの勝利です。'},settings:{title:'設定',playerName:'プレイヤー名（オンライン対戦の表示名と共通）',clubName:'クラブ名',account:'アカウント',sound:'効果音',haptic:'触覚フィードバック',language:'言語',note:'編成とプレイヤー名はこの端末（ブラウザ）に保存されます。'},subscription:{...EN.subscription,title:'サブスクリプション',short:'サブスク',plan:'UniversoFutbol サブスクリプション',price:'月額 ¥2,000',demoNote:'※現在はデモ（実際の請求は発生しません。本番はUniversoFutbol共通サブスクに連動）',benefitAll:'UniversoFutbolの全コンテンツで共通のサブスクリプション',benefitRank:'駒のランク変更（コスト変更）の解放',benefitNoAds:'広告なしでプレイ',benefitFuture:'今後追加: 限定フォーメーション・リプレイ保存 など',billingNote:'決済はUniversoFutbol側で一元化されます。デモ加入は30日で自動的に切れます。',joinDemo:'プレミアムに加入する（デモ）',cancel:'解約する',loginToJoin:'ログインして加入する'},friend:{...EN.friend,open:'🤝 フレンド対戦（招待コード/URLで友達と対戦）',title:'フレンド対戦',create:'部屋を作る',joinRoom:'部屋に入る',copyId:'IDをコピー',copyUrl:'URLをコピー',roomId:'ルームID',waiting:'相手の参加を待っています…',enterRoomId:'ルームIDを入力'},matching:{...EN.matching,searching:'対戦相手を探しています…',elapsedTpl:'{seconds}秒',myNameTpl:'表示名：{name}'},auth:{...EN.auth,login:'ログイン',register:'新規登録',loginRegister:'ログイン / 新規登録',logout:'ログアウト',accountTitle:'UniversoFutbol アカウント',universoLogin:'UniversoFutbolでログイン（Google対応）',continueGuest:'ゲストで続ける',username:'ユーザー名（2〜16文字）',password:'パスワード（8文字以上）',demoNote:'本番ではuniversofutbol.comの会員アカウントを利用します。現在はデモ用アカウントのため、パスワードは使い回さないでください。'},cost:{title:'ランク変更'},result:{rematch:'再戦',rsWin:'WIN',rsLose:'LOSE',rsDraw:'DRAW',rsHome:'HOME',rsGoal:'ゴール',rsOppWants:'相手が再戦を希望しています',rsRematchSent:'再戦希望を送信しました'},ogCostHint:'駒をタップでランク変更',ogCostCurrentBadge:'現在',ogCostOverLabel:'コスト超過',ogCostPremiumMsg:'ランク変更はプレミアム限定です',ogCostPremiumBtn:'プレミアムについて',ogCostTitleTpl:'{pos} のランク　現在 {rank}（コスト{cost}）',ogCostPreviewTpl:'TEAM COST {total} / {max}',ogCostToastTpl:'{pos} をランク{rank}に変更（TEAM COST {total}/{max}）'};
 const L10N={ja:JA,en:EN,ko:{...EN,settings:{...EN.settings,title:'설정',language:'언어'},home:{...EN.home,teamFormation:'팀 편성',onlineMatch:'온라인 대전'},friend:{...EN.friend,title:'친구 대전'},lang_ja:'日本語'},es:{...EN,settings:{...EN.settings,title:'Ajustes',language:'Idioma'},home:{...EN.home,teamFormation:'Formación'},friend:{...EN.friend,title:'Partida con amigo'},lang_ja:'Japonés'},pt:{...EN,settings:{...EN.settings,title:'Configurações',language:'Idioma'},home:{...EN.home,teamFormation:'Formação'},friend:{...EN.friend,title:'Partida com amigo'},lang_ja:'Japonês'},de:{...EN,settings:{...EN.settings,title:'Einstellungen',language:'Sprache'},home:{...EN.home,teamFormation:'Teamaufstellung'},friend:{...EN.friend,title:'Freundschaftsspiel'},lang_ja:'Japanisch'},'zh-CN':{...EN,settings:{...EN.settings,title:'设置',language:'语言'},home:{...EN.home,teamFormation:'球队编成'},friend:{...EN.friend,title:'好友对战'},lang_ja:'日语'}};
 Object.assign(L10N.ja.home,{formationChangedTpl:'{name} {style} に変更しました',slotEmpty:'（空き）',save:'保存',load:'呼出',slotSavedTpl:'SLOT{slot} に保存しました',slotLoadedTpl:'SLOT{slot} を呼び出しました'});
 for(const dict of Object.values(L10N)){ Object.assign(dict.online,{teamBlue:'Blue',teamRed:'Red',emptySeat:'Empty',disconnected:'Disconnected',spectatorCountTpl:'Spectators {count}',abnormalClose:'Abnormal close'}); }
@@ -2227,6 +2254,17 @@ for(const dict of Object.values(L10N)){ dict.accountUi={guest:'Guest',premium:'P
 L10N.ja.accountUi={guest:'ゲスト',premium:'プレミアム',free:'無料プラン',loggedInTpl:'ログイン中: {name}（{plan}）',guestStatus:'ゲストプレイ中。ログインするとサブスク機能を利用できます。',notLoggedIn:'未ログイン',loginRequired:'サブスクリプションの利用にはログインが必要です。',premiumActive:'プレミアム加入中',demo:'（デモ）',validUntilTpl:'有効期限: {date}',freeStatus:'無料プランです',freeDescription:'プレミアムに加入すると駒のランク変更が解放されます。',loginSuccess:'ログインしました',registerSuccess:'アカウントを作成しました',logoutSuccess:'ログアウトしました',serverUnavailable:'サーバーに接続できません',requestFailed:'失敗しました',ufLoginSuccess:'UniversoFutbol会員でログインしました',ufLoginFailed:'UniversoFutbolログインに失敗しました',ssoFailed:'SSOログインに失敗しました',subscribed:'プレミアムに加入しました（デモ・請求なし）',subscribeFailed:'加入に失敗しました',cancelled:'サブスクを解約しました',cancelFailed:'解約に失敗しました',premiumRequired:'ランク変更はプレミアム限定です',costOverTpl:'チームコスト上限 {max} を超えます（{total}）'};
 for(const dict of Object.values(L10N)){ Object.assign(dict.matching,{matchedTpl:'Matched with {opponent} (ROOM {room})',connectFailed:'Could not connect after matching'}); Object.assign(dict.friend,{copied:'Copied!',copyFailed:'Copy failed. Select the text manually.',createFailed:'Could not create the room. Check your connection.',roomRequired:'Enter a room ID',roomNotFound:'Room not found. Check the ID.',joined:'Your friend joined. The match is starting!'}); }
 Object.assign(L10N.ja.matching,{matchedTpl:'マッチング成立：{opponent} と対戦します（ROOM {room}）',connectFailed:'マッチング後の接続に失敗しました'});
+/* 対戦モード選択・15秒COMフォールバック・ランキング（2026-07-10追加。入れ子辞書は初期化ガード付きで追加すること） */
+for(const dict of Object.values(L10N)){
+  Object.assign(dict.home||(dict.home={}),{match:'MATCH',matchSub:'Choose a mode'});
+  dict.mode={title:'Match mode',onlineDesc:'Auto matching. If no opponent is found in 15 seconds, you play the COM',comDesc:'Play the computer right away',friendDesc:'Play a friend with an invite code/URL'};
+  Object.assign(dict.matching||(dict.matching={}),{comFallback:'No opponent found — starting a COM match',comFallbackNote:'If no opponent is found within 15 seconds, you will play the COM'});
+  dict.ranking={short:'Ranking',title:'Ranking',loginMsg:'The ranking is a premium feature. Log in to view it.',premiumMsg:'The ranking is a premium feature',loading:'Loading…',loadFailed:'Could not load the ranking. Please try again later.',empty:'No ranked players yet. Play an online match!',unranked:'Play an online match to enter the ranking',myRankTpl:'Your rank: #{rank} / Rating {rating} ({wins}W {draws}D {losses}L)',recordTpl:'{wins}W {draws}D {losses}L',note:'Ratings change with online match results (auto matching / friend match). Only premium members are listed.'};
+}
+Object.assign(L10N.ja.home,{match:'対戦',matchSub:'モードを選ぶ'});
+L10N.ja.mode={title:'対戦モード',onlineDesc:'自動マッチング。15秒で相手が見つからなければCOM対戦になります',comDesc:'コンピューターとすぐに対戦',friendDesc:'招待コード/URLで友達と対戦'};
+Object.assign(L10N.ja.matching,{comFallback:'相手が見つからないため、COMと対戦します',comFallbackNote:'15秒で相手が見つからない場合はCOMと対戦します'});
+L10N.ja.ranking={short:'ランキング',title:'ランキング',loginMsg:'ランキングはプレミアム限定です。ログインしてご利用ください',premiumMsg:'ランキングはプレミアム限定です',loading:'読み込み中…',loadFailed:'ランキングを取得できませんでした。しばらくしてから再度お試しください',empty:'まだランキング対象のプレイヤーがいません。オンライン対戦をプレイしましょう！',unranked:'オンライン対戦をプレイするとランキングに掲載されます',myRankTpl:'あなたの順位：{rank}位　レート {rating}（{wins}勝{draws}分{losses}敗）',recordTpl:'{wins}勝{draws}分{losses}敗',note:'レートはオンライン対戦（自動マッチング/フレンド対戦）の結果で変動します。掲載はプレミアム会員のみです。'};
 Object.assign(L10N.ja.friend,{copied:'コピーしました!',copyFailed:'コピーに失敗しました（手動で選択してください）',createFailed:'部屋の作成に失敗しました。通信環境を確認してください',roomRequired:'ルームIDを入力してください',roomNotFound:'ルームが見つかりません（IDを確認してください）',joined:'フレンドが参加しました。対戦開始！'});
 for(const dict of Object.values(L10N)){ dict.pageTitle='Football Chess — Board Game'; Object.assign(dict.action||(dict.action={}),{ball:'Ball',operation:'Action',dribbleMove:'Dribble move'}); dict.formation={standard:'Standard',oneTop:'One striker',attacking:'Attacking',possession:'Possession',balance:'Balanced',ultraAttacking:'Ultra attacking'}; }
 L10N.ja.pageTitle='Football Chess — 盤面ゲーム';
@@ -3486,6 +3524,9 @@ function onlineSocketUrl(roomCode,role){
   url.searchParams.set('name',online.displayName);
   const deck=onlineDeckPayload();
   if(deck) url.searchParams.set('deck',deck);
+  // ログイン済みならセッショントークンを添付し、サーバー側で席とアカウントを紐付ける
+  // （オンライン試合の結果をプレミアム限定ランキングへ記録するため。ゲストは従来どおり）
+  if(ogAuth&&ogAuth.token) url.searchParams.set('session',ogAuth.token);
   return url.toString();
 }
 function closeOnlineSocket(){
@@ -5008,11 +5049,73 @@ async function ogCancelSub(){
   else ogToast((r&&r.error)||t('accountUi.cancelFailed'));
 }
 function ogSelectTab(tab){
-  const map={deck:'ogPageDeck',sub:'ogPageSub',settings:'ogPageSettings'};
+  const map={deck:'ogPageDeck',ranking:'ogPageRanking',sub:'ogPageSub',settings:'ogPageSettings'};
   for(const k in map) ogShow(map[k],k===tab);
   document.getElementById('ogTabDeck')?.classList.toggle('active',tab==='deck'); // 編成タブは削除済み（ホーム=編成のため）
+  document.getElementById('ogTabRanking')?.classList.toggle('active',tab==='ranking');
   document.getElementById('ogTabSub')?.classList.toggle('active',tab==='sub');
   document.getElementById('ogTabSettings')?.classList.toggle('active',tab==='settings');
+  if(tab==='ranking') ogRenderRanking();
+}
+
+/* ===== ランキング（プレミアム限定。2026-07-10実装） =====
+   - 閲覧・掲載ともサブスク（プレミアム）会員のみ。未ログイン/未加入はロック表示から導線を出す。
+   - 戦績はサーバー権威：MatchRoomがフルタイム/投了時にAccountStoreへ記録する
+     （WebSocket接続時に session トークンで席とアカウントを紐付け）。クライアントから書き込むAPIは無い。
+   - レートはElo簡略版（初期1000・K=32。src/ranking.ts）。オンライン対戦（自動マッチング/フレンド対戦）が対象。 */
+function ogRankingLocked(icon,msg,btnLabel,onClick){
+  const body=document.getElementById('ogRankingBody');
+  body.innerHTML='';
+  const box=document.createElement('div'); box.className='rkLocked';
+  const ico=document.createElement('span'); ico.className='rkLockIco'; ico.textContent=icon; box.appendChild(ico);
+  const txt=document.createElement('div'); txt.textContent=msg; box.appendChild(txt);
+  if(btnLabel){
+    const btn=document.createElement('button'); btn.className='subBtn'; btn.textContent=btnLabel;
+    btn.addEventListener('click',()=>{ playFeedback('tap'); onClick(); });
+    box.appendChild(btn);
+  }
+  body.appendChild(box);
+}
+async function ogRenderRanking(){
+  const body=document.getElementById('ogRankingBody');
+  if(!ogIsLoggedIn()){ ogRankingLocked('🔒',t('ranking.loginMsg'),t('auth.loginRegister'),()=>ogShowLogin()); return; }
+  if(!ogIsPremium()){ ogRankingLocked('🔒',t('ranking.premiumMsg'),t('ogCostPremiumBtn'),()=>ogSelectTab('sub')); return; }
+  body.innerHTML=`<div class="rkEmpty">${t('ranking.loading')}</div>`;
+  let r=null;
+  try{ r=await ogApi('/ranking/top'); }catch{}
+  if(!r||!r.ok){
+    if(r&&r.reason==='premium'){ ogRankingLocked('🔒',t('ranking.premiumMsg'),t('ogCostPremiumBtn'),()=>ogSelectTab('sub')); return; }
+    if(r&&r.reason==='login'){ ogRankingLocked('🔒',t('ranking.loginMsg'),t('auth.loginRegister'),()=>ogShowLogin()); return; }
+    body.innerHTML=`<div class="rkEmpty">${t('ranking.loadFailed')}</div>`;
+    return;
+  }
+  body.innerHTML='';
+  const me=r.me||null;
+  if(me){
+    const meBox=document.createElement('div'); meBox.className='rkMe';
+    meBox.textContent=me.rank
+      ? tFmt('ranking.myRankTpl',{rank:me.rank,rating:me.rating,wins:me.wins,draws:me.draws,losses:me.losses})
+      : t('ranking.unranked');
+    body.appendChild(meBox);
+  }
+  const list=Array.isArray(r.rankings)?r.rankings:[];
+  if(!list.length){
+    const empty=document.createElement('div'); empty.className='rkEmpty'; empty.textContent=t('ranking.empty');
+    body.appendChild(empty);
+  }
+  const myName=ogAuth.user?ogAuth.user.name:null;
+  for(const row of list){
+    const el=document.createElement('div');
+    el.className='rkRow'+(me&&me.rank===row.rank&&myName===row.name?' me':'');
+    const rank=document.createElement('span'); rank.className='rkRank'; rank.textContent=row.rank; el.appendChild(rank);
+    const name=document.createElement('span'); name.className='rkName'; name.textContent=row.name; el.appendChild(name);
+    const record=document.createElement('span'); record.className='rkRecord';
+    record.textContent=tFmt('ranking.recordTpl',{wins:row.wins,draws:row.draws,losses:row.losses}); el.appendChild(record);
+    const rating=document.createElement('span'); rating.className='rkRating'; rating.textContent=row.rating; el.appendChild(rating);
+    body.appendChild(el);
+  }
+  const note=document.createElement('div'); note.className='rkNote'; note.textContent=t('ranking.note');
+  body.appendChild(note);
 }
 function ogShowSubRequired(){
   ogToast(t('accountUi.premiumRequired'));
@@ -5076,6 +5179,8 @@ document.getElementById('ogTitle').addEventListener('click',()=>{ ogShow('ogTitl
 document.getElementById('ogCostCancel').addEventListener('click',()=>{ ogShow('ogCostPicker',false); ogSelectedPiece=-1; ogRenderDeck(); });
 document.getElementById('ogCostPicker').addEventListener('click',e=>{ if(e.target.id==='ogCostPicker'){ ogShow('ogCostPicker',false); ogSelectedPiece=-1; ogRenderDeck(); } });
 document.getElementById('ogTabSub').addEventListener('click',()=>ogSelectTab('sub'));
+document.getElementById('ogTabRanking').addEventListener('click',()=>ogSelectTab('ranking'));
+document.getElementById('ogRankingBackBtn').addEventListener('click',()=>{ playFeedback('cancel'); ogSelectTab('deck'); });
 // サブスク/設定ページの「← 戻る」＝ホーム（編成）へ（編成タブ削除に伴う導線）
 document.getElementById('ogSubBackBtn').addEventListener('click',()=>{ playFeedback('cancel'); ogSelectTab('deck'); });
 document.getElementById('ogSettingsBackBtn').addEventListener('click',()=>{ playFeedback('cancel'); ogSelectTab('deck'); });
@@ -5084,17 +5189,28 @@ document.getElementById('ogHeadLoginBtn').addEventListener('click',()=>{ playFee
 
 /* ===== オンライン対戦：自動マッチング（footballchessmaniacs Matching相当の簡略版） =====
    2秒間隔で /matchmaking/join をポーリングし、ペア成立でroomCodeを受け取って
-   既存のROOM参加フロー（connectOnlineRoom）へ接続する。30秒でCOM対戦を提案。 */
-let mmActive=false, mmTimer=null, mmStart=0;
+   既存のROOM参加フロー（connectOnlineRoom）へ接続する。
+   Unity版仕様（2026-07-10変更）：15秒でマッチングしなければCOM対戦へ**自動フォールバック**
+   （旧・30秒でCOM提案ボタンは廃止。戻さないこと） */
+const MM_COM_FALLBACK_SEC=15;
+let mmActive=false, mmTimer=null, mmFallbackTimer=null, mmStart=0;
 function stopMatchmaking(sendLeave){
   if(!mmActive) return;
   mmActive=false;
   clearTimeout(mmTimer); mmTimer=null;
+  clearTimeout(mmFallbackTimer); mmFallbackTimer=null;
   ogShow('matchingOverlay',false);
   if(sendLeave){
     fetch(`${online.apiBase}/matchmaking/leave`,{method:'POST',headers:{'content-type':'application/json'},
       body:JSON.stringify({clientId:online.clientId})}).catch(()=>{});
   }
+}
+/* COM対戦の開始（ホームの「対戦」→COM対戦と、マッチング15秒フォールバックの共通漏斗） */
+function startComMatch(){
+  ogCloseHome();
+  if(online.connected){ return; } // オンライン中はサーバー盤面を維持したまま戻る
+  telemetryMatchStartedAt=Date.now(); sendTelemetry('match.start',{mode:'com'});
+  document.getElementById('resetBtn').click(); // 編成を反映してキックオフ配置を作り直す
 }
 async function startMatchmaking(){
   if(mmActive||online.connected) return;
@@ -5102,16 +5218,23 @@ async function startMatchmaking(){
   mmStart=Date.now();
   online.apiBase=defaultOnlineApiBase();
   document.getElementById('mmElapsed').textContent=tFmt('matching.elapsedTpl',{seconds:0});
-  document.getElementById('mmComBtn').style.display='none';
   document.getElementById('mmMyName').textContent=tFmt('matching.myNameTpl',{name:getOnlineDisplayName()});
   ogShow('matchingOverlay',true);
+  // Unity版仕様：15秒でマッチングしなければCOM対戦へ自動フォールバック
+  mmFallbackTimer=setTimeout(()=>{
+    if(!mmActive) return;
+    stopMatchmaking(true);
+    log(t('matching.comFallback'));
+    ogToast(t('matching.comFallback'),true);
+    startComMatch();
+  },MM_COM_FALLBACK_SEC*1000);
   const tick=async()=>{
     if(!mmActive) return;
     try{
       const res=await fetch(`${online.apiBase}/matchmaking/join`,{method:'POST',headers:{'content-type':'application/json'},
         body:JSON.stringify({clientId:online.clientId,name:getOnlineDisplayName()})});
       const data=await res.json();
-      if(!mmActive) return; // ポーリング中にキャンセルされた
+      if(!mmActive) return; // ポーリング中にキャンセル/フォールバックされた
       if(data.status==='matched'){
         stopMatchmaking(false);
         log(tFmt('matching.matchedTpl',{opponent:data.opponentName,room:data.roomCode}));
@@ -5128,12 +5251,22 @@ async function startMatchmaking(){
     }catch(e){ /* 一時的な失敗は次のポーリングで再試行 */ }
     const sec=Math.floor((Date.now()-mmStart)/1000);
     document.getElementById('mmElapsed').textContent=tFmt('matching.elapsedTpl',{seconds:sec});
-    if(sec>=30) document.getElementById('mmComBtn').style.display=''; // maniacs準拠：30秒でCOM提案
     mmTimer=setTimeout(tick,2000);
   };
   tick();
 }
-document.getElementById('ogOnlineBtn').addEventListener('click',()=>{ playFeedback('submit'); ogSaveDeck(); startMatchmaking(); });
+
+/* ===== 対戦モード選択（2026-07-10仕様変更） =====
+   ホームは単一の「対戦」ボタン（#ogMatchBtn）だけにし、その先の #modeOverlay で
+   オンライン対戦（自動マッチング・15秒でCOMへ）/ COM対戦 / フレンド対戦 を選ぶ。 */
+function modeOpen(){ ogShow('modeOverlay',true); }
+function modeClose(){ ogShow('modeOverlay',false); }
+document.getElementById('ogMatchBtn').addEventListener('click',()=>{ playFeedback('submit'); ogSaveDeck(); modeOpen(); });
+document.getElementById('modeCloseBtn').addEventListener('click',()=>{ playFeedback('cancel'); modeClose(); });
+document.getElementById('modeOverlay').addEventListener('click',e=>{ if(e.target.id==='modeOverlay') modeClose(); });
+document.getElementById('modeOnlineBtn').addEventListener('click',()=>{ playFeedback('submit'); modeClose(); startMatchmaking(); });
+document.getElementById('modeComBtn').addEventListener('click',()=>{ playFeedback('submit'); modeClose(); startComMatch(); });
+document.getElementById('modeFriendBtn').addEventListener('click',()=>{ playFeedback('tap'); modeClose(); frOpen(); });
 
 /* ===== フレンド対戦（footballchessmaniacs FriendMatchScreen相当） =====
    部屋を作る＝既存のROOM作成→接続し、コードと参加URLを大きく表示（ID/URLコピー・参加待ちスピナー）。
@@ -5159,7 +5292,7 @@ async function frCopy(btnId,text){
     setTimeout(()=>{ btn.classList.remove('copied'); btn.textContent=btn.dataset.label; },1500);
   }catch{ document.getElementById('frError').textContent=t('friend.copyFailed'); }
 }
-document.getElementById('ogFriendBtn').addEventListener('click',()=>{ playFeedback('tap'); ogSaveDeck(); frOpen(); });
+/* フレンド対戦の入口は #modeFriendBtn（対戦→モード選択）に統合済み（2026-07-10） */
 document.getElementById('frCloseBtn').addEventListener('click',()=>{ playFeedback('cancel'); frClose(); });
 document.getElementById('frCreateBtn').addEventListener('click',async()=>{
   playFeedback('submit');
@@ -5208,12 +5341,7 @@ function frOnPresenceUpdate(){
   }
 }
 document.getElementById('mmCancelBtn').addEventListener('click',()=>{ playFeedback('cancel'); stopMatchmaking(true); });
-document.getElementById('mmComBtn').addEventListener('click',()=>{
-  playFeedback('submit');
-  stopMatchmaking(true);
-  ogCloseHome();
-  document.getElementById('resetBtn').click(); // COM対戦へフォールバック
-});
+/* 旧・30秒COM提案ボタン（mmComBtn）は15秒自動フォールバックへ置き換え済み（startMatchmaking内） */
 // ログインウィンドウの閉じる×
 document.getElementById('ogLoginClose').addEventListener('click',()=>{ playFeedback('cancel'); ogShow('ogLogin',false); });
 // UniversoFutbolポータル経由ログイン（Google等の外部認証はポータル側が処理し #uf_sso で戻る）
@@ -5237,14 +5365,7 @@ document.getElementById('ogSetClub').addEventListener('change',e=>{
 document.getElementById('ogSetSound').addEventListener('change',e=>setFeedbackSetting('sound',e.target.checked));
 document.getElementById('ogSetHaptic').addEventListener('change',e=>setFeedbackSetting('haptic',e.target.checked));
 document.getElementById('ogSetLanguage').addEventListener('change',e=>setLocale(e.target.value));
-document.getElementById('ogKickoffBtn').addEventListener('click',()=>{
-  playFeedback('submit');
-  ogSaveDeck();
-  ogCloseHome();
-  if(online.connected){ return; }  // オンライン中はサーバー盤面を維持したまま戻る
-  telemetryMatchStartedAt=Date.now(); sendTelemetry('match.start',{mode:'com'});
-  document.getElementById('resetBtn').click();  // 編成を反映してキックオフ配置を作り直す
-});
+/* 旧・KICK OFF（COM対戦）ボタンは「対戦」→モード選択（#modeComBtn→startComMatch）へ統合済み（2026-07-10） */
 document.getElementById('ogHomeBtn').addEventListener('click',()=>{ ogShowHome(); });
 
 /* ---- 起動 ---- */
