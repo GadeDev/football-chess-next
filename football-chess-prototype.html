@@ -512,8 +512,9 @@
 @keyframes mmSpin{to{transform:rotate(360deg);}}
 #matchingOverlay .mmTitle{color:#eaf4ff;font-size:15px;font-weight:800;}
 #matchingOverlay .mmElapsed{color:#8fb4da;font-size:12px;margin:6px 0 2px;}
-#matchingOverlay .mmName{color:#6f93b8;font-size:11px;margin-bottom:10px;}
-#matchingOverlay .mmNote{color:#8fb4da;font-size:11px;line-height:1.5;margin-bottom:14px;}
+#matchingOverlay .mmName{color:#6f93b8;font-size:11px;margin-bottom:14px;}
+#matchingOverlay .mmTitle.found{color:#8ef0a0;}
+#matchingOverlay .mmSpinner.done{border-color:rgba(120,230,150,.5);border-top-color:#8ef0a0;animation:none;}
 #matchingOverlay .mmCancel{display:block;width:100%;border:none;border-radius:9px;background:#28425f;color:#dfeaf6;font-size:12px;padding:10px 0;cursor:pointer;}
 /* フレンド対戦（maniacs FriendMatchScreen相当）＋対戦モード選択（#modeOverlay。パネル/大ボタンの見た目を共用） */
 #friendOverlay,#modeOverlay,#tutorialPrompt{position:fixed;inset:0;z-index:5400;background:rgba(2,6,12,.8);display:flex;align-items:center;justify-content:center;}
@@ -859,7 +860,7 @@ body.replaying .boardWrap::after{content:"";position:absolute;inset:0;}
   <div class="panel">
     <button class="closeX" id="modeCloseBtn" data-i18n-attr="aria-label:common.close" aria-label="閉じる">×</button>
     <div class="frTitle" data-i18n="mode.title">対戦モード</div>
-    <button class="frBig" id="modeOnlineBtn"><span data-i18n="home.onlineMatch">オンライン対戦</span><small class="modeDesc" data-i18n="mode.onlineDesc">自動マッチング。15秒で相手が見つからなければCOM対戦</small></button>
+    <button class="frBig" id="modeOnlineBtn"><span data-i18n="home.onlineMatch">オンライン対戦</span><small class="modeDesc" data-i18n="mode.onlineDesc">自動マッチングで対戦相手を探します</small></button>
     <button class="frBig sub" id="modeComBtn"><span data-i18n="home.comMatch">COM対戦</span><small class="modeDesc" data-i18n="mode.comDesc">コンピューターとすぐに対戦</small></button>
     <button class="frBig sub" id="modeFriendBtn"><span data-i18n="friend.title">フレンド対戦</span><small class="modeDesc" data-i18n="mode.friendDesc">招待コード/URLで友達と対戦</small></button>
   </div>
@@ -911,14 +912,14 @@ body.replaying .boardWrap::after{content:"";position:absolute;inset:0;}
   </div>
 </div>
 
-<!-- マッチング待機オーバーレイ（Unity版仕様：15秒でマッチングしなければCOM対戦へ自動フォールバック） -->
+<!-- マッチング待機オーバーレイ。時間内に相手が見つからない場合はCOMへ自動で切り替わるが、
+     UI上は通常のマッチング成立として見せる（COMであることは一切明示しない。2026-07-10仕様） -->
 <div id="matchingOverlay" style="display:none">
   <div class="panel">
-    <div class="mmSpinner"></div>
-    <div class="mmTitle" data-i18n="matching.searching">対戦相手を探しています…</div>
+    <div class="mmSpinner" id="mmSpinner"></div>
+    <div class="mmTitle" id="mmTitle" data-i18n="matching.searching">対戦相手を探しています…</div>
     <div class="mmElapsed" id="mmElapsed">0s</div>
     <div class="mmName" id="mmMyName"></div>
-    <div class="mmNote" data-i18n="matching.comFallbackNote">15秒で相手が見つからない場合はCOMと対戦します</div>
     <button class="mmCancel" id="mmCancelBtn" data-i18n="common.cancel">キャンセル</button>
   </div>
 </div>
@@ -2348,8 +2349,8 @@ Object.assign(L10N.ja.matching,{matchedTpl:'マッチング成立：{opponent} �
 /* 対戦モード選択・15秒COMフォールバック・ランキング（2026-07-10追加。入れ子辞書は初期化ガード付きで追加すること） */
 for(const dict of Object.values(L10N)){
   Object.assign(dict.home||(dict.home={}),{match:'MATCH',matchSub:'Choose a mode'});
-  dict.mode={title:'Match mode',onlineDesc:'Auto matching. If no opponent is found in 15 seconds, you play the COM',comDesc:'Play the computer right away',friendDesc:'Play a friend with an invite code/URL'};
-  Object.assign(dict.matching||(dict.matching={}),{comFallback:'No opponent found — starting a COM match',comFallbackNote:'If no opponent is found within 15 seconds, you will play the COM'});
+  dict.mode={title:'Match mode',onlineDesc:'Find an opponent with auto matching',comDesc:'Play the computer right away',friendDesc:'Play a friend with an invite code/URL'};
+  Object.assign(dict.matching||(dict.matching={}),{foundTpl:'Opponent found: {name}'});
   dict.ranking={short:'Ranking',title:'Ranking',loginMsg:'The ranking is a premium feature. Log in to view it.',premiumMsg:'The ranking is a premium feature',loading:'Loading…',loadFailed:'Could not load the ranking. Please try again later.',empty:'No ranked players yet. Play an online match!',unranked:'Play an online match to enter the ranking',myRankTpl:'Your rank: #{rank} / Rating {rating} ({wins}W {draws}D {losses}L)',recordTpl:'{wins}W {draws}D {losses}L',note:'Ratings change with online match results (auto matching / friend match). Only premium members are listed.'};
 }
 for(const dict of Object.values(L10N)){
@@ -2357,8 +2358,8 @@ for(const dict of Object.values(L10N)){
 }
 Object.assign(L10N.ja.tutorial,{promptTitle:'はじめてですか？',promptBody:'短い動画でルールと操作をご紹介します。あとからホームの「遊び方」でいつでも見られます。',promptWatch:'動画で遊び方を見る',promptLater:'あとで見る'});
 Object.assign(L10N.ja.home,{match:'対戦',matchSub:'モードを選ぶ'});
-L10N.ja.mode={title:'対戦モード',onlineDesc:'自動マッチング。15秒で相手が見つからなければCOM対戦になります',comDesc:'コンピューターとすぐに対戦',friendDesc:'招待コード/URLで友達と対戦'};
-Object.assign(L10N.ja.matching,{comFallback:'相手が見つからないため、COMと対戦します',comFallbackNote:'15秒で相手が見つからない場合はCOMと対戦します'});
+L10N.ja.mode={title:'対戦モード',onlineDesc:'自動マッチングで対戦相手を探します',comDesc:'コンピューターとすぐに対戦',friendDesc:'招待コード/URLで友達と対戦'};
+Object.assign(L10N.ja.matching,{foundTpl:'対戦相手が見つかりました：{name}'});
 L10N.ja.ranking={short:'ランキング',title:'ランキング',loginMsg:'ランキングはプレミアム限定です。ログインしてご利用ください',premiumMsg:'ランキングはプレミアム限定です',loading:'読み込み中…',loadFailed:'ランキングを取得できませんでした。しばらくしてから再度お試しください',empty:'まだランキング対象のプレイヤーがいません。オンライン対戦をプレイしましょう！',unranked:'オンライン対戦をプレイするとランキングに掲載されます',myRankTpl:'あなたの順位：{rank}位　レート {rating}（{wins}勝{draws}分{losses}敗）',recordTpl:'{wins}勝{draws}分{losses}敗',note:'レートはオンライン対戦（自動マッチング/フレンド対戦）の結果で変動します。掲載はプレミアム会員のみです。'};
 Object.assign(L10N.ja.friend,{copied:'コピーしました!',copyFailed:'コピーに失敗しました（手動で選択してください）',createFailed:'部屋の作成に失敗しました。通信環境を確認してください',roomRequired:'ルームIDを入力してください',roomNotFound:'ルームが見つかりません（IDを確認してください）',joined:'フレンドが参加しました。対戦開始！'});
 for(const dict of Object.values(L10N)){ dict.pageTitle='Football Chess — Board Game'; Object.assign(dict.action||(dict.action={}),{ball:'Ball',operation:'Action',dribbleMove:'Dribble move'}); dict.formation={standard:'Standard',oneTop:'One striker',attacking:'Attacking',possession:'Possession',balance:'Balanced',ultraAttacking:'Ultra attacking'}; }
@@ -5285,44 +5286,73 @@ document.getElementById('ogHeadLoginBtn').addEventListener('click',()=>{ playFee
 /* ===== オンライン対戦：自動マッチング（footballchessmaniacs Matching相当の簡略版） =====
    2秒間隔で /matchmaking/join をポーリングし、ペア成立でroomCodeを受け取って
    既存のROOM参加フロー（connectOnlineRoom）へ接続する。
-   Unity版仕様（2026-07-10変更）：15秒でマッチングしなければCOM対戦へ**自動フォールバック**
-   （旧・30秒でCOM提案ボタンは廃止。戻さないこと） */
-const MM_COM_FALLBACK_SEC=15;
-let mmActive=false, mmTimer=null, mmFallbackTimer=null, mmStart=0;
+   Unity版仕様：時間内にマッチングしなければCOM対戦へ自動フォールバックする。
+   **秘匿方針（2026-07-10仕様変更・ユーザー指定）**：フォールバックしたことは**ユーザーに一切明示しない**。
+   ①待機画面・モード説明・トースト・ログのどこにも「COM」と出さない
+   ②切替タイミングは9〜15秒のランダム（毎回15秒ちょうどだと機械的に見えるため）
+   ③切替時は「対戦相手が見つかりました：{名前}」の成立演出（緑チェック）を挟んでから対戦開始
+   「相手が見つからないためCOMに切り替える」旨をユーザーへ明示する文言を復活させないこと（ユーザーが冷めるとの指摘）。 */
+const MM_COM_FALLBACK_MIN_MS=9000, MM_COM_FALLBACK_MAX_MS=15000;
+const MM_FOUND_FLASH_MS=1300; // 成立演出の表示時間
+let mmActive=false, mmTimer=null, mmFallbackTimer=null, mmFoundTimer=null, mmStart=0;
+function mmResetPanel(){
+  const title=document.getElementById('mmTitle');
+  title.textContent=t('matching.searching'); title.classList.remove('found');
+  document.getElementById('mmSpinner').classList.remove('done');
+  document.getElementById('mmCancelBtn').style.display='';
+}
 function stopMatchmaking(sendLeave){
   if(!mmActive) return;
   mmActive=false;
   clearTimeout(mmTimer); mmTimer=null;
   clearTimeout(mmFallbackTimer); mmFallbackTimer=null;
+  clearTimeout(mmFoundTimer); mmFoundTimer=null;
   ogShow('matchingOverlay',false);
   if(sendLeave){
     fetch(`${online.apiBase}/matchmaking/leave`,{method:'POST',headers:{'content-type':'application/json'},
       body:JSON.stringify({clientId:online.clientId})}).catch(()=>{});
   }
 }
-/* COM対戦の開始（ホームの「対戦」→COM対戦と、マッチング15秒フォールバックの共通漏斗） */
+/* COM対戦の開始（ホームの「対戦」→COM対戦と、マッチングのフォールバックの共通漏斗） */
 function startComMatch(){
   ogCloseHome();
   if(online.connected){ return; } // オンライン中はサーバー盤面を維持したまま戻る
-  telemetryMatchStartedAt=Date.now(); sendTelemetry('match.start',{mode:'com'});
+  telemetryMatchStartedAt=Date.now(); sendTelemetry('match.start',{mode:'com'}); // 集計は正直にcom（非表示情報）
   document.getElementById('resetBtn').click(); // 編成を反映してキックオフ配置を作り直す
 }
+/* フォールバック用の対戦相手名（実在プレイヤー風。COMとは表示しない） */
+const MM_AI_NAMES=['Leo10','Kicker7','TORA','Nao','Falcon','Sora','Ryu11','Mina','KENGO','Hulk9','Pepe','Kazu','Marco','SHUN','Taku'];
+function aiOpponentName(){ return MM_AI_NAMES[Math.floor(Math.random()*MM_AI_NAMES.length)]; }
 async function startMatchmaking(){
   if(mmActive||online.connected) return;
   mmActive=true;
   mmStart=Date.now();
   online.apiBase=defaultOnlineApiBase();
+  mmResetPanel();
   document.getElementById('mmElapsed').textContent=tFmt('matching.elapsedTpl',{seconds:0});
   document.getElementById('mmMyName').textContent=tFmt('matching.myNameTpl',{name:getOnlineDisplayName()});
   ogShow('matchingOverlay',true);
-  // Unity版仕様：15秒でマッチングしなければCOM対戦へ自動フォールバック
+  // 時間内に相手が見つからなければCOMへ切替（9〜15秒ランダム）。UI上は通常のマッチング成立として見せる
+  const fallbackDelay=MM_COM_FALLBACK_MIN_MS+Math.random()*(MM_COM_FALLBACK_MAX_MS-MM_COM_FALLBACK_MIN_MS);
   mmFallbackTimer=setTimeout(()=>{
     if(!mmActive) return;
-    stopMatchmaking(true);
-    log(t('matching.comFallback'));
-    ogToast(t('matching.comFallback'),true);
-    startComMatch();
-  },MM_COM_FALLBACK_SEC*1000);
+    // ポーリングとキャンセルを止め、成立演出→対戦開始（以降に本物の相手が来ても次回マッチングへ）
+    clearTimeout(mmTimer); mmTimer=null;
+    fetch(`${online.apiBase}/matchmaking/leave`,{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({clientId:online.clientId})}).catch(()=>{});
+    const name=aiOpponentName();
+    const title=document.getElementById('mmTitle');
+    title.textContent=tFmt('matching.foundTpl',{name}); title.classList.add('found');
+    document.getElementById('mmSpinner').classList.add('done');
+    document.getElementById('mmCancelBtn').style.display='none'; // 成立後のキャンセルは不可（実マッチングと同じ）
+    log(tFmt('matching.foundTpl',{name}));
+    playFeedback('submit');
+    mmFoundTimer=setTimeout(()=>{
+      mmActive=false;
+      ogShow('matchingOverlay',false);
+      startComMatch();
+    },MM_FOUND_FLASH_MS);
+  },fallbackDelay);
   const tick=async()=>{
     if(!mmActive) return;
     try{

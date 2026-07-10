@@ -63,12 +63,21 @@ test("home offers a single match button that opens the mode selector", () => {
   }
 });
 
-test("online matchmaking falls back to a COM match after 15 seconds", () => {
-  assert.match(html, /const MM_COM_FALLBACK_SEC=15/);
+test("online matchmaking falls back to COM silently (never disclosed to the user)", () => {
+  // 9〜15秒ランダムでフォールバック（毎回15秒ちょうどだと機械的に見えるため）
+  assert.match(html, /MM_COM_FALLBACK_MIN_MS=9000/);
+  assert.match(html, /MM_COM_FALLBACK_MAX_MS=15000/);
   assert.match(html, /mmFallbackTimer=setTimeout/);
+  // 成立演出（対戦相手が見つかりました：{name}）→ COM対戦を裏で開始
+  assert.match(html, /aiOpponentName/);
+  assert.match(html, /matching\.foundTpl/);
   assert.match(html, /startComMatch\(\);/);
   // 旧・30秒COM提案ボタンは廃止済み
   assert.doesNotMatch(html, /id="mmComBtn"/);
+  // COMへの切替をユーザーに明示する文言・キーが復活していないこと（ユーザーが冷めるとの指摘）
+  assert.doesNotMatch(html, /COMと対戦します/);
+  assert.doesNotMatch(html, /comFallback/);
+  assert.doesNotMatch(html, /id="mmNote"/);
 });
 
 test("premium-only ranking page ships with locked states and session binding", () => {

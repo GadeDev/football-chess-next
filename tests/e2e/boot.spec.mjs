@@ -80,14 +80,16 @@ test("「見る」を選ぶと初回案内からチュートリアルが開く",
   assertNoPageErrors(errors);
 });
 
-test("オンライン対戦は15秒でマッチングしなければCOM対戦へ自動フォールバックする", async ({ page }) => {
+test("マッチング不成立時は成立演出を経て対戦が始まる（COMとは明示しない）", async ({ page }) => {
   test.setTimeout(60_000);
   const errors = trackPageErrors(page);
   await gotoHome(page);
   await openModeOverlay(page);
   await page.locator("#modeOnlineBtn").click();
   await expect(page.locator("#matchingOverlay")).toBeVisible();
-  // 相手がいないため15秒後にオーバーレイが閉じ、COM対戦（盤面）が始まる
+  // 待機画面に「COM」への言及がないこと（秘匿仕様）
+  await expect(page.locator("#matchingOverlay")).not.toContainText("COM");
+  // 相手がいなくても9〜15秒＋成立演出でオーバーレイが閉じ、対戦（盤面）が始まる
   await expect(page.locator("#matchingOverlay")).toBeHidden({ timeout: 20_000 });
   await expect(page.locator("#board")).toBeVisible();
   await expect(page.locator("#endTurnBtn")).toBeEnabled();
