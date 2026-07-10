@@ -8,3 +8,7 @@ public/
 .test-dist/
 *.tmp
 .DS_Store
+
+# Playwright E2E の生成物
+test-results/
+playwright-report/

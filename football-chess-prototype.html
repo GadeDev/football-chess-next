@@ -516,13 +516,14 @@
 #matchingOverlay .mmNote{color:#8fb4da;font-size:11px;line-height:1.5;margin-bottom:14px;}
 #matchingOverlay .mmCancel{display:block;width:100%;border:none;border-radius:9px;background:#28425f;color:#dfeaf6;font-size:12px;padding:10px 0;cursor:pointer;}
 /* フレンド対戦（maniacs FriendMatchScreen相当）＋対戦モード選択（#modeOverlay。パネル/大ボタンの見た目を共用） */
-#friendOverlay,#modeOverlay{position:fixed;inset:0;z-index:5400;background:rgba(2,6,12,.8);display:flex;align-items:center;justify-content:center;}
-#friendOverlay .panel,#modeOverlay .panel{position:relative;background:#0c1f36;border:1px solid #2d5a8c;border-radius:12px;padding:24px 22px;width:min(86vw,340px);text-align:center;}
-#friendOverlay .frTitle,#modeOverlay .frTitle{color:#eaf4ff;font-size:16px;font-weight:800;letter-spacing:.08em;margin-bottom:14px;}
-#friendOverlay .frBig,#modeOverlay .frBig{display:block;width:100%;border:1px solid rgba(90,180,255,.4);border-radius:10px;margin-bottom:10px;
+#friendOverlay,#modeOverlay,#tutorialPrompt{position:fixed;inset:0;z-index:5400;background:rgba(2,6,12,.8);display:flex;align-items:center;justify-content:center;}
+#friendOverlay .panel,#modeOverlay .panel,#tutorialPrompt .panel{position:relative;background:#0c1f36;border:1px solid #2d5a8c;border-radius:12px;padding:24px 22px;width:min(86vw,340px);text-align:center;}
+#friendOverlay .frTitle,#modeOverlay .frTitle,#tutorialPrompt .frTitle{color:#eaf4ff;font-size:16px;font-weight:800;letter-spacing:.08em;margin-bottom:14px;}
+#friendOverlay .frBig,#modeOverlay .frBig,#tutorialPrompt .frBig{display:block;width:100%;border:1px solid rgba(90,180,255,.4);border-radius:10px;margin-bottom:10px;
   background:rgba(68,136,204,.14);color:#fff;font-size:14px;font-weight:800;padding:14px 0;cursor:pointer;}
-#friendOverlay .frBig.sub,#modeOverlay .frBig.sub{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.15);}
+#friendOverlay .frBig.sub,#modeOverlay .frBig.sub,#tutorialPrompt .frBig.sub{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.15);}
 #modeOverlay .modeDesc{display:block;font-size:10.5px;font-weight:600;color:#9fc0e2;margin-top:4px;letter-spacing:0;}
+#tutorialPrompt .tpBody{color:#cfe4fa;font-size:12.5px;line-height:1.8;margin-bottom:14px;}
 #friendOverlay .frLabel{color:#8fb4da;font-size:12px;margin-bottom:6px;}
 #friendOverlay .frCode{color:#5ab4ff;font-size:26px;font-weight:800;letter-spacing:.12em;font-family:ui-monospace,monospace;margin-bottom:12px;}
 #friendOverlay .frCopyRow{display:flex;gap:8px;justify-content:center;margin-bottom:14px;}
@@ -639,7 +640,9 @@ body.replaying .boardWrap::after{content:"";position:absolute;inset:0;}
 #resultOverlay .home{display:block;width:100%;margin-top:8px;border:none;border-radius:9px;background:#28425f;color:#dfeaf6;font-size:12px;padding:10px 0;cursor:pointer;}
 
 /* 動画チュートリアル：ゲーム内で決定論的に再生し、画面収録時も同じ内容を使う */
-#tutorialOverlay{position:fixed;inset:0;z-index:1200;background:rgba(1,10,20,.94);display:flex;align-items:center;justify-content:center;padding:12px;box-sizing:border-box;color:#eef7ff;font-family:Arial,sans-serif;}
+/* z-indexはホーム(#ogHome=4500)や各オーバーレイ(5400)より上に置く。
+   旧値1200はホームの下に潜り「遊び方」から開いても操作不能になる実バグだった（E2Eで検出。2026-07-10修正） */
+#tutorialOverlay{position:fixed;inset:0;z-index:5500;background:rgba(1,10,20,.94);display:flex;align-items:center;justify-content:center;padding:12px;box-sizing:border-box;color:#eef7ff;font-family:Arial,sans-serif;}
 .tutorialPanel{position:relative;width:min(560px,100%);max-height:96vh;overflow:auto;background:#071b2e;border:1px solid #2a6b99;border-radius:16px;padding:14px;box-sizing:border-box;box-shadow:0 20px 60px #000;}
 .tutorialTitle{text-align:center;font-size:20px;font-weight:900;margin:3px 34px 12px;}
 .tutorialTabs{display:flex;gap:5px;overflow-x:auto;padding-bottom:8px;}
@@ -838,6 +841,16 @@ body.replaying .boardWrap::after{content:"";position:absolute;inset:0;}
     <button class="ogTab" id="ogTabRanking"><span aria-hidden="true">🏆</span><span data-i18n="ranking.short">ランキング</span></button>
     <button class="ogTab" id="ogTabSub"><span class="ogTabIco"></span><span data-i18n="subscription.short">サブスク</span></button>
     <button class="ogTab" id="ogTabSettings"><span class="ogTabIco"></span><span data-i18n="settings.title">設定</span></button>
+  </div>
+</div>
+
+<!-- 初回起動時のチュートリアル案内（1回だけ表示。視聴/案内済みはlocalStorage。以後はホームの「遊び方」から再視聴） -->
+<div id="tutorialPrompt" style="display:none">
+  <div class="panel">
+    <div class="frTitle" data-i18n="tutorial.promptTitle">はじめてですか？</div>
+    <div class="tpBody" data-i18n="tutorial.promptBody">短い動画でルールと操作をご紹介します。あとからホームの「遊び方」でいつでも見られます。</div>
+    <button class="frBig" id="tpWatchBtn" data-i18n="tutorial.promptWatch">動画で遊び方を見る</button>
+    <button class="frBig sub" id="tpLaterBtn" data-i18n="tutorial.promptLater">あとで見る</button>
   </div>
 </div>
 
@@ -2261,6 +2274,10 @@ for(const dict of Object.values(L10N)){
   Object.assign(dict.matching||(dict.matching={}),{comFallback:'No opponent found — starting a COM match',comFallbackNote:'If no opponent is found within 15 seconds, you will play the COM'});
   dict.ranking={short:'Ranking',title:'Ranking',loginMsg:'The ranking is a premium feature. Log in to view it.',premiumMsg:'The ranking is a premium feature',loading:'Loading…',loadFailed:'Could not load the ranking. Please try again later.',empty:'No ranked players yet. Play an online match!',unranked:'Play an online match to enter the ranking',myRankTpl:'Your rank: #{rank} / Rating {rating} ({wins}W {draws}D {losses}L)',recordTpl:'{wins}W {draws}D {losses}L',note:'Ratings change with online match results (auto matching / friend match). Only premium members are listed.'};
 }
+for(const dict of Object.values(L10N)){
+  Object.assign(dict.tutorial||(dict.tutorial={}),{promptTitle:'First time here?',promptBody:'A short video introduces the rules and controls. You can rewatch it anytime from “How to play” on the home screen.',promptWatch:'Watch how to play',promptLater:'Maybe later'});
+}
+Object.assign(L10N.ja.tutorial,{promptTitle:'はじめてですか？',promptBody:'短い動画でルールと操作をご紹介します。あとからホームの「遊び方」でいつでも見られます。',promptWatch:'動画で遊び方を見る',promptLater:'あとで見る'});
 Object.assign(L10N.ja.home,{match:'対戦',matchSub:'モードを選ぶ'});
 L10N.ja.mode={title:'対戦モード',onlineDesc:'自動マッチング。15秒で相手が見つからなければCOM対戦になります',comDesc:'コンピューターとすぐに対戦',friendDesc:'招待コード/URLで友達と対戦'};
 Object.assign(L10N.ja.matching,{comFallback:'相手が見つからないため、COMと対戦します',comFallbackNote:'15秒で相手が見つからない場合はCOMと対戦します'});
@@ -5268,6 +5285,21 @@ document.getElementById('modeOnlineBtn').addEventListener('click',()=>{ playFeed
 document.getElementById('modeComBtn').addEventListener('click',()=>{ playFeedback('submit'); modeClose(); startComMatch(); });
 document.getElementById('modeFriendBtn').addEventListener('click',()=>{ playFeedback('tap'); modeClose(); frOpen(); });
 
+/* ===== 初回起動時のチュートリアル案内（2026-07-10実装。Issue #1 P1） =====
+   初回起動時だけ #tutorialPrompt で「動画で遊び方」を案内する。案内済み（fc.tutorial.prompted）と
+   視聴済み（fc.tutorial.seen＝tutorialOpenが保存）をlocalStorageに持ち、以後はホームの「遊び方」から任意再視聴。 */
+const TUTORIAL_SEEN_KEY='fc.tutorial.seen', TUTORIAL_PROMPTED_KEY='fc.tutorial.prompted';
+function maybeShowTutorialPrompt(){
+  let seen=null,prompted=null;
+  try{ seen=localStorage.getItem(TUTORIAL_SEEN_KEY); prompted=localStorage.getItem(TUTORIAL_PROMPTED_KEY); }catch{}
+  if(seen||prompted) return;
+  try{ localStorage.setItem(TUTORIAL_PROMPTED_KEY,'1'); }catch{}
+  ogShow('tutorialPrompt',true);
+}
+document.getElementById('tpWatchBtn').addEventListener('click',()=>{ playFeedback('submit'); ogShow('tutorialPrompt',false); tutorialOpen(); });
+document.getElementById('tpLaterBtn').addEventListener('click',()=>{ playFeedback('cancel'); ogShow('tutorialPrompt',false); });
+document.getElementById('tutorialPrompt').addEventListener('click',e=>{ if(e.target.id==='tutorialPrompt') ogShow('tutorialPrompt',false); });
+
 /* ===== フレンド対戦（footballchessmaniacs FriendMatchScreen相当） =====
    部屋を作る＝既存のROOM作成→接続し、コードと参加URLを大きく表示（ID/URLコピー・参加待ちスピナー）。
    相手が席に着いたら（room.presenceで両席が埋まったら）オーバーレイを自動で閉じて対戦へ。
@@ -5375,6 +5407,7 @@ function ogBoot(){
   // 他のUniversoFutbolコンテンツとの整合性のため、タイトル画面・自動ログインダイアログは廃止（2026-07-10）。
   // 直接ホームを表示し、ログインは右上のログインボタンから任意で行う（タイトル画像はホーム背景に転用）
   ogShowHome();
+  maybeShowTutorialPrompt(); // 初回起動時だけ「動画で遊び方」を案内（Issue #1 P1）
   (async()=>{ if(!(await ogHandleUfSsoFromHash())) await ogHandleSsoFromUrl(); await ogRestoreSession(); })();
 }
 
