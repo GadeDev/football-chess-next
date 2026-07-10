@@ -2280,7 +2280,7 @@ function makeDefaultPiece(p,team){
 function rebuildDefaultPieces(){
   pieces=[];pieceSeq=0;
   playerTeamDef().forEach(p=>pieces.push(makeDefaultPiece(p,'b')));  // 編成画面のデッキを反映（未編集時は既定編成と同一）
-  DEFAULT_TEAM.forEach(p=>pieces.push(makeDefaultPiece(p,'r')));
+  comTeamDef().forEach(p=>pieces.push(makeDefaultPiece(p,'r')));      // COMはペルソナのフォーメーション（未選択時はDEFAULT_TEAM）
 }
 function kickoffPieceForTeam(team){
   for(const c of KICKOFF_CELLS[team]||[]){
@@ -2639,13 +2639,30 @@ function renderOnlineStatus(){
     if(online.connected && !online.enabled) btn.textContent=t('match.spectating');
     else btn.textContent=online.enabled ? (online.waiting?t('match.sent'):t('match.endTurn')) : t('match.endTurn');
   }
-  // ヘッダーは常に自分視点（あなた/あいて）。視点変換で自分=青見えのため、論理色の「赤/青」表記は出さない
+  // ヘッダーは常に自分視点。視点変換で自分=青見えのため、論理色の「赤/青」表記は出さない。
+  // 2026-07-10仕様変更（ユーザー指定）：「あなた/あいて」→実名表示。
+  // 自分=設定のプレイヤー名／相手=オンラインは相手の表示名・COMはペルソナ名／観戦は青席・赤席の名前。
   const names=document.querySelectorAll('.teamName');
   if(names[0]&&names[1]){
-    names[0].textContent=t('you');
-    names[1].textContent=t('opp');
+    const pair=headerTeamNames();
+    names[0].textContent=pair[0];
+    names[1].textContent=pair[1];
   }
   renderOnlineRoster();
+}
+/* ヘッダー左右の表示名（8文字に短縮。取得できるまでは従来の「あなた/あいて」でフォールバック） */
+function headerTeamNames(){
+  const players=(online.presence&&online.presence.players)||{};
+  if(online.enabled&&isOnlineSpectator()){
+    return [shortOnlineName(players.b&&players.b.displayName,t('you')),
+            shortOnlineName(players.r&&players.r.displayName,t('opp'))];
+  }
+  const my=shortOnlineName(getOnlineDisplayName(),t('you'));
+  if(online.enabled&&(online.role==='b'||online.role==='r')){
+    const opp=players[opponentTeam(online.role)];
+    return [my, shortOnlineName(opp&&opp.displayName,t('opp'))];
+  }
+  return [my, comPersona?shortOnlineName(comPersona.name,t('opp')):t('opp')];
 }
 function isMoveCommand(c){ return c.type==='move'||c.type==='dribble'; }
 function isNormalMoveCommand(c){ return c.type==='move'; }
@@ -3989,6 +4006,10 @@ document.getElementById('onlineRematchBtn').addEventListener('click',()=>{
 document.getElementById('resetBtn').addEventListener('click',ev=>{
   if(ev.isTrusted) playFeedback('cancel');
   goOffline('OFFLINE','');
+  // COMペルソナを抽選（マッチングフォールバックで名前を先に見せた場合はその予約を使う）。
+  // フォーメーション＝ペルソナ由来なので、buildTeams()より前に確定させること
+  comPersona=comPersonaNext||pickComPersona();
+  comPersonaNext=null;
   buildTeams();myCommands=[];oppCommands=[];state={turn:1,half:'前半',scoreSelf:0,scoreOpp:0,selected:null,mode:'idle',expanded:null,atFirst:null,atSecond:null,matchOver:false,ballSelected:false,popup:null,phase:'input'};log('配置をリセットしました');render();
 });
 /* ☰メニューの開閉（表示のみ）。タックル実演ボタンはUI廃止（runTackle本体のロジックは実プレイで使用中のため残置） */
@@ -5017,13 +5038,18 @@ function ogSaveSession(){
 }
 function ogIsLoggedIn(){ return !!(ogAuth.token&&ogAuth.user); }
 function ogIsPremium(){ return !!(ogAuth.user&&ogAuth.user.subscription&&ogAuth.user.subscription.active); }
-function ogApplyUser(){
-  if(ogAuth.user){
+/* ログイン状態をUIへ反映する。
+   ⚠プレイヤー名の上書きは syncName:true（明示的なログイン/新規登録/SSO直後）のときだけ行う。
+   旧実装は起動時のセッション復元（ogRestoreSession）でも毎回アカウント名で
+   localStorage のプレイヤー名を上書きしており、「設定した名前がリロードのたびに消える」
+   実バグになっていた（2026-07-10修正。復元時は syncName を渡さないこと）。 */
+function ogApplyUser(options={}){
+  if(ogAuth.user&&options.syncName){
     try{ localStorage.setItem(ONLINE_DISPLAY_NAME_KEY,normalizeOnlineDisplayName(ogAuth.user.name)); }catch{}
     const oi=document.getElementById('onlineNameInput'); if(oi) oi.value=ogAuth.user.name;
     const sn=document.getElementById('ogSetName'); if(sn) sn.value=ogAuth.user.name;
-    document.getElementById('ogHeadName').textContent=ogAuth.user.name;
   }
+  document.getElementById('ogHeadName').textContent=ogUserName(); // 表示は保存済みプレイヤー名を正とする
   ogRenderAuth();
   ogRenderDeck(); // プレミアム状態でランク変更ヒントの表示/非表示が変わるため、ログイン反映時に再描画
 }
@@ -5064,7 +5090,7 @@ async function ogHandleUfSsoFromHash(){
   if(!accessToken) return false;
   try{
     const r=await ogApi('/auth/uf-sso','POST',{access_token:accessToken});
-    if(r.ok){ ogAuth={token:r.token,user:r.user}; ogSaveSession(); ogApplyUser(); ogToast(t('accountUi.ufLoginSuccess'),true); }
+    if(r.ok){ ogAuth={token:r.token,user:r.user}; ogSaveSession(); ogApplyUser({syncName:true}); ogToast(t('accountUi.ufLoginSuccess'),true); }
     else ogToast(r.error||t('accountUi.ufLoginFailed'));
   }catch{ ogToast(t('accountUi.ufLoginFailed')); }
   return true;
@@ -5074,7 +5100,7 @@ async function ogHandleSsoFromUrl(){
   if(!t) return false;
   try{
     const r=await ogApi('/auth/sso','POST',{token:t});
-    if(r.ok){ ogAuth={token:r.token,user:r.user}; ogSaveSession(); ogApplyUser(); ogToast(t('accountUi.ufLoginSuccess'),true); }
+    if(r.ok){ ogAuth={token:r.token,user:r.user}; ogSaveSession(); ogApplyUser({syncName:true}); ogToast(t('accountUi.ufLoginSuccess'),true); }
     else ogToast(r.error||t('accountUi.ssoFailed'));
   }catch{ ogToast(t('accountUi.ssoFailed')); }
   try{ const u=new URL(location.href); u.searchParams.delete('sso'); history.replaceState(null,'',u.toString()); }catch{}
@@ -5095,7 +5121,7 @@ async function ogSubmitLogin(){
   try{
     const r=await ogApi(ogLoginMode==='login'?'/auth/login':'/auth/register','POST',{name,password:pass});
     if(r.ok){
-      ogAuth={token:r.token,user:r.user}; ogSaveSession(); ogApplyUser();
+      ogAuth={token:r.token,user:r.user}; ogSaveSession(); ogApplyUser({syncName:true});
       ogShow('ogLogin',false); ogShowHome();
       ogToast(t(ogLoginMode==='login'?'accountUi.loginSuccess':'accountUi.registerSuccess'),true);
     }else{
@@ -5331,9 +5357,30 @@ function startComMatch(){
   telemetryMatchStartedAt=Date.now(); sendTelemetry('match.start',{mode:'com'}); // 集計は正直にcom（非表示情報）
   document.getElementById('resetBtn').click(); // 編成を反映してキックオフ配置を作り直す
 }
-/* フォールバック用の対戦相手名（実在プレイヤー風。COMとは表示しない） */
-const MM_AI_NAMES=['Leo10','Kicker7','TORA','Nao','Falcon','Sora','Ryu11','Mina','KENGO','Hulk9','Pepe','Kazu','Marco','SHUN','Taku'];
-function aiOpponentName(){ return MM_AI_NAMES[Math.floor(Math.random()*MM_AI_NAMES.length)]; }
+/* ===== COM対戦の対戦相手ペルソナ（2026-07-10実装・ユーザー指定） =====
+   6つのフォーメーションごとに実在プレイヤー風の名前を1人ずつ用意し、
+   COM対戦では①ヘッダーの相手名に表示 ②COM(赤)の編成もそのフォーメーションで組む。
+   マッチングのCOMフォールバック時は成立演出の名前とヘッダー名が同一人物になる。
+   名前に「COM」「AI」を含めないこと（秘匿方針）。 */
+const COM_PERSONAS=[
+  {formationId:1,name:'Leo10'},   // 4-4-2 スタンダード
+  {formationId:2,name:'TORA'},    // 4-5-1 ワントップ
+  {formationId:3,name:'Falcao9'}, // 4-3-3 アタッキング
+  {formationId:4,name:'Marco'},   // 3-6-1 ポゼッション
+  {formationId:5,name:'KENGO'},   // 3-5-2 バランス
+  {formationId:6,name:'Sora11'},  // 3-4-3 超攻撃
+];
+let comPersona=null;      // 進行中のCOM試合のペルソナ（試合中は固定。resetBtnで再抽選）
+let comPersonaNext=null;  // マッチングフォールバックで先に名前を見せた場合の予約
+function pickComPersona(){ return COM_PERSONAS[Math.floor(Math.random()*COM_PERSONAS.length)]; }
+/* COM(赤)の編成定義。ペルソナのフォーメーション＋そのフォーメーションの既定コスト（合計16.0） */
+function comTeamDef(){
+  if(!comPersona) return DEFAULT_TEAM;
+  const f=ogFormation(comPersona.formationId);
+  return f.pos.map((p,i)=>({id:ogMasterPieceId(p[0],f.costs[i]),x:p[1],y:p[2]}));
+}
+/* マッチングフォールバックの成立演出用：ペルソナを予約して名前だけ先に返す */
+function aiOpponentName(){ comPersonaNext=pickComPersona(); return comPersonaNext.name; }
 async function startMatchmaking(){
   if(mmActive||online.connected) return;
   mmActive=true;
@@ -5502,12 +5549,17 @@ document.getElementById('ogUfLoginBtn').addEventListener('click',()=>{
   location.href='https://universo-futbol.com/api/auth/launch?to='+encodeURIComponent(to);
 });
 document.getElementById('ogTabSettings').addEventListener('click',()=>ogSelectTab('settings'));
-document.getElementById('ogSetName').addEventListener('change',e=>{
-  const v=normalizeOnlineDisplayName(e.target.value||'Player');
+/* プレイヤー名は input（入力の都度）と change（確定）の両方で保存する。
+   changeのみだとフォーカスを外す前にリロードされると入力が失われるため */
+function ogSaveNameFromInput(raw){
+  const v=normalizeOnlineDisplayName(raw||'Player');
   try{ localStorage.setItem(ONLINE_DISPLAY_NAME_KEY,v); }catch{}
-  const oi=document.getElementById('onlineNameInput'); if(oi) oi.value=v;
+  online.displayName=v;
+  const oi=document.getElementById('onlineNameInput'); if(oi&&document.activeElement!==oi) oi.value=v;
   document.getElementById('ogHeadName').textContent=v;
-});
+}
+document.getElementById('ogSetName').addEventListener('input',e=>ogSaveNameFromInput(e.target.value));
+document.getElementById('ogSetName').addEventListener('change',e=>ogSaveNameFromInput(e.target.value));
 document.getElementById('ogSetClub').addEventListener('change',e=>{
   const v=(e.target.value||'MY CLUB').trim().slice(0,20)||'MY CLUB';
   try{ localStorage.setItem(OG_CLUB_KEY,v); }catch{}

@@ -91,6 +91,30 @@ test("TEAM COST label is localized for 7 locales and rank hint is premium-only",
   assert.match(html, /ogIsPremium\(\)\?t\('ogCostHint'\):''/);
 });
 
+test("header shows real names and COM personas cover all six formations", () => {
+  // ヘッダーは「あなた/あいて」ではなく実名（自分=プレイヤー名/相手=オンライン名 or COMペルソナ）
+  assert.match(html, /function headerTeamNames\(/);
+  const personas = html.match(/const COM_PERSONAS=\[[\s\S]*?\];/)?.[0] ?? "";
+  for (const id of [1, 2, 3, 4, 5, 6]) {
+    assert.match(personas, new RegExp(`formationId:${id},`), `フォーメーション${id}のペルソナが無い`);
+  }
+  // 秘匿方針: ペルソナ名にCOM/AIを含めない
+  assert.doesNotMatch(personas, /name:'[^']*(COM|AI|CPU)[^']*'/i);
+  // COM(赤)の編成はペルソナのフォーメーションで組む
+  assert.match(html, /comTeamDef\(\)\.forEach/);
+});
+
+test("player name persists across reloads (session restore must not overwrite it)", () => {
+  // セッション復元(ogRestoreSession)は syncName を渡さない＝プレイヤー名を上書きしない
+  assert.match(html, /function ogApplyUser\(options=\{\}\)/);
+  assert.match(html, /ogAuth\.user&&options\.syncName/);
+  const restoreBlock = html.match(/async function ogRestoreSession\(\)[\s\S]*?\n}/)?.[0] ?? "";
+  assert.match(restoreBlock, /ogApplyUser\(\);/);
+  assert.doesNotMatch(restoreBlock, /syncName/);
+  // 入力の都度保存（changeのみだとリロードで失われる）
+  assert.match(html, /addEventListener\('input',e=>ogSaveNameFromInput/);
+});
+
 test("premium-only ranking page ships with locked states and session binding", () => {
   for (const id of ["ogTabRanking", "ogPageRanking", "ogRankingBody"]) {
     assert.match(html, new RegExp(`id="${id}"`));
