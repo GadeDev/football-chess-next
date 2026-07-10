@@ -27,6 +27,11 @@ test("all supported locales inherit tutorial copy and locale selector remains av
   assert.match(html, /id="ogSetLanguage"/);
 });
 
+test("localization boot initializes optional nested dictionaries before assignment", () => {
+  assert.match(html, /Object\.assign\(dict\.action\|\|\(dict\.action=\{\}\)/);
+  assert.doesNotMatch(html, /Object\.assign\(dict\.action,\{ball:/);
+});
+
 test("cut-in labels are resolved through localization dictionaries", () => {
   assert.match(html, /dict\.cutinLabel=/);
   assert.match(html, /cutinLabel\.\$\{key\}/);
