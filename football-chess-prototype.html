@@ -2124,9 +2124,14 @@ function aiTackleRiskAt(piece,x,y){
 }
 function aiPlanHolder(p){
   const options=[];
-  // シュート：成功率そのもの＋ゴール直結ボーナス
+  // シュート：成功率＋エリアボーナス（2026-07-10強化。ユーザー指摘「攻撃が弱すぎてシュートに至らない」対策：
+  // 静的な守備壁の前で安全な横パス回しがシュートを上回ってしまうため、
+  // PA/GAでは強め・VAでも一定のボーナスを与えて「撃てる時は撃つ」寄りにする）
   const sh=calcShoot(p);
-  if(sh.area!=='-') options.push({score:sh.prob*1.2, act:{type:'shoot',pieceId:p.id,tx:p.x,ty:p.y,team:'r'}});
+  if(sh.area!=='-'){
+    const areaBonus=sh.area==='VA'?12:30; // PA/GA=30, VA=12
+    options.push({score:sh.prob*1.2+areaBonus, act:{type:'shoot',pieceId:p.id,tx:p.x,ty:p.y,team:'r'}});
+  }
   // 通常パス：実質成功率（経路×着地×(1-オフサイド率)×被タックル割引）＋前進価値＋受け手のシュート期待
   redPassTargets(p).forEach(q=>{
     const base=calcPassDisplayProbability(p,q.x,q.y);
@@ -2136,9 +2141,10 @@ function aiPlanHolder(p){
     const reach=aiReachThreatAt(q,q.x,q.y); // 受け手の隣に強い駒（SS級）が居るパスは割り引く
     const succ=base*(100-off)/100*(100-risk*0.6)/100*(100-reach*0.35)/100;
     if(succ<28) return; // 通る見込みの薄いパスは選ばない
-    const gain=Math.max(0,(redGoalDistance(p.x,p.y)-redGoalDistance(q.x,q.y))*8);
+    // 前進価値はクランプしない（後戻り・横パスの回し続けを防ぐ。2026-07-10）
+    const gain=(redGoalDistance(p.x,p.y)-redGoalDistance(q.x,q.y))*8;
     const qShoot=calcShoot(q);
-    const chainShoot=(qShoot.area!=='-'&&qShoot.prob>=45)?q:null; // パス→シュート連鎖の候補
+    const chainShoot=(qShoot.area!=='-'&&qShoot.prob>=30)?q:null; // パス→シュート連鎖の候補（45→30に緩和）
     options.push({score:succ*0.6+gain+(chainShoot?qShoot.prob*0.5:0),
       act:{type:'pass',pieceId:p.id,targetId:q.id,tx:q.x,ty:q.y,team:'r'}, chainShoot});
   });
@@ -2162,8 +2168,11 @@ function aiPlanHolder(p){
   redMoveTargets(p).forEach(([x,y])=>{
     const risk=aiTackleRiskAt(p,x,y);
     const reach=aiReachThreatAt(p,x,y);
-    const gain=Math.max(0,(redGoalDistance(p.x,p.y)-redGoalDistance(x,y))*10);
-    options.push({score:(100-risk)*0.35+gain+(isRedAttackingArea(x,y)?14:0)-reach*0.18,
+    // 前進価値はクランプしない（後戻りは減点。2026-07-10）
+    const gain=(redGoalDistance(p.x,p.y)-redGoalDistance(x,y))*10;
+    // PA/GA（ゴール至近）への持ち込みは強めのボーナス＝守備壁への突入を恐れすぎない
+    const areaBonus=isRedAttackingArea(x,y)?(redGoalDistance(x,y)<=2?30:14):0;
+    options.push({score:(100-risk)*0.35+gain+areaBonus-reach*0.18,
       act:{type:'dribble',pieceId:p.id,tx:x,ty:y,team:'r'}});
   });
   // 自陣停滞の解消（2026-07-10。ユーザー指摘「プレイヤーが動かないとAIが自陣から出てこず

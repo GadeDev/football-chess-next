@@ -26,6 +26,13 @@ test("COM戦を開始からフルタイムまで自動実行できる", async ({
   await expect(page.locator('#log [data-i18n-log="halftimeSimple"]').first()).toBeAttached();
   await expect(page.locator('#log [data-i18n-log="matchResult"]').first()).toBeAttached();
 
+  // COM AIの攻撃力回帰（2026-07-10ユーザー指摘「無操作でもシュートに至らない」の再発防止）:
+  // このテストのプレイヤー(青)は一切操作しないため、シュート系ログが1件でもあれば赤AIのシュート。
+  const shotLogs = await page
+    .locator('#log [data-i18n-log="goal"], #log [data-i18n-log="shotMiss"], #log [data-i18n-log="shotBlocked"], #log [data-i18n-log="gkSave"], #log [data-i18n-log="goalAgainst"]')
+    .count();
+  expect(shotLogs).toBeGreaterThan(0);
+
   // リザルトからホームへ戻れる（タップで演出スキップ→HOME）
   await page.locator("#resultOverlay").click();
   await page.locator("#resultHomeBtn").click();
