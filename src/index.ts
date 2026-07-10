@@ -120,6 +120,14 @@ const ROOM_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const TURN_INPUT_TIMEOUT_MS = 3 * 60 * 1000;
 const ROOM_IDLE_CLEANUP_MS = 30 * 60 * 1000;
 const FINISHED_ROOM_CLEANUP_MS = 6 * 60 * 60 * 1000;
+const TELEMETRY_EVENTS = new Set([
+  "tutorial.open",
+  "tutorial.scene_complete",
+  "match.start",
+  "match.complete",
+  "match.resign",
+  "match.disconnect",
+]);
 
 function json(data: unknown, init: ResponseInit = {}): Response {
   return Response.json(data, {
@@ -174,6 +182,37 @@ function parseJsonObject(text: string): Record<string, unknown> | null {
   } catch {
     return null;
   }
+}
+
+function finiteNumber(value: unknown, min: number, max: number): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) && value >= min && value <= max ? value : undefined;
+}
+
+async function receiveTelemetry(request: Request, env: Env): Promise<Response> {
+  if (await rateLimited(env, "telemetry", request)) return problem(429, "Too many telemetry events");
+  const body = parseJsonObject(await request.text());
+  if (!body || typeof body.event !== "string" || !TELEMETRY_EVENTS.has(body.event)) {
+    return problem(400, "Invalid telemetry event");
+  }
+  const properties = body.properties && typeof body.properties === "object" && !Array.isArray(body.properties)
+    ? body.properties as Record<string, unknown>
+    : {};
+  const safe = {
+    event: body.event,
+    mode: properties.mode === "com" || properties.mode === "online" ? properties.mode : undefined,
+    locale: typeof properties.locale === "string" ? properties.locale.slice(0, 8) : undefined,
+    scene: typeof properties.scene === "string" ? properties.scene.slice(0, 24) : undefined,
+    result: properties.result === "win" || properties.result === "lose" || properties.result === "draw" ? properties.result : undefined,
+    turns: finiteNumber(properties.turns, 0, 100),
+    durationSec: finiteNumber(properties.durationSec, 0, 24 * 60 * 60),
+    scoreFor: finiteNumber(properties.scoreFor, 0, 99),
+    scoreAgainst: finiteNumber(properties.scoreAgainst, 0, 99),
+    receivedAt: new Date().toISOString(),
+    environment: env.ENVIRONMENT,
+  };
+  // Cloudflare Workers Logsへ構造化出力する。表示名、roomCode、IP、認証情報はpayloadに保存しない。
+  console.log(JSON.stringify({ type: "football_chess.telemetry", ...safe }));
+  return json({ ok: true }, { status: 202 });
 }
 
 function stringField(value: unknown, fallback: string, maxLength = 48): string {
@@ -424,6 +463,7 @@ const RATE_LIMITS: Record<string, { limit: number; windowMs: number }> = {
   auth: { limit: 10, windowMs: 10 * 60 * 1000 }, // login/register/sso: 10回/10分/IP
   billing: { limit: 30, windowMs: 60 * 60 * 1000 },
   room: { limit: 12, windowMs: 60 * 60 * 1000 }, // ROOM作成: 12回/時/IP
+  telemetry: { limit: 240, windowMs: 60 * 60 * 1000 },
 };
 
 async function rateLimited(env: Env, bucket: keyof typeof RATE_LIMITS, request: Request): Promise<boolean> {
@@ -502,6 +542,10 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
     url.pathname.startsWith(`${API_PREFIX}/billing/`)
   ) {
     return handleAuthApi(request, env, url.pathname);
+  }
+
+  if (url.pathname === `${API_PREFIX}/telemetry` && request.method === "POST") {
+    return receiveTelemetry(request, env);
   }
 
   // マッチメイキング（自動対戦相手探し）：/matchmaking/join を2秒間隔でポーリング、/leave でキャンセル

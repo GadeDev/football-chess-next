@@ -9,6 +9,7 @@ Unity製「Football Chess」（サッカー×将棋の同時ターン制対戦�
 
 ## ドキュメント
 - 引き継ぎ・仕様: [HANDOFF.md](./HANDOFF.md)
+- v1.0完成条件・作業一覧: [docs/V1_RELEASE_PLAN.md](./docs/V1_RELEASE_PLAN.md)
 - Push手順: [PUSH_GUIDE.md](./PUSH_GUIDE.md)
 - Cloudflare対人化計画: [MULTIPLAYER.md](./MULTIPLAYER.md)
 

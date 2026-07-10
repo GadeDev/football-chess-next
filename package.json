@@ -7,7 +7,8 @@
   "scripts": {
     "check:worker": "tsc --noEmit",
     "test": "npm run test:core",
-    "test:core": "rm -rf .test-dist && tsc -p tsconfig.test.json && node --test tests/game-core.test.mjs",
+    "test:core": "rm -rf .test-dist && tsc -p tsconfig.test.json && node --test tests/*.test.mjs",
+    "audit:i18n": "node scripts/audit-i18n.mjs",
     "build:assets": "mkdir -p public && cp football-chess-prototype.html public/index.html && cp pwa/manifest.webmanifest pwa/icon-192.png pwa/icon-512.png pwa/apple-touch-icon.png assets/kickoff-l10n-banner.png public/",
     "dev:worker": "npm run build:assets && wrangler dev --port 8787",
     "deploy:worker": "npm run build:assets && wrangler deploy",

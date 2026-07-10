@@ -41,6 +41,31 @@ function minimalState(seed = "game-core-test") {
   return state;
 }
 
+test("COM-style full match core simulation remains deterministic for 34 simultaneous turns", () => {
+  let first = createInitialGameState("b", "e2e-full-match");
+  let second = createInitialGameState("b", "e2e-full-match");
+  for (let turn = 0; turn < 34; turn += 1) {
+    first = resolveServerTurn(first, { b: [], r: [] }).game;
+    second = resolveServerTurn(second, { b: [], r: [] }).game;
+  }
+  assert.deepEqual(first, second);
+  assert.equal(first.pieces.length, 22);
+  assert.deepEqual(first.score, { b: 0, r: 0 });
+});
+
+test("online-style simultaneous intents resolve both teams in one authoritative turn", () => {
+  const state = createInitialGameState("b", "e2e-online-turn");
+  const blue = state.pieces.find((candidate) => candidate.team === "b" && candidate.posType !== "gk");
+  const red = state.pieces.find((candidate) => candidate.team === "r" && candidate.posType !== "gk");
+  assert.ok(blue && red);
+  const result = resolveServerTurn(state, {
+    b: [{ type: "move", pieceId: blue.id, tx: blue.x, ty: blue.y - 1, team: "b" }],
+    r: [{ type: "move", pieceId: red.id, tx: red.x, ty: red.y + 1, team: "r" }],
+  });
+  assert.ok(result.events.some((event) => event.type === "turn.completed"));
+  assert.equal(result.events.filter((event) => event.type === "piece.moved").length, 2);
+});
+
 test("through pass survives when the passer makes a normal move later in the same turn", () => {
   const state = minimalState("throughpass-then-move");
   const commands = [

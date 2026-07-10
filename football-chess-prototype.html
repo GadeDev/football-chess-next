@@ -640,6 +640,23 @@ body.replaying .boardWrap::after{content:"";position:absolute;inset:0;}
 #resultOverlay .again{display:block;width:100%;border:none;border-radius:9px;background:linear-gradient(180deg,#5db6ff,#1f7be0 60%,#1565c0);color:#fff;font-size:14px;font-weight:800;padding:12px 0;cursor:pointer;}
 #resultOverlay .again:disabled{opacity:.55;}
 #resultOverlay .home{display:block;width:100%;margin-top:8px;border:none;border-radius:9px;background:#28425f;color:#dfeaf6;font-size:12px;padding:10px 0;cursor:pointer;}
+
+/* 動画チュートリアル：ゲーム内で決定論的に再生し、画面収録時も同じ内容を使う */
+#tutorialOverlay{position:fixed;inset:0;z-index:1200;background:rgba(1,10,20,.94);display:flex;align-items:center;justify-content:center;padding:12px;box-sizing:border-box;color:#eef7ff;font-family:Arial,sans-serif;}
+.tutorialPanel{position:relative;width:min(560px,100%);max-height:96vh;overflow:auto;background:#071b2e;border:1px solid #2a6b99;border-radius:16px;padding:14px;box-sizing:border-box;box-shadow:0 20px 60px #000;}
+.tutorialTitle{text-align:center;font-size:20px;font-weight:900;margin:3px 34px 12px;}
+.tutorialTabs{display:flex;gap:5px;overflow-x:auto;padding-bottom:8px;}
+.tutorialTabs button{flex:0 0 auto;border:1px solid #275d82;border-radius:999px;background:#0c2c47;color:#bcd5e7;padding:7px 11px;font-size:11px;}
+.tutorialTabs button.active{background:#117db5;color:white;border-color:#59c9ff;}
+.tutorialStage{position:relative;overflow:hidden;aspect-ratio:16/10;border-radius:12px;background:linear-gradient(#071426cc,#071426cc),var(--fieldImg) center/cover;border:1px solid #24577b;}
+.tutorialPitch{position:absolute;inset:0;}
+.tutorialPiece{position:absolute;width:11%;aspect-ratio:1;border-radius:50%;display:grid;place-items:center;font-size:10px;font-weight:900;color:white;border:2px solid #d9f3ff;box-shadow:0 4px 10px #0008;transform:translate(-50%,-50%);transition:left .75s ease,top .75s ease,filter .2s;}
+.tutorialPiece.b{background:#0876bd}.tutorialPiece.r{background:#c9385d}.tutorialPiece.focus{filter:drop-shadow(0 0 8px #fff) drop-shadow(0 0 14px #39d7ff)}
+.tutorialBall{position:absolute;width:5%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff 0 35%,#333 38% 53%,#fff 56%);box-shadow:0 2px 8px #000;transform:translate(-50%,-50%);transition:left .65s ease,top .65s ease;}
+.tutorialArrow{position:absolute;height:3px;background:#6ee7ff;transform-origin:left center;box-shadow:0 0 8px #38cfff;}
+.tutorialCaption{position:absolute;left:4%;right:4%;bottom:4%;background:#00111ee8;border-left:4px solid #32bfff;padding:9px 12px;border-radius:5px;font-size:13px;font-weight:700;line-height:1.45;}
+.tutorialProgress{height:4px;background:#183a53;margin:10px 0;border-radius:4px;overflow:hidden}.tutorialProgress span{display:block;height:100%;width:0;background:#39c8ff;transition:width .15s linear;}
+.tutorialControls{display:grid;grid-template-columns:1fr 1.2fr 1fr;gap:7px}.tutorialControls button{border:1px solid #2b668d;border-radius:9px;background:#103451;color:white;padding:10px 5px;font-weight:800}.tutorialControls #tutorialPlayBtn{background:#087cb4;}
 /* スキップ（タップ）時：ワード演出を完了状態に固定して全拍を即表示 */
 #resultOverlay.revealed .resultWord{animation:none;opacity:1;transform:none;}
 #resultOverlay.revealed .resultWord.play{animation:none;}
@@ -802,8 +819,28 @@ body.replaying .boardWrap::after{content:"";position:absolute;inset:0;}
   <div class="ogFooter">
     <button class="ogKickoff" id="ogKickoffBtn">KICK OFF<span class="sub" data-i18n="home.comMatch">COM対戦</span></button>
     <button class="ogKickoff online" id="ogOnlineBtn"><span data-i18n="home.onlineMatch">オンライン対戦</span><span class="sub" data-i18n="home.autoMatch">自動マッチング</span></button>
+    <button class="ogTab" id="ogTutorialBtn"><span aria-hidden="true">▶</span><span data-i18n="tutorial.open">遊び方</span></button>
     <button class="ogTab" id="ogTabSub"><span class="ogTabIco"></span><span data-i18n="subscription.short">サブスク</span></button>
     <button class="ogTab" id="ogTabSettings"><span class="ogTabIco"></span><span data-i18n="settings.title">設定</span></button>
+  </div>
+</div>
+
+<!-- 動画チュートリアル。決定論的なシーン定義を再生し、同じ正本を将来MP4収録にも使う。 -->
+<div id="tutorialOverlay" style="display:none">
+  <div class="tutorialPanel" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle">
+    <button class="closeX" id="tutorialCloseBtn" data-i18n-attr="aria-label:common.close">×</button>
+    <div class="tutorialTitle" id="tutorialTitle" data-i18n="tutorial.title">動画で遊び方</div>
+    <div class="tutorialTabs" id="tutorialTabs"></div>
+    <div class="tutorialStage" id="tutorialStage">
+      <div class="tutorialPitch" id="tutorialPitch"></div>
+      <div class="tutorialCaption" id="tutorialCaption"></div>
+    </div>
+    <div class="tutorialProgress"><span id="tutorialProgressBar"></span></div>
+    <div class="tutorialControls">
+      <button id="tutorialRestartBtn" data-i18n="tutorial.restart">最初から</button>
+      <button id="tutorialPlayBtn" data-i18n="tutorial.pause">一時停止</button>
+      <button id="tutorialNextBtn" data-i18n="tutorial.next">次へ</button>
+    </div>
   </div>
 </div>
 
@@ -2160,7 +2197,7 @@ function buildTeams(){
 const EN={
   you:'YOU',opp:'OPP',nav:{online:'Online match',menu:'Menu'},common:{back:'← Back',join:'Join',cancel:'Cancel',close:'Close',or:'or'},
   online:{create:'Create room',leave:'Leave',resign:'Resign'},match:{firstHalf:'1ST HALF',secondHalf:'2ND HALF',endTurn:'TURN END (Confirm)',offsideDemo:'Offside demo',spectating:'SPECTATING',sent:'Sent'},
-  home:{teamFormation:'Team formation',formations:'Formations',saveSlots:'Save slots',comMatch:'COM match',onlineMatch:'Online match',autoMatch:'Auto matching'},
+  home:{teamFormation:'Team formation',formations:'Formations',saveSlots:'Save slots',comMatch:'COM match',onlineMatch:'Online match',autoMatch:'Auto matching'},tutorial:{open:'How to play',title:'Learn with video',restart:'Restart',pause:'Pause',play:'Play',next:'Next',intro:'Football Chess',move:'Move',pass:'Pass',defend:'Defend',shoot:'Shoot',intro1:'Both teams plan their moves at the same time.',intro2:'End the turn to resolve every move together.',move1:'Select a piece and choose a highlighted cell.',move2:'Read the opponent and move into useful space.',pass1:'Select the ball and pass to a teammate.',pass2:'A free receiver can continue the passing chain.',defend1:'Move defenders onto the ball holder to challenge.',defend2:'Position and piece cost affect the result.',shoot1:'From the attacking area, select the holder and shoot.',shoot2:'Score more goals before full time to win.'},
   settings:{title:'Settings',playerName:'Player name (also used online)',clubName:'Club name',account:'Account',sound:'Sound effects',haptic:'Haptic feedback',language:'Language',note:'Your formation and player name are saved on this browser.'},
   subscription:{title:'Subscription',short:'Subscription',joinDemo:'Join premium (demo)',cancel:'Cancel subscription',loginToJoin:'Log in to join'},
   friend:{open:'🤝 Friend match (invite code/URL)',title:'Friend match',create:'Create room',joinRoom:'Join a room',copyId:'Copy ID',copyUrl:'Copy URL'},
@@ -2170,7 +2207,7 @@ const EN={
   ogCostHint:'Tap a piece to change its rank',ogCostCurrentBadge:'Current',ogCostOverLabel:'Over limit',ogCostPremiumMsg:'Rank change is a premium feature',ogCostPremiumBtn:'About Premium',ogCostTitleTpl:'{pos} rank — current {rank} (cost {cost})',ogCostPreviewTpl:'TEAM COST {total} / {max}',ogCostToastTpl:'Changed {pos} to rank {rank} (TEAM COST {total}/{max})',
   lang_ja:'日本語',lang_en:'English',lang_ko:'한국어',lang_es:'Español',lang_pt:'Português',lang_de:'Deutsch',lang_zhCN:'简体中文'
 };
-const JA={...EN,you:'あなた',opp:'あいて',nav:{online:'オンライン対戦',menu:'メニュー'},common:{back:'← 戻る',join:'参加',cancel:'キャンセル',close:'閉じる',or:'または',selectionCleared:'選択を解除しました'},online:{create:'ROOM作成',leave:'退出',resign:'投了'},match:{firstHalf:'前半',secondHalf:'後半',endTurn:'TURN END（決定）',offsideDemo:'オフサイド実演',spectating:'観戦中',sent:'送信済み'},home:{teamFormation:'チーム編成',formations:'フォーメーション',saveSlots:'保存スロット',comMatch:'COM対戦',onlineMatch:'オンライン対戦',autoMatch:'自動マッチング'},settings:{title:'設定',playerName:'プレイヤー名（オンライン対戦の表示名と共通）',clubName:'クラブ名',account:'アカウント',sound:'効果音',haptic:'触覚フィードバック',language:'言語',note:'編成とプレイヤー名はこの端末（ブラウザ）に保存されます。'},subscription:{title:'サブスクリプション',short:'サブスク',joinDemo:'プレミアムに加入する（デモ）',cancel:'解約する',loginToJoin:'ログインして加入する'},friend:{open:'🤝 フレンド対戦（招待コード/URLで友達と対戦）',title:'フレンド対戦',create:'部屋を作る',joinRoom:'部屋に入る',copyId:'IDをコピー',copyUrl:'URLをコピー'},matching:{searching:'対戦相手を探しています…',playCom:'相手が見つかりません。COMと対戦する'},auth:{login:'ログイン',register:'新規登録',loginRegister:'ログイン / 新規登録',logout:'ログアウト',accountTitle:'UniversoFutbol アカウント',universoLogin:'UniversoFutbolでログイン（Google対応）',continueGuest:'ゲストで続ける'},cost:{title:'ランク変更'},result:{rematch:'再戦',rsWin:'WIN',rsLose:'LOSE',rsDraw:'DRAW',rsHome:'HOME',rsGoal:'ゴール',rsOppWants:'相手が再戦を希望しています',rsRematchSent:'再戦希望を送信しました'},ogCostHint:'駒をタップでランク変更',ogCostCurrentBadge:'現在',ogCostOverLabel:'コスト超過',ogCostPremiumMsg:'ランク変更はプレミアム限定です',ogCostPremiumBtn:'プレミアムについて',ogCostTitleTpl:'{pos} のランク　現在 {rank}（コスト{cost}）',ogCostPreviewTpl:'TEAM COST {total} / {max}',ogCostToastTpl:'{pos} をランク{rank}に変更（TEAM COST {total}/{max}）'};
+const JA={...EN,you:'あなた',opp:'あいて',nav:{online:'オンライン対戦',menu:'メニュー'},common:{back:'← 戻る',join:'参加',cancel:'キャンセル',close:'閉じる',or:'または',selectionCleared:'選択を解除しました'},online:{create:'ROOM作成',leave:'退出',resign:'投了'},match:{firstHalf:'前半',secondHalf:'後半',endTurn:'TURN END（決定）',offsideDemo:'オフサイド実演',spectating:'観戦中',sent:'送信済み'},home:{teamFormation:'チーム編成',formations:'フォーメーション',saveSlots:'保存スロット',comMatch:'COM対戦',onlineMatch:'オンライン対戦',autoMatch:'自動マッチング'},tutorial:{...EN.tutorial,open:'遊び方',title:'動画で遊び方',restart:'最初から',pause:'一時停止',play:'再生',next:'次へ',intro:'Football Chessとは',move:'移動',pass:'パス',defend:'守備',shoot:'シュート',intro1:'両チームが同時に行動を考えます。',intro2:'TURN ENDを押すと、すべての行動が一斉に解決されます。',move1:'駒を選び、光っている移動先を選びます。',move2:'相手の狙いを読み、有利なスペースへ動かします。',pass1:'ボールを選び、味方の駒へパスします。',pass2:'フリーで受けた選手から、さらにパスを続けられます。',defend1:'ボール保持者と同じマスへ守備者を動かして競り合います。',defend2:'人数、位置、駒のコストによって結果が変わります。',shoot1:'攻撃エリアでは、ボール保持者を選んでシュートできます。',shoot2:'試合終了までに多く得点したチームの勝利です。'},settings:{title:'設定',playerName:'プレイヤー名（オンライン対戦の表示名と共通）',clubName:'クラブ名',account:'アカウント',sound:'効果音',haptic:'触覚フィードバック',language:'言語',note:'編成とプレイヤー名はこの端末（ブラウザ）に保存されます。'},subscription:{title:'サブスクリプション',short:'サブスク',joinDemo:'プレミアムに加入する（デモ）',cancel:'解約する',loginToJoin:'ログインして加入する'},friend:{open:'🤝 フレンド対戦（招待コード/URLで友達と対戦）',title:'フレンド対戦',create:'部屋を作る',joinRoom:'部屋に入る',copyId:'IDをコピー',copyUrl:'URLをコピー'},matching:{searching:'対戦相手を探しています…',playCom:'相手が見つかりません。COMと対戦する'},auth:{login:'ログイン',register:'新規登録',loginRegister:'ログイン / 新規登録',logout:'ログアウト',accountTitle:'UniversoFutbol アカウント',universoLogin:'UniversoFutbolでログイン（Google対応）',continueGuest:'ゲストで続ける'},cost:{title:'ランク変更'},result:{rematch:'再戦',rsWin:'WIN',rsLose:'LOSE',rsDraw:'DRAW',rsHome:'HOME',rsGoal:'ゴール',rsOppWants:'相手が再戦を希望しています',rsRematchSent:'再戦希望を送信しました'},ogCostHint:'駒をタップでランク変更',ogCostCurrentBadge:'現在',ogCostOverLabel:'コスト超過',ogCostPremiumMsg:'ランク変更はプレミアム限定です',ogCostPremiumBtn:'プレミアムについて',ogCostTitleTpl:'{pos} のランク　現在 {rank}（コスト{cost}）',ogCostPreviewTpl:'TEAM COST {total} / {max}',ogCostToastTpl:'{pos} をランク{rank}に変更（TEAM COST {total}/{max}）'};
 const L10N={ja:JA,en:EN,ko:{...EN,settings:{...EN.settings,title:'설정',language:'언어'},home:{...EN.home,teamFormation:'팀 편성',onlineMatch:'온라인 대전'},friend:{...EN.friend,title:'친구 대전'},lang_ja:'日本語'},es:{...EN,settings:{...EN.settings,title:'Ajustes',language:'Idioma'},home:{...EN.home,teamFormation:'Formación'},friend:{...EN.friend,title:'Partida con amigo'},lang_ja:'Japonés'},pt:{...EN,settings:{...EN.settings,title:'Configurações',language:'Idioma'},home:{...EN.home,teamFormation:'Formação'},friend:{...EN.friend,title:'Partida com amigo'},lang_ja:'Japonês'},de:{...EN,settings:{...EN.settings,title:'Einstellungen',language:'Sprache'},home:{...EN.home,teamFormation:'Teamaufstellung'},friend:{...EN.friend,title:'Freundschaftsspiel'},lang_ja:'Japanisch'},'zh-CN':{...EN,settings:{...EN.settings,title:'设置',language:'语言'},home:{...EN.home,teamFormation:'球队编成'},friend:{...EN.friend,title:'好友对战'},lang_ja:'日语'}};
 for(const dict of Object.values(L10N)){ Object.assign(dict,{rsWin:dict.result.rsWin,rsLose:dict.result.rsLose,rsDraw:dict.result.rsDraw,rsRematch:dict.result.rematch,rsHome:dict.result.rsHome,rsGoal:dict.result.rsGoal,rsOppWants:dict.result.rsOppWants,rsRematchSent:dict.result.rsRematchSent,notInput:'Input is not available now',enemyPiece:'You cannot control the opponent\'s piece',selectionCleared:'Selection cleared',replaying:'Replay in progress…',finished:'The match is over',offline:'Offline',creating:'Creating room…',roomRequired:'Enter a room code',copied:'Copied!',turn:'Turn',pass:'Pass',throughPass:'Through pass',shoot:'Shoot',move:'Move',dribble:'Dribble',offside:'Offside',tackleSuccess:'Tackle successful',tackleFailed:'Tackle failed',foul:'Foul',looseBall:'Loose ball',kickoff:'Kick-off',halftime:'Half-time',fulltime:'Full time'}); }
 Object.assign(L10N.ja,{notInput:'入力待ちではありません',enemyPiece:'相手の駒は操作できません',selectionCleared:'選択を解除しました',replaying:'再生中です…',finished:'試合は終了しています',offline:'オンライン接続がありません',creating:'ROOM作成中…',roomRequired:'ROOM CODEを入力してください',copied:'コピーしました!',turn:'ターン',pass:'パス',throughPass:'スルーパス',shoot:'シュート',move:'移動',dribble:'ドリブル',offside:'オフサイド',tackleSuccess:'タックル成功',tackleFailed:'タックル失敗',foul:'ファウル',looseBall:'こぼれ球',kickoff:'キックオフ',halftime:'ハーフタイム',fulltime:'フルタイム'});
@@ -2187,7 +2224,7 @@ function setTextPreservingChildren(el,value){ const textNode=[...el.childNodes].
 function populateLanguageSelect(){ const select=document.getElementById('ogSetLanguage'); if(!select) return; select.innerHTML=''; SUPPORTED_LOCALES.forEach(locale=>{ const option=document.createElement('option'); option.value=locale; option.textContent=LOCALE_NAMES[locale]; select.appendChild(option); }); select.value=currentLocale; }
 function applyI18n(){ document.documentElement.lang=currentLocale==='zh-CN'?'zh-CN':currentLocale; populateLanguageSelect(); document.querySelectorAll('[data-i18n]').forEach(el=>setTextPreservingChildren(el,t(el.dataset.i18n))); document.querySelectorAll('[data-i18n-attr]').forEach(el=>{ for(const part of el.dataset.i18nAttr.split(',')){ const [attr,key]=part.split(':'); if(attr&&key) el.setAttribute(attr,t(key)); } }); const half=document.getElementById('halfInfo'); if(half) half.textContent=state?.half==='後半'?t('match.secondHalf'):t('match.firstHalf'); }
 function localizeLegacyText(value){ let out=String(value??''); const replacements=[['入力待ちではありません','match.notInput'],['相手の駒は操作できません','match.enemyPiece'],['選択を解除しました','common.selectionCleared'],['再生中です…','match.replaying'],['試合は終了しています','match.finished'],['オンライン接続がありません','online.offline'],['ROOM作成中…','online.creating'],['ROOM CODEを入力してください','online.roomRequired'],['コピーしました!','common.copied'],['キャンセル','common.cancel'],['参加','common.join'],['退出','online.leave'],['再戦','result.rematch'],['観戦中','match.spectating'],['前半','match.firstHalf'],['後半','match.secondHalf'],['ターン','match.turn'],['パス','action.pass'],['スルーパス','action.throughPass'],['シュート','action.shoot'],['移動','action.move'],['ドリブル','action.dribble'],['ゴール','result.rsGoal'],['オフサイド','action.offside'],['タックル成功','action.tackleSuccess'],['タックル失敗','action.tackleFailed'],['ファウル','action.foul'],['こぼれ球','action.looseBall'],['キックオフ','action.kickoff'],['ハーフタイム','match.halftime'],['フルタイム','match.fulltime'],['相手','opp'],['あなた','you']]; for(const [from,key] of replacements){ if(currentLocale!=='ja') out=out.split(from).join(t(key)); } return out; }
-function setLocale(locale){ if(!SUPPORTED_LOCALES.includes(locale)) return; currentLocale=locale; try{ localStorage.setItem('fc.locale',locale); }catch{}; if(typeof state==='object') state.lang=locale; applyI18n(); relocalizeLog(); if(typeof render==='function') render(); if(typeof renderOnlineStatus==='function') renderOnlineStatus(); if(typeof ogRenderDeck==='function') ogRenderDeck(); if(typeof ogRenderAuth==='function') ogRenderAuth(); if(typeof ogRenderSubPage==='function') ogRenderSubPage(); }
+function setLocale(locale){ if(!SUPPORTED_LOCALES.includes(locale)) return; currentLocale=locale; try{ localStorage.setItem('fc.locale',locale); }catch{}; if(typeof state==='object') state.lang=locale; applyI18n(); relocalizeLog(); if(typeof render==='function') render(); if(typeof renderOnlineStatus==='function') renderOnlineStatus(); if(typeof ogRenderDeck==='function') ogRenderDeck(); if(typeof ogRenderAuth==='function') ogRenderAuth(); if(typeof ogRenderSubPage==='function') ogRenderSubPage(); if(typeof tutorialRender==='function') tutorialRender(); }
 currentLocale=detectLocale();
 
 let state={lang:currentLocale,turn:1,half:'前半',scoreSelf:0,scoreOpp:0,
@@ -2255,6 +2292,18 @@ function defaultOnlineApiBase(){
     return `${location.protocol}//${location.hostname}:8787${ONLINE_API_PREFIX}`;
   }
   return location.origin+ONLINE_API_PREFIX;
+}
+
+/* 個人を識別しない集計イベント。表示名、ルームコード、認証情報、自由入力は送らない。 */
+let telemetryMatchStartedAt=0;
+function sendTelemetry(event,properties={}){
+  const allowed={...properties,locale:currentLocale};
+  const body=JSON.stringify({event,properties:allowed});
+  const url=`${defaultOnlineApiBase()}/telemetry`;
+  try{
+    if(navigator.sendBeacon){ navigator.sendBeacon(url,new Blob([body],{type:'application/json'})); return; }
+    fetch(url,{method:'POST',headers:{'content-type':'application/json'},body,keepalive:true}).catch(()=>{});
+  }catch{}
 }
 function roomCodeFromUrl(){
   const raw=new URLSearchParams(location.search).get('room');
@@ -4470,6 +4519,7 @@ async function startFulltimeResultSequence(options={}){
 function openResultOverlay(){
   const ov=document.getElementById('resultOverlay');
   const outcome=resultOutcome(); // オンラインはapplyServerScoreで自分視点のスコアに正規化済み
+  sendTelemetry('match.complete',{mode:online.enabled?'online':'com',result:outcome,turns:state.turn,durationSec:telemetryMatchStartedAt?Math.round((Date.now()-telemetryMatchStartedAt)/1000):undefined,scoreFor:state.scoreSelf,scoreAgainst:state.scoreOpp});
   ov.className=outcome;
   // 拍2：勝敗ワード
   const word=document.getElementById('resultWord');
@@ -4903,6 +4953,42 @@ function setFeedbackSetting(kind,enabled){
   syncFeedbackControls();
   if(enabled) playFeedback('select');
 }
+
+/* ===== 動画チュートリアル =====
+   盤面状態と時刻から毎回同じ映像を生成する。録画ファイルを正本にせず、この定義を正本にする。 */
+const TUTORIAL_SCENE_MS=4800;
+const TUTORIAL_SCENES=[
+  {id:'intro',title:'tutorial.intro',captions:['tutorial.intro1','tutorial.intro2'],pieces:[['b','MF',27,73,42,57],['b','FW',47,70,55,51],['r','DF',67,27,55,43],['r','MF',47,31,39,49]],ball:[47,70,55,51]},
+  {id:'move',title:'tutorial.move',captions:['tutorial.move1','tutorial.move2'],pieces:[['b','MF',30,72,42,57],['r','MF',61,36,54,48]],ball:[52,64,52,64]},
+  {id:'pass',title:'tutorial.pass',captions:['tutorial.pass1','tutorial.pass2'],pieces:[['b','MF',28,69,28,69],['b','FW',53,52,53,52],['b','FW',72,34,72,34],['r','DF',55,31,55,31]],ball:[28,69,72,34]},
+  {id:'defend',title:'tutorial.defend',captions:['tutorial.defend1','tutorial.defend2'],pieces:[['b','MF',50,52,50,52],['r','DF',73,34,54,49],['r','MF',27,35,46,49]],ball:[50,52,50,52]},
+  {id:'shoot',title:'tutorial.shoot',captions:['tutorial.shoot1','tutorial.shoot2'],pieces:[['b','FW',50,48,50,34],['r','GK',50,14,50,14],['r','DF',67,34,62,28]],ball:[50,48,50,8]}
+];
+let tutorialSceneIndex=0,tutorialStartedAt=0,tutorialPausedAt=0,tutorialPlaying=false,tutorialFrame=0;
+function tutorialElapsed(){ return tutorialPlaying?Math.min(TUTORIAL_SCENE_MS,Date.now()-tutorialStartedAt):tutorialPausedAt; }
+function tutorialPieceNode(team,label,x,y,focus){ const el=document.createElement('div'); el.className=`tutorialPiece ${team}${focus?' focus':''}`; el.textContent=label; el.style.left=x+'%'; el.style.top=y+'%'; return el; }
+function tutorialRender(){
+  const scene=TUTORIAL_SCENES[tutorialSceneIndex]; if(!scene) return;
+  const elapsed=tutorialElapsed(),second=elapsed>=TUTORIAL_SCENE_MS/2,ratio=Math.min(1,elapsed/TUTORIAL_SCENE_MS);
+  const tabs=document.getElementById('tutorialTabs'),pitch=document.getElementById('tutorialPitch'); if(!tabs||!pitch) return;
+  tabs.innerHTML=''; TUTORIAL_SCENES.forEach((s,i)=>{ const b=document.createElement('button'); b.textContent=t(s.title); b.classList.toggle('active',i===tutorialSceneIndex); b.onclick=()=>tutorialSelect(i); tabs.appendChild(b); });
+  pitch.innerHTML=''; scene.pieces.forEach((p,i)=>pitch.appendChild(tutorialPieceNode(p[0],p[1],second?p[4]:p[2],second?p[5]:p[3],i===0)));
+  const ball=document.createElement('div'); ball.className='tutorialBall'; ball.style.left=(second?scene.ball[2]:scene.ball[0])+'%'; ball.style.top=(second?scene.ball[3]:scene.ball[1])+'%'; pitch.appendChild(ball);
+  document.getElementById('tutorialCaption').textContent=t(scene.captions[second?1:0]);
+  document.getElementById('tutorialProgressBar').style.width=(ratio*100)+'%';
+  document.getElementById('tutorialPlayBtn').textContent=t(tutorialPlaying?'tutorial.pause':'tutorial.play');
+ }
+function tutorialTick(){ tutorialRender(); if(tutorialPlaying&&tutorialElapsed()>=TUTORIAL_SCENE_MS){ tutorialPlaying=false; tutorialPausedAt=TUTORIAL_SCENE_MS; sendTelemetry('tutorial.scene_complete',{scene:TUTORIAL_SCENES[tutorialSceneIndex].id}); tutorialRender(); return; } tutorialFrame=requestAnimationFrame(tutorialTick); }
+function tutorialSelect(index){ tutorialSceneIndex=(index+TUTORIAL_SCENES.length)%TUTORIAL_SCENES.length; tutorialStartedAt=Date.now(); tutorialPausedAt=0; tutorialPlaying=true; cancelAnimationFrame(tutorialFrame); tutorialTick(); }
+function tutorialOpen(){ ogShow('tutorialOverlay',true); sendTelemetry('tutorial.open'); tutorialSelect(0); try{ localStorage.setItem('fc.tutorial.seen','1'); }catch{} }
+function tutorialClose(){ tutorialPlaying=false; cancelAnimationFrame(tutorialFrame); ogShow('tutorialOverlay',false); }
+function tutorialToggle(){ if(tutorialPlaying){ tutorialPausedAt=tutorialElapsed(); tutorialPlaying=false; cancelAnimationFrame(tutorialFrame); tutorialRender(); }else{ tutorialStartedAt=Date.now()-tutorialPausedAt; tutorialPlaying=true; tutorialTick(); } }
+document.getElementById('ogTutorialBtn').addEventListener('click',tutorialOpen);
+document.getElementById('tutorialCloseBtn').addEventListener('click',tutorialClose);
+document.getElementById('tutorialRestartBtn').addEventListener('click',()=>tutorialSelect(tutorialSceneIndex));
+document.getElementById('tutorialPlayBtn').addEventListener('click',tutorialToggle);
+document.getElementById('tutorialNextBtn').addEventListener('click',()=>tutorialSelect(tutorialSceneIndex+1));
+document.getElementById('tutorialOverlay').addEventListener('click',e=>{ if(e.target.id==='tutorialOverlay') tutorialClose(); });
 document.getElementById('ogLoginModeLogin').addEventListener('click',()=>ogSetLoginMode('login'));
 document.getElementById('ogLoginModeReg').addEventListener('click',()=>ogSetLoginMode('register'));
 document.getElementById('ogLoginSubmit').addEventListener('click',ogSubmitLogin);
@@ -5084,6 +5170,7 @@ document.getElementById('ogKickoffBtn').addEventListener('click',()=>{
   ogSaveDeck();
   ogCloseHome();
   if(online.connected){ return; }  // オンライン中はサーバー盤面を維持したまま戻る
+  telemetryMatchStartedAt=Date.now(); sendTelemetry('match.start',{mode:'com'});
   document.getElementById('resetBtn').click();  // 編成を反映してキックオフ配置を作り直す
 });
 document.getElementById('ogHomeBtn').addEventListener('click',()=>{ ogShowHome(); });
