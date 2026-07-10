@@ -350,6 +350,13 @@
   .cutin .cutin-label{position:absolute; left:0; right:0; bottom:8%; text-align:center;
     font-size:26px; font-weight:900; color:#fff; letter-spacing:.06em;
     text-shadow:0 2px 0 #000,0 0 12px #000; font-style:italic;}
+  /* キックオフ帯：kickoff-l10n-banner.png は全画面比率(1672x941)のスタジアム画像のため、
+     そのまま出すと中央に巨大な暗い四角が出て不格好（2026-07-10ユーザー指摘）。
+     object-fit:cover で他のプレートと同じ横帯(340:147)に切り出し、ラベルは帯の中央に置く */
+  .cutin.kickoffband img{aspect-ratio:340/147; object-fit:cover; object-position:center 55%;
+    border-radius:10px; box-shadow:0 4px 18px rgba(0,0,0,.55), inset 0 0 0 1px rgba(90,180,255,.35);}
+  .cutin.kickoffband .cutin-label{bottom:auto; top:50%; transform:translateY(-50%);
+    font-size:30px; letter-spacing:.16em;}
   @keyframes cutinIn{
     0%{transform:translate(-50%,-50%) translateX(120%) skewX(-12deg); opacity:0;}
     18%{transform:translate(-50%,-50%) translateX(0) skewX(-12deg); opacity:1;}
@@ -1206,6 +1213,7 @@ function playNextCutin(){
   if(src){ const img=document.createElement('img'); img.src=src; el.appendChild(img); }
   else el.classList.add('textband'); // 専用画像が無いキー（fulltime等）はテキスト帯
   if(key==='turnStart'||key==='turnEnd') el.classList.add('turnband'); // 紫帯＋中央テキスト（Unity turn_cutin）
+  if(key==='kickoff') el.classList.add('kickoffband'); // 全画面比率バナーを横帯に切り出し（中央ラベル）
   if(key==='tackleFailed'||key==='passCutFailed') el.classList.add('concede'); // 失敗系は彩度落とし
   const lab=lookupLocale(currentLocale,`cutinLabel.${key}`)??lookupLocale('en',`cutinLabel.${key}`)??CUTIN_LABEL[key];
   if(lab){ const l=document.createElement('div'); l.className='cutin-label'; l.textContent=lab; el.appendChild(l); }
@@ -4215,7 +4223,9 @@ function rollAT(half){
 async function playHalftimeCurtain(){
   const dim=document.createElement('div');
   dim.id='halftimeDim';
-  dim.innerHTML=`<div class="htScore">${t('you')} ${state.scoreSelf} - ${state.scoreOpp} ${t('opp')}</div>`;
+  // ハーフタイムのスコアもヘッダーと同じ実名表示（あなた/あいて→プレイヤー名。2026-07-10ユーザー指定）
+  const htNames=headerTeamNames();
+  dim.innerHTML=`<div class="htScore">${escapeOnlineText(htNames[0])} ${state.scoreSelf} - ${state.scoreOpp} ${escapeOnlineText(htNames[1])}</div>`;
   document.body.appendChild(dim);
   void dim.offsetWidth;
   dim.classList.add('show');
@@ -4839,7 +4849,9 @@ function openResultOverlay(){
   word.textContent=t(outcome==='win'?'rsWin':outcome==='lose'?'rsLose':'rsDraw');
   // 拍3：振り返り（スコア＋得点タイムライン）
   document.getElementById('resultScoreText').textContent=`${state.scoreSelf} - ${state.scoreOpp}`;
-  document.getElementById('resultNamesText').textContent=`${t('you')} - ${t('opp')}`;
+  // リザルトの対戦カードもヘッダーと同じ実名表示（あなた/あいて→プレイヤー名。2026-07-10ユーザー指定）
+  const rsNames=headerTeamNames();
+  document.getElementById('resultNamesText').textContent=`${rsNames[0]} - ${rsNames[1]}`;
   const goals=document.getElementById('resultGoals');
   goals.innerHTML='';
   const timeline=collectGoalTimelineFromLog();
