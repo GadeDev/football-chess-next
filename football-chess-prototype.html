@@ -665,6 +665,16 @@ body.replaying .boardWrap::after{content:"";position:absolute;inset:0;}
 .tgStage{aspect-ratio:16/9;}
 .tutorialArrow::after{content:'';position:absolute;right:-2px;top:50%;transform:translateY(-50%);
   border-left:9px solid #6ee7ff;border-top:6px solid transparent;border-bottom:6px solid transparent;filter:drop-shadow(0 0 4px #38cfff);}
+.tutorialArrow.gold{background:#ffd75e;box-shadow:0 0 8px #f7c948;}
+.tutorialArrow.gold::after{border-left-color:#ffd75e;filter:drop-shadow(0 0 4px #f7c948);}
+.tutorialArrow.red{background:#ff8d9b;box-shadow:0 0 8px #ff5c70;}
+.tutorialArrow.red::after{border-left-color:#ff8d9b;filter:drop-shadow(0 0 4px #ff5c70);}
+/* ③制限時間のモック図（残り時間バー＋TURN END） */
+.tgTimerDemo{display:flex;align-items:center;gap:10px;background:#081a2c;border:1px solid #1d466b;border-radius:10px;padding:12px;}
+.tgTimerLabel{min-width:34px;text-align:center;font-size:18px;font-weight:900;color:#ffe14d;font-variant-numeric:tabular-nums;}
+.tgTimerBar{flex:1;height:10px;border-radius:999px;background:#183a53;overflow:hidden;}
+.tgTimerFill{display:block;height:100%;width:62%;border-radius:999px;background:linear-gradient(90deg,#39c8ff,#59e0ff);}
+.tgTurnEnd{flex:0 0 auto;border-radius:9px;background:linear-gradient(180deg,#5db6ff 0%,#1f7be0 55%,#1565c0 100%);color:#fff;font-size:11px;font-weight:900;padding:9px 12px;box-shadow:0 3px 0 #0d3f78, inset 0 1px 0 rgba(255,255,255,.4);}
 .tutorialPitch{position:absolute;inset:0;}
 .tutorialPiece{position:absolute;width:11%;aspect-ratio:1;border-radius:50%;display:grid;place-items:center;font-size:10px;font-weight:900;color:white;border:2px solid #d9f3ff;box-shadow:0 4px 10px #0008;transform:translate(-50%,-50%);transition:left .75s ease,top .75s ease,filter .2s;}
 .tutorialPiece.b{background:#0876bd}.tutorialPiece.r{background:#c9385d}.tutorialPiece.focus{filter:drop-shadow(0 0 8px #fff) drop-shadow(0 0 14px #39d7ff)}
@@ -2437,9 +2447,9 @@ for(const dict of Object.values(L10N)){
   dict.ranking={short:'Ranking',title:'Ranking',loginMsg:'The ranking is a premium feature. Log in to view it.',premiumMsg:'The ranking is a premium feature',loading:'Loading…',loadFailed:'Could not load the ranking. Please try again later.',empty:'No ranked players yet. Play an online match!',unranked:'Play an online match to enter the ranking',myRankTpl:'Your rank: #{rank} / Rating {rating} ({wins}W {draws}D {losses}L)',recordTpl:'{wins}W {draws}D {losses}L',note:'Ratings change with online match results (auto matching / friend match). Only premium members are listed.'};
 }
 for(const dict of Object.values(L10N)){
-  Object.assign(dict.tutorial||(dict.tutorial={}),{promptTitle:'First time here?',promptBody:'A one-page illustrated guide covers the rules and controls. You can reopen it anytime from “How to play” on the home screen.',promptWatch:'See how to play',promptLater:'Maybe later'});
+  Object.assign(dict.tutorial||(dict.tutorial={}),{promptTitle:'First time here?',promptBody:'A one-page illustrated guide covers the rules and controls. You can reopen it anytime from “How to play” on the home screen.',promptWatch:'See how to play',promptLater:'Maybe later',turnsTitle:'Simultaneous turns',controlsTitle:'How to control your pieces',timeTitle:'Time limit',time1:'You have {seconds} seconds per turn. When time runs out, the turn ends automatically with the moves you planned.'});
 }
-Object.assign(L10N.ja.tutorial,{promptTitle:'はじめてですか？',promptBody:'ルールと操作を1枚の図解でご紹介します。あとからホームの「遊び方」でいつでも見られます。',promptWatch:'遊び方を見る',promptLater:'あとで見る'});
+Object.assign(L10N.ja.tutorial,{promptTitle:'はじめてですか？',promptBody:'ルールと操作を1枚の図解でご紹介します。あとからホームの「遊び方」でいつでも見られます。',promptWatch:'遊び方を見る',promptLater:'あとで見る',turnsTitle:'同時ターン制',controlsTitle:'駒の操作',timeTitle:'制限時間',time1:'1ターンの持ち時間は{seconds}秒。時間切れになると、仕込んだ操作のまま自動でターンが終了します。'});
 Object.assign(L10N.ja.home,{match:'対戦',matchSub:'モードを選ぶ'});
 L10N.ja.mode={title:'対戦モード',onlineDesc:'自動マッチングで対戦相手を探します',comDesc:'コンピューターとすぐに対戦',friendDesc:'招待コード/URLで友達と対戦'};
 Object.assign(L10N.ja.matching,{foundTpl:'対戦相手が見つかりました：{name}'});
@@ -5358,29 +5368,39 @@ function setFeedbackSetting(kind,enabled){
    ルール5項目を盤面図解＋説明文で1画面（縦スクロール）にまとめる。
    文字はすべてDOM（L10N辞書）＝7言語対応を維持。図の座標は%（旧シーン定義の到達位置を流用）。
    各図の arrow は [fromX,fromY,toX,toY]（%）で動きを矢印表示する。 */
+/* 内容は3項目（2026-07-11ユーザー指定「ルールよりも駒の操作・ターン制・時間制限が描いてあれば十分」）：
+   ①同時ターン制 ②駒の操作（駒タップ=移動／ボールタップ=パス・シュート） ③制限時間（20秒で自動ターンエンド）。
+   ③は盤面ではなくタイマーバー＋TURN ENDのモック図。矢印は arrows=青の移動/goldArrows=ボール/redArrows=相手 */
 const TUTORIAL_GUIDE=[
-  {id:'intro',title:'tutorial.intro',captions:['tutorial.intro1','tutorial.intro2'],
-   pieces:[['b','MF',30,72],['b','FW',50,60],['r','DF',62,34],['r','MF',40,40]],ball:[50,60],arrows:[]},
-  {id:'move',title:'tutorial.move',captions:['tutorial.move1','tutorial.move2'],
-   pieces:[['b','MF',42,57],['r','MF',61,36]],ball:[52,64],arrows:[[30,72,42,57]]},
-  {id:'pass',title:'tutorial.pass',captions:['tutorial.pass1','tutorial.pass2'],
-   pieces:[['b','MF',28,69],['b','FW',53,52],['b','FW',72,34],['r','DF',55,31]],ball:[72,34],arrows:[[28,69,72,34]]},
-  {id:'defend',title:'tutorial.defend',captions:['tutorial.defend1','tutorial.defend2'],
-   pieces:[['b','MF',50,52],['r','DF',54,49],['r','MF',46,49]],ball:[50,52],arrows:[[73,34,54,49],[27,35,46,49]]},
-  {id:'shoot',title:'tutorial.shoot',captions:['tutorial.shoot1','tutorial.shoot2'],
-   pieces:[['b','FW',50,44],['r','GK',50,14],['r','DF',66,30]],ball:[50,44],arrows:[[50,44,50,10]]}
+  {id:'turns',title:'tutorial.turnsTitle',captions:['tutorial.intro1','tutorial.intro2'],
+   pieces:[['b','MF',30,72],['b','FW',55,62],['r','DF',66,32],['r','MF',38,38]],ball:[55,62],
+   arrows:[[30,72,44,56]],goldArrows:[],redArrows:[[66,32,52,44]]},
+  {id:'controls',title:'tutorial.controlsTitle',captions:['tutorial.move1','tutorial.pass1','tutorial.shoot1'],
+   pieces:[['b','MF',35,65],['b','FW',70,32],['r','GK',50,12]],ball:[35,65],
+   arrows:[[35,65,55,50]],goldArrows:[[35,65,70,32]],redArrows:[]},
+  {id:'time',title:'tutorial.timeTitle',captions:['tutorial.time1'],timer:true},
 ];
 function tutorialPieceNode(team,label,x,y,focus){ const el=document.createElement('div'); el.className=`tutorialPiece ${team}${focus?' focus':''}`; el.textContent=label; el.style.left=x+'%'; el.style.top=y+'%'; return el; }
 /* 図中の矢印（%座標）。ステージのaspect-ratio 16/10 を踏まえて長さ・角度を計算する */
-function tutorialArrowNode(fx,fy,tx,ty){
+function tutorialArrowNode(fx,fy,tx,ty,variant){
   const el=document.createElement('div');
-  el.className='tutorialArrow';
+  el.className='tutorialArrow'+(variant?' '+variant:'');
   const dx=tx-fx, dy=(ty-fy)*(10/16); // 縦%を横%スケールへ換算
   const len=Math.hypot(dx,dy);
   el.style.left=fx+'%'; el.style.top=fy+'%';
   el.style.width=len+'%';
   el.style.transform=`rotate(${Math.atan2(dy,dx)*180/Math.PI}deg)`;
   return el;
+}
+/* ③制限時間のモック図：残り時間バー＋TURN ENDボタンの見た目を再現 */
+function tutorialTimerDemoNode(){
+  const box=document.createElement('div'); box.className='tgTimerDemo';
+  const barWrap=document.createElement('div'); barWrap.className='tgTimerBar';
+  const fill=document.createElement('span'); fill.className='tgTimerFill'; barWrap.appendChild(fill);
+  const label=document.createElement('div'); label.className='tgTimerLabel'; label.textContent=String(INPUT_TIME_SEC);
+  const btn=document.createElement('div'); btn.className='tgTurnEnd'; btn.textContent=t('match.endTurn');
+  box.appendChild(label); box.appendChild(barWrap); box.appendChild(btn);
+  return box;
 }
 function tutorialRender(){
   const sheet=document.getElementById('tutorialSheet'); if(!sheet) return;
@@ -5390,15 +5410,21 @@ function tutorialRender(){
     const title=document.createElement('div'); title.className='tgTitle';
     title.textContent=`${idx+1}. ${t(item.title)}`;
     box.appendChild(title);
-    const stage=document.createElement('div'); stage.className='tutorialStage tgStage';
-    const pitch=document.createElement('div'); pitch.className='tutorialPitch';
-    item.arrows.forEach(a=>pitch.appendChild(tutorialArrowNode(a[0],a[1],a[2],a[3])));
-    item.pieces.forEach((p,i)=>pitch.appendChild(tutorialPieceNode(p[0],p[1],p[2],p[3],i===0)));
-    const ball=document.createElement('div'); ball.className='tutorialBall'; ball.style.left=item.ball[0]+'%'; ball.style.top=item.ball[1]+'%'; pitch.appendChild(ball);
-    stage.appendChild(pitch);
-    box.appendChild(stage);
+    if(item.timer){
+      box.appendChild(tutorialTimerDemoNode());
+    }else{
+      const stage=document.createElement('div'); stage.className='tutorialStage tgStage';
+      const pitch=document.createElement('div'); pitch.className='tutorialPitch';
+      (item.arrows||[]).forEach(a=>pitch.appendChild(tutorialArrowNode(a[0],a[1],a[2],a[3])));
+      (item.goldArrows||[]).forEach(a=>pitch.appendChild(tutorialArrowNode(a[0],a[1],a[2],a[3],'gold')));
+      (item.redArrows||[]).forEach(a=>pitch.appendChild(tutorialArrowNode(a[0],a[1],a[2],a[3],'red')));
+      item.pieces.forEach((p,i)=>pitch.appendChild(tutorialPieceNode(p[0],p[1],p[2],p[3],i===0)));
+      const ball=document.createElement('div'); ball.className='tutorialBall'; ball.style.left=item.ball[0]+'%'; ball.style.top=item.ball[1]+'%'; pitch.appendChild(ball);
+      stage.appendChild(pitch);
+      box.appendChild(stage);
+    }
     const cap=document.createElement('div'); cap.className='tgCaption';
-    item.captions.forEach(key=>{ const line=document.createElement('div'); line.textContent=t(key); cap.appendChild(line); });
+    item.captions.forEach(key=>{ const line=document.createElement('div'); line.textContent=tFmt(key,{seconds:INPUT_TIME_SEC}); cap.appendChild(line); });
     box.appendChild(cap);
     sheet.appendChild(box);
   });

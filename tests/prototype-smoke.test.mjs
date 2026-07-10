@@ -11,12 +11,14 @@ test("prototype inline scripts compile", () => {
   scripts.forEach((source, index) => assert.doesNotThrow(() => new vm.Script(source, { filename: `prototype-${index}.js` })));
 });
 
-test("how-to-play is a static one-page guide with five illustrated rules", () => {
-  // 2026-07-11仕様変更: 動画型チュートリアル（アニメ再生・MP4収録前提）は廃止し、静的1枚ガイドへ
-  for (const id of ["intro", "move", "pass", "defend", "shoot"]) {
+test("how-to-play is a static one-page guide focused on turns, controls, and time limit", () => {
+  // 2026-07-11仕様変更: 動画型チュートリアル廃止→静的ガイド。内容は3項目のみ
+  // （ルール羅列より「同時ターン制・駒の操作・制限時間」が伝われば十分＝ユーザー指定）
+  for (const id of ["turns", "controls", "time"]) {
     assert.match(html, new RegExp(`id:'${id}'`));
   }
   assert.match(html, /const TUTORIAL_GUIDE=/);
+  assert.match(html, /tutorialTimerDemoNode/); // 制限時間はタイマーバーのモック図
   assert.match(html, /id="tutorialSheet"/);
   assert.match(html, /id="ogTutorialBtn"/);
   assert.match(html, /id="tutorialCloseBtn"/);
