@@ -318,7 +318,10 @@
     background:linear-gradient(90deg, rgba(255,255,255,0), var(--trail), rgba(255,255,255,.9));
     filter:blur(.2px) drop-shadow(0 0 5px var(--glow));
     animation:trailFade .2s ease-out forwards;}
-  .ball-trail.shoot{height:22px; filter:blur(.35px) drop-shadow(0 0 9px var(--glow));}
+  /* シュートの軌跡は細く鋭いスピードライン（太い帯だと浮ついて見える） */
+  .ball-trail.shoot{height:9px; filter:blur(.15px) drop-shadow(0 0 10px var(--glow));
+    background:linear-gradient(90deg, rgba(255,255,255,0), var(--trail) 55%, #fff);
+    animation-duration:.28s;}
   .ball-impact{position:absolute; width:36px; height:36px; border-radius:50%;
     transform:translate(-50%,-50%) scale(.4); border:2px solid var(--trail);
     box-shadow:0 0 14px var(--glow), inset 0 0 9px rgba(255,255,255,.55);
@@ -1063,7 +1066,7 @@ function makeBallTrailSegment(layer,from,to,colors,kind){
   el.style.setProperty('--dx',(dx*.12)+'px');
   el.style.setProperty('--dy',(dy*.12)+'px');
   layer.appendChild(el);
-  setTimeout(()=>el.remove(),240);
+  setTimeout(()=>el.remove(),kind==='shoot'?300:240); // シュートのスピードラインは少し長く残す
 }
 function showBallImpact(x,y,colors){
   const layer=ensureBallFxLayer();
@@ -1083,8 +1086,17 @@ function animateBallFlight(from,to,team,options={}){
   const layer=ensureBallFxLayer();
   const kind=options.kind||'pass';
   const dist=Math.hypot(end.x-start.x,end.y-start.y);
-  const duration=options.duration || Math.max(kind==='shoot'?300:260, Math.min(kind==='shoot'?620:520, dist*1.45));
-  const arc=options.arc ?? Math.min(kind==='shoot'?58:38, Math.max(12, dist*.16));
+  /* シュートは「鋭い弾道」プロファイル（2026-07-10仕様変更・ユーザー指定。パスと同じ山なり軌道にしない）：
+     ①従来比で約2倍速（距離比例・170〜300ms） ②弧はほぼゼロ（直線的なライナー）
+     ③イージングは蹴った瞬間が最速の軽い減速のみ ④サイズ変化なし・軌跡は高頻度で残す。
+     呼び出し側の旧duration/arc指定（520ms/弧58など）は浮ついて見えるため意図的に無視する。 */
+  const sharp=kind==='shoot';
+  const duration=sharp
+    ? Math.max(170, Math.min(300, dist*.5))
+    : (options.duration || Math.max(260, Math.min(520, dist*1.45)));
+  const arc=sharp
+    ? Math.min(6, dist*.02)
+    : (options.arc ?? Math.min(38, Math.max(12, dist*.16)));
   const colors=ballFxColors(viewTeam(team));
   const ballEl=document.createElement('div');
   ballEl.className='ball-flight'+(kind==='shoot'?' shoot':'');
@@ -1097,15 +1109,19 @@ function animateBallFlight(from,to,team,options={}){
     let startTime=null;
     let lastPoint={...start};
     let lastTrail=0;
-    const ease=t=>t<.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2;
+    // パス=山なりのイーズイン/アウト、シュート=蹴った瞬間が最速の直線的ライナー
+    const ease=sharp
+      ? (t=>1-Math.pow(1-t,1.35))
+      : (t=>t<.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2);
     const step=now=>{
       if(startTime===null) startTime=now;
       const raw=Math.min(1,(now-startTime)/duration);
       const t=ease(raw);
       const x=start.x+(end.x-start.x)*t;
       const y=start.y+(end.y-start.y)*t-Math.sin(Math.PI*raw)*arc;
-      ballEl.style.transform=`translate(${x}px,${y}px) translate(-50%,-50%) scale(${1+.12*Math.sin(Math.PI*raw)})`;
-      if(now-lastTrail>18){
+      const scale=sharp?1.05:(1+.12*Math.sin(Math.PI*raw)); // シュートは膨らまない（浮遊感を出さない）
+      ballEl.style.transform=`translate(${x}px,${y}px) translate(-50%,-50%) scale(${scale})`;
+      if(now-lastTrail>(sharp?10:18)){
         makeBallTrailSegment(layer,lastPoint,{x,y},colors,kind);
         lastPoint={x,y};
         lastTrail=now;
