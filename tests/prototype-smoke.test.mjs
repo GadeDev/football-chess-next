@@ -80,6 +80,17 @@ test("online matchmaking falls back to COM silently (never disclosed to the user
   assert.doesNotMatch(html, /id="mmNote"/);
 });
 
+test("TEAM COST label is localized for 7 locales and rank hint is premium-only", () => {
+  // ホームの合計表示とランク変更ウィンドウのTEAM COST表記が英語固定でないこと（2026-07-10ユーザー指摘）
+  assert.match(html, /TEAM_COST_LABELS/);
+  assert.match(html, /ja:'チームコスト'/);
+  assert.match(html, /'zh-CN':'球队成本'/);
+  assert.match(html, /tFmt\('ogTeamCostTpl'/);
+  assert.doesNotMatch(html, /textContent=`TEAM COST /);
+  // 「駒をタップでランク変更」ヒントはプレミアム加入者のみ表示
+  assert.match(html, /ogIsPremium\(\)\?t\('ogCostHint'\):''/);
+});
+
 test("premium-only ranking page ships with locked states and session binding", () => {
   for (const id of ["ogTabRanking", "ogPageRanking", "ogRankingBody"]) {
     assert.match(html, new RegExp(`id="${id}"`));

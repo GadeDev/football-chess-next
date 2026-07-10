@@ -2361,6 +2361,15 @@ Object.assign(L10N.ja.home,{match:'対戦',matchSub:'モードを選ぶ'});
 L10N.ja.mode={title:'対戦モード',onlineDesc:'自動マッチングで対戦相手を探します',comDesc:'コンピューターとすぐに対戦',friendDesc:'招待コード/URLで友達と対戦'};
 Object.assign(L10N.ja.matching,{foundTpl:'対戦相手が見つかりました：{name}'});
 L10N.ja.ranking={short:'ランキング',title:'ランキング',loginMsg:'ランキングはプレミアム限定です。ログインしてご利用ください',premiumMsg:'ランキングはプレミアム限定です',loading:'読み込み中…',loadFailed:'ランキングを取得できませんでした。しばらくしてから再度お試しください',empty:'まだランキング対象のプレイヤーがいません。オンライン対戦をプレイしましょう！',unranked:'オンライン対戦をプレイするとランキングに掲載されます',myRankTpl:'あなたの順位：{rank}位　レート {rating}（{wins}勝{draws}分{losses}敗）',recordTpl:'{wins}勝{draws}分{losses}敗',note:'レートはオンライン対戦（自動マッチング/フレンド対戦）の結果で変動します。掲載はプレミアム会員のみです。'};
+/* 「TEAM COST」表記の7言語化（ホームの合計表示＋ランク変更ウィンドウのプレビュー/トースト。
+   英語固定だったのを各言語のラベルへ置換する。2026-07-10ユーザー指摘） */
+const TEAM_COST_LABELS={en:'TEAM COST',ja:'チームコスト',ko:'팀 코스트',es:'Coste del equipo',pt:'Custo da equipe',de:'Teamkosten','zh-CN':'球队成本'};
+for(const [loc,dict] of Object.entries(L10N)){
+  const label=TEAM_COST_LABELS[loc]||TEAM_COST_LABELS.en;
+  dict.ogTeamCostTpl=`${label} {total} / {max}`;
+  dict.ogCostPreviewTpl=`${label} {total} / {max}`;
+  dict.ogCostToastTpl=String(dict.ogCostToastTpl||'').split('TEAM COST').join(label);
+}
 Object.assign(L10N.ja.friend,{copied:'コピーしました!',copyFailed:'コピーに失敗しました（手動で選択してください）',createFailed:'部屋の作成に失敗しました。通信環境を確認してください',roomRequired:'ルームIDを入力してください',roomNotFound:'ルームが見つかりません（IDを確認してください）',joined:'フレンドが参加しました。対戦開始！'});
 for(const dict of Object.values(L10N)){ dict.pageTitle='Football Chess — Board Game'; Object.assign(dict.action||(dict.action={}),{ball:'Ball',operation:'Action',dribbleMove:'Dribble move'}); dict.formation={standard:'Standard',oneTop:'One striker',attacking:'Attacking',possession:'Possession',balance:'Balanced',ultraAttacking:'Ultra attacking'}; }
 L10N.ja.pageTitle='Football Chess — 盤面ゲーム';
@@ -4840,11 +4849,12 @@ function ogRenderDeck(){
   const f=ogFormation(ogDeck.formationId);
   const total=ogDeckCost();
   const costEl=document.getElementById('ogTeamCost');
-  costEl.textContent=`TEAM COST ${total.toFixed(1)} / ${OG_MAX_TEAM_COST.toFixed(1)}`;
+  costEl.textContent=tFmt('ogTeamCostTpl',{total:total.toFixed(1),max:OG_MAX_TEAM_COST.toFixed(1)}); // 7言語対応（英語固定にしない）
   costEl.classList.toggle('over',total>OG_MAX_TEAM_COST);
   costEl.classList.remove('punch');
   if(ogCostPunchPending){ void costEl.offsetWidth; costEl.classList.add('punch'); ogCostPunchPending=false; }
-  document.getElementById('ogCostHint').textContent=t('ogCostHint');
+  // 「駒をタップでランク変更」ヒントはプレミアム加入者にだけ表示する（未加入者への誘導はしない。2026-07-10ユーザー指定）
+  document.getElementById('ogCostHint').textContent=ogIsPremium()?t('ogCostHint'):'';
   const grid=document.getElementById('ogDeckGrid');
   // フォーメーション切替の滑らか移動（FLIP）：再構築前の各駒の画面位置を記録しておく
   const prevRects={};
@@ -5015,6 +5025,7 @@ function ogApplyUser(){
     document.getElementById('ogHeadName').textContent=ogAuth.user.name;
   }
   ogRenderAuth();
+  ogRenderDeck(); // プレミアム状態でランク変更ヒントの表示/非表示が変わるため、ログイン反映時に再描画
 }
 async function ogRestoreSession(){
   let token=null;
