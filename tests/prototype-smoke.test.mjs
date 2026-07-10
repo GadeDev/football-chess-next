@@ -11,14 +11,21 @@ test("prototype inline scripts compile", () => {
   scripts.forEach((source, index) => assert.doesNotThrow(() => new vm.Script(source, { filename: `prototype-${index}.js` })));
 });
 
-test("video tutorial ships five deterministic scenes and controls", () => {
+test("how-to-play is a static one-page guide with five illustrated rules", () => {
+  // 2026-07-11仕様変更: 動画型チュートリアル（アニメ再生・MP4収録前提）は廃止し、静的1枚ガイドへ
   for (const id of ["intro", "move", "pass", "defend", "shoot"]) {
     assert.match(html, new RegExp(`id:'${id}'`));
   }
-  for (const id of ["ogTutorialBtn", "tutorialPlayBtn", "tutorialRestartBtn", "tutorialNextBtn"]) {
-    assert.match(html, new RegExp(`id="${id}"`));
+  assert.match(html, /const TUTORIAL_GUIDE=/);
+  assert.match(html, /id="tutorialSheet"/);
+  assert.match(html, /id="ogTutorialBtn"/);
+  assert.match(html, /id="tutorialCloseBtn"/);
+  // 旧・再生系UIが復活していないこと
+  for (const id of ["tutorialPlayBtn", "tutorialRestartBtn", "tutorialNextBtn", "tutorialProgressBar", "tutorialTabs"]) {
+    assert.doesNotMatch(html, new RegExp(`id="${id}"`));
   }
-  assert.match(html, /const TUTORIAL_SCENE_MS=4800/);
+  assert.doesNotMatch(html, /TUTORIAL_SCENE_MS/);
+  assert.doesNotMatch(html, /tutorial\.scene_complete/);
 });
 
 test("all supported locales inherit tutorial copy and locale selector remains available", () => {

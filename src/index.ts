@@ -126,7 +126,7 @@ const ROOM_IDLE_CLEANUP_MS = 30 * 60 * 1000;
 const FINISHED_ROOM_CLEANUP_MS = 6 * 60 * 60 * 1000;
 const TELEMETRY_EVENTS = new Set([
   "tutorial.open",
-  "tutorial.scene_complete",
+  // "tutorial.scene_complete" は動画型チュートリアル廃止（2026-07-11・静的1枚ガイド化）に伴い削除
   "match.start",
   "match.complete",
   "match.resign",

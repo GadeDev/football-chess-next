@@ -60,10 +60,11 @@ test("初回起動時だけチュートリアル案内が出て、以後は「�
   await page.reload();
   await expect(page.locator("#ogHome")).toBeVisible();
   await expect(page.locator("#tutorialPrompt")).toBeHidden();
-  // ホームの「遊び方」からいつでも再視聴でき、視聴済みが保存される
+  // ホームの「遊び方」からいつでも開け、閲覧済みが保存される（静的1枚ガイド・5項目）
   await page.locator("#ogTutorialBtn").click();
   await expect(page.locator("#tutorialOverlay")).toBeVisible();
-  await expect(page.locator("#tutorialCaption")).not.toHaveText("");
+  await expect(page.locator("#tutorialSheet .tgItem")).toHaveCount(5);
+  await expect(page.locator("#tutorialSheet .tgCaption").first()).not.toHaveText("");
   expect(await page.evaluate(() => localStorage.getItem("fc.tutorial.seen"))).toBe("1");
   await page.locator("#tutorialCloseBtn").click();
   await expect(page.locator("#tutorialOverlay")).toBeHidden();
