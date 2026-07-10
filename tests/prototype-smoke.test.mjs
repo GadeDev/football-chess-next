@@ -27,6 +27,20 @@ test("all supported locales inherit tutorial copy and locale selector remains av
   assert.match(html, /id="ogSetLanguage"/);
 });
 
+test("cut-in labels are resolved through localization dictionaries", () => {
+  assert.match(html, /dict\.cutinLabel=/);
+  assert.match(html, /cutinLabel\.\$\{key\}/);
+  assert.match(html, /L10N\.ja\.cutinSub=/);
+});
+
+test("goal timeline is reconstructed from locale-independent log metadata", () => {
+  const block = html.match(/function collectGoalTimelineFromLog\(\)[\s\S]*?\n}/)?.[0] ?? "";
+  assert.match(block, /dataset\.i18nLog/);
+  assert.match(block, /params\.halfId/);
+  assert.match(block, /params\.teamId/);
+  assert.doesNotMatch(block, /textContent|相手ゴール|青\|赤/);
+});
+
 test("telemetry client does not include identity fields", () => {
   const block = html.match(/function sendTelemetry\([\s\S]*?\n}/)?.[0] ?? "";
   assert.match(block, /locale:currentLocale/);

@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Football Chess — 盤面プロトタイプ</title>
+<title>Football Chess</title>
 <style>
   :root{
     --pitch1:#3a8f4a; --pitch2:#347f43; --line:rgba(255,255,255,.55);
@@ -741,7 +741,7 @@ body.replaying .boardWrap::after{content:"";position:absolute;inset:0;}
     <div class="clockText">
       <span class="clockHalf" id="halfInfo" data-i18n="match.firstHalf">前半</span>
       <span class="clockMin" id="matchClock">0'</span>
-      <span class="clockTurn" id="turnInfo">ターン 1</span>
+      <span class="clockTurn" id="turnInfo">Turn 1</span>
     </div>
     <div class="timerWrap">
       <div class="timerBarBg" id="timerBarBg"></div>
@@ -1150,9 +1150,9 @@ function playNextCutin(){
   else el.classList.add('textband'); // 専用画像が無いキー（fulltime等）はテキスト帯
   if(key==='turnStart'||key==='turnEnd') el.classList.add('turnband'); // 紫帯＋中央テキスト（Unity turn_cutin）
   if(key==='tackleFailed'||key==='passCutFailed') el.classList.add('concede'); // 失敗系は彩度落とし
-  const lab=CUTIN_LABEL[key];
+  const lab=lookupLocale(currentLocale,`cutinLabel.${key}`)??lookupLocale('en',`cutinLabel.${key}`)??CUTIN_LABEL[key];
   if(lab){ const l=document.createElement('div'); l.className='cutin-label'; l.textContent=lab; el.appendChild(l); }
-  const sub=(opts&&opts.sublabel)||CUTIN_SUBLABEL[key]; // 動的サブラベル（消極的戦術ペナルティ適用中など）
+  const sub=(opts&&opts.sublabel?localizeLegacyText(opts.sublabel):(lookupLocale(currentLocale,`cutinSub.${key}`)??lookupLocale('en',`cutinSub.${key}`)??CUTIN_SUBLABEL[key])); // 動的サブラベル（消極的戦術ペナルティ適用中など）
   if(sub){ const s=document.createElement('div'); s.className='cutin-sublabel'; s.textContent=sub; el.appendChild(s); }
   layer.appendChild(el);
   void el.offsetWidth;
@@ -1258,7 +1258,7 @@ const CT = {Normal:'normal', SelfPA:'pa', SelfVA:'va', SelfGA:'selfga', SelfGoal
 // Unity版 BoardDef.Map（x,y → エリア）。yが大きいほど自陣側。
 const BOARD = [
   // y=-3 敵ゴール
-  {x:0,y:-3,t:'oppgoal',label:'敵G'},
+  {x:0,y:-3,t:'oppgoal'},
   // y=-2 敵PA/GA/Cross
   {x:-2,y:-2,t:'cross'},{x:-1,y:-2,t:'pa',label:'PA'},{x:0,y:-2,t:'oppga',label:'GA'},{x:1,y:-2,t:'pa',label:'PA'},{x:2,y:-2,t:'cross'},
   // y=-1 敵VA/Cross
@@ -1272,7 +1272,7 @@ const BOARD = [
   // y=3 自PA/GA/Cross
   {x:-2,y:3,t:'cross'},{x:-1,y:3,t:'pa',label:'PA'},{x:0,y:3,t:'selfga',label:'GA'},{x:1,y:3,t:'pa',label:'PA'},{x:2,y:3,t:'cross'},
   // y=4 自ゴール
-  {x:0,y:4,t:'selfgoal',label:'自G'},
+  {x:0,y:4,t:'selfgoal'},
 ];
 const COLS=[-2,-1,0,1,2];
 const ROWS=[-3,-2,-1,0,1,2,3,4]; // 8段
@@ -1567,7 +1567,6 @@ function calcShoot(attackPiece){
 }
 function pieceCost(p){ return p.cost||1; }
 function rollPercent(p){ return Math.random()*100 < p; }
-function teamLabel(team){ return team==='b'?'青':'赤'; }
 function opponentTeam(team){ return team==='b'?'r':'b'; }
 function goalCellFor(team){ return team==='b'?{x:0,y:-3}:{x:0,y:4}; }
 function enemyGKFor(team){ return pieces.find(p=>p.team!==team && p.posType==='gk')||null; }
@@ -1652,7 +1651,7 @@ async function applyCKOrGKFromKick(kicker,gk,firstKind,x,y,options={}){
   const out=[];
   const result=resolveCKOrGKSequence(kicker,gk,firstKind,out,options);
   for(const m of result.log){
-    log('・'+m);
+    logBattleDetail(m);
     if(m.endsWith('→ CK')){
       await showCutinAtPiece('saving',650,x,y);
       await showCutinAtPiece('ck',850,x,y);
@@ -1670,7 +1669,7 @@ async function applyCKOrGKFromKick(kicker,gk,firstKind,x,y,options={}){
     await showCutinAtPiece('saving',900,result.gk.x,result.gk.y);
     setBallToPiece(result.gk,true);
     resetBattleDelayCount();
-    log(`→ ${label(result.gk)} が保持（GK）`);
+    logKey('gkHolds',{piece:label(result.gk)});
     if(shouldStopAfterKickGK(kicker,result.gk,result,options)) turnStopped=true;
     return true;
   }
@@ -1780,9 +1779,9 @@ function resolveTackle(hasBallPiece, tackler){
 async function applyTackleResult(holder,tackler,result,hx,hy){
   const kickFrom=result.kickFrom||{x:hx,y:hy};
   // 消極的戦術ペナルティが実際に効いたタックルにだけサブラベルで明示（毎ターンのカットインは廃止）
-  const passiveSub=passivePenaltyTeams.has(tackler.team)?{sublabel:'消極的戦術ペナルティ適用中（タックル-20%）'}:null;
+  const passiveSub=passivePenaltyTeams.has(tackler.team)?{sublabel:t('cutinSub.passiveTackle')}:null;
   for(const m of result.log){
-    log('・'+m);
+    logBattleDetail(m);
     if(m.includes('ファウル発生')){
       resetBattleDelayCount();
       await showCutinAtPiece('foul',950,hx,hy,passiveSub);
@@ -1808,25 +1807,25 @@ async function applyTackleResult(holder,tackler,result,hx,hy){
     await showCutinAtPiece('saving',900,result.gk.x,result.gk.y);
     setBallToPiece(result.gk,true);
     resetBattleDelayCount();
-    log(`→ ${label(result.gk)} が保持（GK）`);
+    logKey('gkHolds',{piece:label(result.gk)});
     turnStopped=true;
     return true;
   }
   if(!result.turnover) return false;
   if(result.restart){
     const gk=pieces.find(pp=>pp.team===tackler.team&&pp.posType==='gk');
-    if(gk){ setBallToPiece(gk,true); resetBattleDelayCount(); log('→ GKがキャッチ、リスタート'); }
-    else { placeLooseBall(hx,hy,'→ ボールがこぼれました',holder.team); resetBattleDelayCount(); }
+    if(gk){ setBallToPiece(gk,true); resetBattleDelayCount(); logKey('gkRestart'); }
+    else { placeLooseBall(hx,hy,null,holder.team); logKey('ballSpilled'); resetBattleDelayCount(); }
     return true;
   }
   if(result.rebound){
-    placeLooseBall(result.rebound.x,result.rebound.y,'→ こぼれ球',holder.team);
+    placeLooseBall(result.rebound.x,result.rebound.y,null,holder.team); logKey('looseBall');
     resetBattleDelayCount();
     return true;
   }
   setBallToPiece(tackler,true);
   resetBattleDelayCount();
-  log(`→ ${label(tackler)} がボールを奪取`);
+  logKey('tackleWonBall',{piece:label(tackler)});
   return true;
 }
 
@@ -1856,7 +1855,7 @@ async function resolveStationaryTackles(){
   if(!holder) return false;
   const tacklers=piecesAt(holder.x,holder.y).filter(q=>q.team!==holder.team);
   if(tacklers.length===0) return false;
-  log('同じマスの相手駒がボール保持者へタックル');
+  logKey('stationaryTackle');
   return resolveTacklesAgainstHolder(holder,tacklers);
 }
 
@@ -1919,7 +1918,7 @@ async function resolveTurnEndRules(turnStartHasBallTeam){
       // ＝時間稼ぎをした側のペナルティとして【相手チームのボール】でキックオフ再開する。
       // 旧実装は holder.team（時間稼ぎした側）にボールを渡しており逆だった（2026-07-10修正）
       const restartTeam=opponentTeam(holder.team);
-      log(`遅延行為：${teamLabel(holder.team)}が自陣保持を${BATTLE_DELAY_COUNT}回継続 → ${teamLabel(restartTeam)}ボールでキックオフ`);
+      logKey('battleDelayDetail',{team:eventTeamName(holder.team),turns:BATTLE_DELAY_COUNT,restart:eventTeamName(restartTeam)});
       await showCutinAtPiece('battleDelay',1100,holder.x,holder.y);
       buildKickoffForTeam(restartTeam,{keepTurnStopped:true});
       resetBattleDelayCount();
@@ -1937,7 +1936,7 @@ async function resolveTurnEndRules(turnStartHasBallTeam){
   for(const team of ['b','r']){
     if(isPassiveTactics(team)){
       passivePenaltyTeams.add(team);
-      if(!prevPassive.has(team)) log(`消極的戦術：${teamLabel(team)}が自陣に引きこもり過ぎ → ペナルティ（パスカット/タックル-20%）`);
+      if(!prevPassive.has(team)) logKey('passiveTacticsDetail',{team:eventTeamName(team)});
     }
   }
 }
@@ -2224,6 +2223,36 @@ Object.assign(L10N.en.matchLog,{inputTimeout:'Input time expired; the unsubmitte
 Object.assign(L10N.ja.matchLog,{inputTimeout:'入力期限に達したため、未送信側は操作なしで解決します',reconnectFailed:'{room} の自動再接続に失敗しました。参加で再試行できます',reconnectError:'再接続失敗: {error}',disconnected:'{room} から切断されました。自動再接続を試します',onlineError:'オンライン処理エラー: {error}',joinedTeam:'{room} に {team} で参加しました',joinedSpectator:'{room} に観戦で参加しました',leftRoom:'ROOMから退出しました',teamLeft:'{team} が退出しました',inputReceived:'{team} の入力を受信',resigned:'{loser} が投了しました。{winner} の勝利',rematchRequested:'再戦希望を送信しました',opponentRematch:'{team} が再戦を希望しています',rematchStarted:'―― 再戦開始 ――',cannotResignSpectator:'観戦中は投了できません',cannotRematchSpectator:'観戦中は再戦希望を送れません',rematchAfterMatch:'再戦は試合終了後に使えます',cannotInputSpectator:'観戦中は入力できません',alreadySent:'送信済みです',turnReplay:'―― ターン {turn} 実行（リプレイ）――',matchResult:'―― 試合終了（フルタイム）　あなた {self} - {opp} 相手 ――',turnStartInput:'―― {half}{at} ターン {turn} 開始：行動を仕込んでください ――',halftimeSimple:'―― ハーフタイム ――',secondHalfKickoff:'後半は{team}ボールでキックオフ'});
 for(const dict of Object.values(L10N)){ dict.confirmResign='Resign this match?'; }
 L10N.ja.confirmResign='投了しますか？';
+for(const dict of Object.values(L10N)){ dict.accountUi={guest:'Guest',premium:'Premium',free:'Free plan',loggedInTpl:'Signed in as {name} ({plan})',guestStatus:'Playing as guest. Sign in to use subscription features.',notLoggedIn:'Not signed in',loginRequired:'Sign in to use the subscription.',premiumActive:'Premium active',demo:' (demo)',validUntilTpl:'Valid until: {date}',freeStatus:'Free plan',freeDescription:'Join Premium to unlock piece rank and cost changes.',loginSuccess:'Signed in',registerSuccess:'Account created',logoutSuccess:'Signed out',serverUnavailable:'Cannot connect to the server',requestFailed:'Request failed',ufLoginSuccess:'Signed in with UniversoFutbol',ufLoginFailed:'UniversoFutbol sign-in failed',ssoFailed:'SSO sign-in failed',subscribed:'Premium enabled (demo; no charge)',subscribeFailed:'Could not enable Premium',cancelled:'Subscription cancelled',cancelFailed:'Could not cancel subscription',premiumRequired:'Rank changes require Premium',costOverTpl:'Team cost limit {max} exceeded ({total})'}; }
+L10N.ja.accountUi={guest:'ゲスト',premium:'プレミアム',free:'無料プラン',loggedInTpl:'ログイン中: {name}（{plan}）',guestStatus:'ゲストプレイ中。ログインするとサブスク機能を利用できます。',notLoggedIn:'未ログイン',loginRequired:'サブスクリプションの利用にはログインが必要です。',premiumActive:'プレミアム加入中',demo:'（デモ）',validUntilTpl:'有効期限: {date}',freeStatus:'無料プランです',freeDescription:'プレミアムに加入すると駒のランク変更が解放されます。',loginSuccess:'ログインしました',registerSuccess:'アカウントを作成しました',logoutSuccess:'ログアウトしました',serverUnavailable:'サーバーに接続できません',requestFailed:'失敗しました',ufLoginSuccess:'UniversoFutbol会員でログインしました',ufLoginFailed:'UniversoFutbolログインに失敗しました',ssoFailed:'SSOログインに失敗しました',subscribed:'プレミアムに加入しました（デモ・請求なし）',subscribeFailed:'加入に失敗しました',cancelled:'サブスクを解約しました',cancelFailed:'解約に失敗しました',premiumRequired:'ランク変更はプレミアム限定です',costOverTpl:'チームコスト上限 {max} を超えます（{total}）'};
+for(const dict of Object.values(L10N)){ Object.assign(dict.matching,{matchedTpl:'Matched with {opponent} (ROOM {room})',connectFailed:'Could not connect after matching'}); Object.assign(dict.friend,{copied:'Copied!',copyFailed:'Copy failed. Select the text manually.',createFailed:'Could not create the room. Check your connection.',roomRequired:'Enter a room ID',roomNotFound:'Room not found. Check the ID.',joined:'Your friend joined. The match is starting!'}); }
+Object.assign(L10N.ja.matching,{matchedTpl:'マッチング成立：{opponent} と対戦します（ROOM {room}）',connectFailed:'マッチング後の接続に失敗しました'});
+Object.assign(L10N.ja.friend,{copied:'コピーしました!',copyFailed:'コピーに失敗しました（手動で選択してください）',createFailed:'部屋の作成に失敗しました。通信環境を確認してください',roomRequired:'ルームIDを入力してください',roomNotFound:'ルームが見つかりません（IDを確認してください）',joined:'フレンドが参加しました。対戦開始！'});
+for(const dict of Object.values(L10N)){ dict.pageTitle='Football Chess — Board Game'; Object.assign(dict.action,{ball:'Ball',operation:'Action',dribbleMove:'Dribble move'}); dict.formation={standard:'Standard',oneTop:'One striker',attacking:'Attacking',possession:'Possession',balance:'Balanced',ultraAttacking:'Ultra attacking'}; }
+L10N.ja.pageTitle='Football Chess — 盤面ゲーム';
+Object.assign(L10N.ja.action,{ball:'ボール',operation:'操作',dribbleMove:'ドリブル移動'});
+L10N.ja.formation={standard:'スタンダード',oneTop:'ワントップ',attacking:'アタッキング',possession:'ポゼッション',balance:'バランス',ultraAttacking:'超攻撃'};
+for(const dict of Object.values(L10N)){ dict.cutinLabel={tackle:'TACKLE',tackleSuccess:'TACKLE WON!',tackleFailed:'TACKLE LOST',passCut:'PASS CUT!',passCutFailed:'PASS CUT FAILED',pass:'PASS',thruPass:'THROUGH',dribble:'DRIBBLE',shoot:'SHOOT',failedShoot:'MISS',saving:'SAVE',goal:'GOAL!!',foul:'FOUL',pk:'PK',fk:'FK',ck:'CK',offside:'OFFSIDE',kickoff:'KICK OFF',start_turn:'',ballKeep:'KEEP',shootStop:'STOP',commandSkip:'SKIP',battleDelay:'TIME WASTING',passiveTactics:'PASSIVE TACTICS','additional-time':'AT',halftime:'HALF TIME',fulltime:'FULL TIME',turnStart:'TURN START',turnEnd:'TURN END'}; dict.cutinSub={passiveTactics:'Defensive penalty: pass cut/tackle -20%',battleDelay:'Time wasting in own half → opponent kick-off'}; }
+Object.assign(L10N.ja.cutinLabel,{tackleSuccess:'タックル成功！',tackleFailed:'タックル失敗',passCut:'パスカット成功！',passCutFailed:'パスカット失敗',battleDelay:'時間稼ぎ',passiveTactics:'消極的戦術',turnStart:'ターンスタート',turnEnd:'ターンエンド'});
+L10N.ja.cutinSub={passiveTactics:'守りすぎペナルティ：パスカット/タックル -20%',battleDelay:'自陣で時間稼ぎ → 相手ボールで再開'};
+Object.assign(L10N.en.matchLog,{passCutDetail:'{team} pass cut {at}{reason}{holder}',goalAreaGk:' (goal-area GK)',holderSuffix:' → {piece} takes possession',noHolder:'No ball holder on your team',offsideDemo:'―― Offside demo: line y={line}, receiver y={receiver} ({relation}) ――',offsideChance:'Offside probability {probability}% → {result}',offsideResult:'OFFSIDE!',safeResult:'SAFE',replayEnded:'The match has ended. Reset to play again.',shotAvoid:'{team} shot-block avoidance at ({x},{y}) {probability}% → {result}',shotStopped:'{piece} stopped the shot',shotOutside:'{team} {piece} is outside the shooting area',shotResult:'{team} shot ({area} {probability}%) {result}',initialHelp:'Simultaneous turns: chain passes through teammates, then confirm the turn to replay.'});
+Object.assign(L10N.ja.matchLog,{passCutDetail:'{team} パスカット {at}{reason}{holder}',goalAreaGk:'（GAのGK）',holderSuffix:'→ {piece} が保持',noHolder:'自分のボール保持駒がいません',offsideDemo:'―― オフサイド実演：ライン y={line}, 受け手 y={receiver}（相対:{relation}）――',offsideChance:'オフサイドになる確率 {probability}% → {result}',offsideResult:'オフサイド！',safeResult:'セーフ',replayEnded:'試合は終了しています。「リセット」で再開できます',shotAvoid:'{team}シュートブロック回避 ({x},{y}) {probability}% → {result}',shotStopped:'{piece} がシュートストップ',shotOutside:'{team} {piece} はシュート可能エリア外',shotResult:'{team}シュート（{area} {probability}%）{result}',initialHelp:'同時ターン制：味方へパスをつなぎ、決定するとリプレイします。'});
+Object.assign(L10N.en.matchLog,{noEnemyGkGoal:'• No opposing GK → goal',ckDecision:'• After the {kick} miss, CK check {probability}% → {result}',ckAttempt:'• CK {piece}→GK ({probability}%) {result}',ckLimit:'• CK retry limit ({count}) reached → GK',foulDetail:'• Foul ({defenders} defender(s), {probability}%)',setPieceAttempt:'• {kick} {piece}→GK ({probability}%) {result}',tackleDetailWon:'• Tackle successful ({probability}%) → possession won',tackleDetailLost:'• Tackle failed ({probability}%) → ball retained',paShot:'PA shot',vaShot:'VA shot',gkHolds:'→ {piece} holds the ball (GK)',gkRestart:'→ GK catches and restarts',ballSpilled:'→ Ball spilled',looseBall:'→ Loose ball',tackleWonBall:'→ {piece} wins the ball',stationaryTackle:'An opposing piece on the same cell tackles the ball holder'});
+Object.assign(L10N.ja.matchLog,{noEnemyGkGoal:'・相手GK不在 → ゴール',ckDecision:'・{kick}失敗後のCK判定 {probability}% → {result}',ckAttempt:'・CK {piece}→GK（{probability}%）{result}',ckLimit:'・CK再判定上限（{count}）到達 → GK',foulDetail:'・ファウル発生（守備{defenders}人, {probability}%）',setPieceAttempt:'・{kick} {piece}→GK（{probability}%）{result}',tackleDetailWon:'・タックル成功（{probability}%）→ ボール奪取',tackleDetailLost:'・タックル失敗（{probability}%）→ ボールキープ',paShot:'PAシュート',vaShot:'VAシュート',gkHolds:'→ {piece} が保持（GK）',gkRestart:'→ GKがキャッチ、リスタート',ballSpilled:'→ ボールがこぼれました',looseBall:'→ こぼれ球',tackleWonBall:'→ {piece} がボールを奪取',stationaryTackle:'同じマスの相手駒がボール保持者へタックル'});
+Object.assign(L10N.en.matchLog,{battleDelayDetail:'Time wasting: {team} held the ball in its own half for {turns} turns → {restart} kick-off',passiveTacticsDetail:'Passive tactics: {team} stayed too deep → pass cut/tackle -20% penalty'});
+Object.assign(L10N.ja.matchLog,{battleDelayDetail:'遅延行為：{team}が自陣保持を{turns}回継続 → {restart}ボールでキックオフ',passiveTacticsDetail:'消極的戦術：{team}が自陣に引きこもり過ぎ → ペナルティ（パスカット/タックル-20%）'});
+Object.assign(L10N.en.matchLog,{connectionError:'{room} connection error{detail}',roomError:'Room error: {error}',playerUrl:'Player URL: {url}',spectatorUrl:'Spectator URL: {url}',noOnlineConnection:'No online connection',matchAlreadyEnded:'The match has already ended',replayInProgress:'Replay in progress…',looseBallCleared:'→ Cleared! The loose ball is pushed toward midfield',shotStoppedLoose:'→ Shot stopped → loose ball'});
+Object.assign(L10N.ja.matchLog,{connectionError:'{room} 接続エラー{detail}',roomError:'ROOMエラー: {error}',playerUrl:'参加URL: {url}',spectatorUrl:'観戦URL: {url}',noOnlineConnection:'オンライン接続がありません',matchAlreadyEnded:'試合は終了しています',replayInProgress:'再生中です…',looseBallCleared:'→ クリア！こぼれ球を中盤方向へ押し出し',shotStoppedLoose:'→ シュートストップ → こぼれ球'});
+Object.assign(L10N.en.matchLog,{notInputPhase:'Moves cannot be entered right now',enemyPieceBlocked:'You cannot control an opposing piece',selectionCleared:'Selection cleared',goalTimeline:'{half} Turn {turn}  {goal} ({side})'});
+Object.assign(L10N.ja.matchLog,{notInputPhase:'入力待ちではありません',enemyPieceBlocked:'相手の駒は操作できません',selectionCleared:'選択を解除しました',goalTimeline:'{half} ターン{turn}　{goal}（{side}）'});
+Object.assign(L10N.en.matchLog,{relationAhead:'ahead',relationLevel:'level',relationBehind:'behind'});
+Object.assign(L10N.ja.matchLog,{relationAhead:'前',relationLevel:'線上',relationBehind:'後'});
+for(const dict of Object.values(L10N)){ Object.assign(dict.online,{processingError:'Online processing error',playerUrlTpl:'Player URL: {url}',spectatorUrlTpl:'Spectator URL: {url}'}); }
+Object.assign(L10N.ja.online,{processingError:'オンライン処理エラー',playerUrlTpl:'参加URL: {url}',spectatorUrlTpl:'観戦URL: {url}'});
+for(const dict of Object.values(L10N)){ Object.assign(dict.cutinSub,{passiveTackle:'Passive-tactics penalty active (tackle -20%)',passivePassCut:'Passive-tactics penalty active (pass cut -20%)'}); }
+Object.assign(L10N.ja.cutinSub,{passiveTackle:'消極的戦術ペナルティ適用中（タックル-20%）',passivePassCut:'消極的戦術ペナルティ適用中（パスカット-20%）'});
+for(const dict of Object.values(L10N)){ Object.assign(dict.online,{logCheckTpl:'{error} / Check log',retryJoinTpl:'{error} / Join to retry',autoConnectingTpl:'{room} auto-connecting…',autoSpectatingTpl:'{room} auto-connecting as spectator…',autoJoinFailed:'Automatic join failed',createFailed:'Room creation failed',joinFailed:'Join failed',copyFailed:'URL copy failed'}); }
+Object.assign(L10N.ja.online,{logCheckTpl:'{error} / ログ確認',retryJoinTpl:'{error} / 参加で再試行',autoConnectingTpl:'{room} 自動接続中…',autoSpectatingTpl:'{room} 観戦自動接続中…',autoJoinFailed:'自動参加失敗',createFailed:'ROOM作成失敗',joinFailed:'参加失敗',copyFailed:'URLコピー失敗'});
 for(const dict of Object.values(L10N)){ Object.assign(dict,{rsWin:dict.result.rsWin,rsLose:dict.result.rsLose,rsDraw:dict.result.rsDraw,rsRematch:dict.result.rematch,rsHome:dict.result.rsHome,rsGoal:dict.result.rsGoal,rsOppWants:dict.result.rsOppWants,rsRematchSent:dict.result.rsRematchSent,notInput:'Input is not available now',enemyPiece:'You cannot control the opponent\'s piece',selectionCleared:'Selection cleared',replaying:'Replay in progress…',finished:'The match is over',offline:'Offline',creating:'Creating room…',roomRequired:'Enter a room code',copied:'Copied!',turn:'Turn',pass:'Pass',throughPass:'Through pass',shoot:'Shoot',move:'Move',dribble:'Dribble',offside:'Offside',tackleSuccess:'Tackle successful',tackleFailed:'Tackle failed',foul:'Foul',looseBall:'Loose ball',kickoff:'Kick-off',halftime:'Half-time',fulltime:'Full time'}); }
 Object.assign(L10N.ja,{notInput:'入力待ちではありません',enemyPiece:'相手の駒は操作できません',selectionCleared:'選択を解除しました',replaying:'再生中です…',finished:'試合は終了しています',offline:'オンライン接続がありません',creating:'ROOM作成中…',roomRequired:'ROOM CODEを入力してください',copied:'コピーしました!',turn:'ターン',pass:'パス',throughPass:'スルーパス',shoot:'シュート',move:'移動',dribble:'ドリブル',offside:'オフサイド',tackleSuccess:'タックル成功',tackleFailed:'タックル失敗',foul:'ファウル',looseBall:'こぼれ球',kickoff:'キックオフ',halftime:'ハーフタイム',fulltime:'フルタイム'});
 for(const dict of Object.values(L10N)){ Object.assign(dict.match,{notInput:dict.notInput,enemyPiece:dict.enemyPiece,selectionCleared:dict.selectionCleared,replaying:dict.replaying,finished:dict.finished,spectating:dict.match.spectating}); Object.assign(dict.online,{offline:dict.offline,creating:dict.creating,roomRequired:dict.roomRequired}); Object.assign(dict.action||(dict.action={}),{pass:dict.pass,throughPass:dict.throughPass,shoot:dict.shoot,move:dict.move,dribble:dict.dribble,offside:dict.offside,tackleSuccess:dict.tackleSuccess,tackleFailed:dict.tackleFailed,foul:dict.foul,looseBall:dict.looseBall,kickoff:dict.kickoff}); }
@@ -2237,7 +2266,7 @@ function t(key){ return lookupLocale(currentLocale,key)??lookupLocale('en',key)?
 function tFmt(key,params){ let s=t(key); for(const p in (params||{})) s=s.split('{'+p+'}').join(String(params[p])); return s; }
 function setTextPreservingChildren(el,value){ const textNode=[...el.childNodes].find(n=>n.nodeType===Node.TEXT_NODE); if(textNode) textNode.nodeValue=value; else el.insertBefore(document.createTextNode(value),el.firstChild); }
 function populateLanguageSelect(){ const select=document.getElementById('ogSetLanguage'); if(!select) return; select.innerHTML=''; SUPPORTED_LOCALES.forEach(locale=>{ const option=document.createElement('option'); option.value=locale; option.textContent=LOCALE_NAMES[locale]; select.appendChild(option); }); select.value=currentLocale; }
-function applyI18n(){ document.documentElement.lang=currentLocale==='zh-CN'?'zh-CN':currentLocale; populateLanguageSelect(); document.querySelectorAll('[data-i18n]').forEach(el=>setTextPreservingChildren(el,t(el.dataset.i18n))); document.querySelectorAll('[data-i18n-attr]').forEach(el=>{ for(const part of el.dataset.i18nAttr.split(',')){ const [attr,key]=part.split(':'); if(attr&&key) el.setAttribute(attr,t(key)); } }); const half=document.getElementById('halfInfo'); if(half) half.textContent=state?.half==='後半'?t('match.secondHalf'):t('match.firstHalf'); }
+function applyI18n(){ document.documentElement.lang=currentLocale==='zh-CN'?'zh-CN':currentLocale; document.title=t('pageTitle'); populateLanguageSelect(); document.querySelectorAll('[data-i18n]').forEach(el=>setTextPreservingChildren(el,t(el.dataset.i18n))); document.querySelectorAll('[data-i18n-attr]').forEach(el=>{ for(const part of el.dataset.i18nAttr.split(',')){ const [attr,key]=part.split(':'); if(attr&&key) el.setAttribute(attr,t(key)); } }); const half=document.getElementById('halfInfo'); if(half) half.textContent=state?.half==='後半'?t('match.secondHalf'):t('match.firstHalf'); }
 function localizeLegacyText(value){ let out=String(value??''); const replacements=[['入力待ちではありません','match.notInput'],['相手の駒は操作できません','match.enemyPiece'],['選択を解除しました','common.selectionCleared'],['再生中です…','match.replaying'],['試合は終了しています','match.finished'],['オンライン接続がありません','online.offline'],['ROOM作成中…','online.creating'],['ROOM CODEを入力してください','online.roomRequired'],['コピーしました!','common.copied'],['キャンセル','common.cancel'],['参加','common.join'],['退出','online.leave'],['再戦','result.rematch'],['観戦中','match.spectating'],['前半','match.firstHalf'],['後半','match.secondHalf'],['ターン','match.turn'],['パス','action.pass'],['スルーパス','action.throughPass'],['シュート','action.shoot'],['移動','action.move'],['ドリブル','action.dribble'],['ゴール','result.rsGoal'],['オフサイド','action.offside'],['タックル成功','action.tackleSuccess'],['タックル失敗','action.tackleFailed'],['ファウル','action.foul'],['こぼれ球','action.looseBall'],['キックオフ','action.kickoff'],['ハーフタイム','match.halftime'],['フルタイム','match.fulltime'],['相手','opp'],['あなた','you']]; for(const [from,key] of replacements){ if(currentLocale!=='ja') out=out.split(from).join(t(key)); } return out; }
 function setLocale(locale){ if(!SUPPORTED_LOCALES.includes(locale)) return; currentLocale=locale; try{ localStorage.setItem('fc.locale',locale); }catch{}; if(typeof state==='object') state.lang=locale; applyI18n(); relocalizeLog(); if(typeof render==='function') render(); if(typeof renderOnlineStatus==='function') renderOnlineStatus(); if(typeof ogRenderDeck==='function') ogRenderDeck(); if(typeof ogRenderAuth==='function') ogRenderAuth(); if(typeof ogRenderSubPage==='function') ogRenderSubPage(); if(typeof tutorialRender==='function') tutorialRender(); }
 currentLocale=detectLocale();
@@ -2751,7 +2780,7 @@ function renderSelectFan(){
       img.src = it.type==='ball' ? (IMG.ball||IMG.have_ball) : IMG[it.piece.posType+'_'+viewTeam(it.piece.team)];
       el.appendChild(img);
     }
-    el.title = it.type==='ball' ? 'ボール' : (it.type==='shoot' ? 'シュート' : label(it.piece));
+    el.title = it.type==='ball' ? t('action.ball') : (it.type==='shoot' ? t('action.shoot') : label(it.piece));
     // タップ→ポップ拡大→その後に選択確定（範囲ハイライト表示）／シュートは即実行へ
     el.addEventListener('click',ev=>{
       ev.stopPropagation();
@@ -2822,7 +2851,7 @@ function preferSelectOverPassBack(p){
   return p && p.team===localPlayerTeam() && chainPassedIds.has(p.id) && !chainMovedIds.has(p.id);
 }
 function onPieceClick(p,cx,cy){
-  if(state.phase!=='input'){ playFeedback('error'); log('入力待ちではありません'); return; }
+  if(state.phase!=='input'){ playFeedback('error'); logKey('notInputPhase'); return; }
   // 駒選択中に、行動先として有効なマス（相手駒/自駒が既に乗っているマスも含む）をタップした場合は
   // そちらを優先する。個別駒のクリックハンドラがマスのクリックを奪ってしまう（stopPropagation）ため、
   // ここでonCellClickと同じ判定をこちらでも行う。
@@ -2841,7 +2870,7 @@ function onPieceClick(p,cx,cy){
       movePiece(state.selected,p.x,p.y,carry); return;
     }
   }
-  if(p.team!==localPlayerTeam()){ playFeedback('error'); log('相手の駒は操作できません'); return; }
+  if(p.team!==localPlayerTeam()){ playFeedback('error'); logKey('enemyPieceBlocked'); return; }
   // それ以外は「そのマスの選択」扱い（扇ポップアップ）
   handleCellTap(p.x,p.y);
 }
@@ -2901,7 +2930,7 @@ function label(p){ return p.posType.toUpperCase()+'('+p.cost+')'; }
 function clearSelection(){ state.selected=null; state.mode='idle'; state.expanded=null; state.ballSelected=false; state.popup=null; }
 
 function onCellClick(x,y){
-  if(state.phase!=='input'){ playFeedback('error'); log('入力待ちではありません'); return; }
+  if(state.phase!=='input'){ playFeedback('error'); logKey('notInputPhase'); return; }
   // 駒選択中：有効な行動先なら実行、範囲外タップなら選択解除（キャンセル）
   if(state.selected){
     const p=state.selected;
@@ -2917,7 +2946,7 @@ function onCellClick(x,y){
       const carry = chainHolder() && chainHolder().id===p.id;
       movePiece(p,x,y,carry); return;
     }
-    playFeedback('cancel'); log('選択を解除しました'); clearSelection(); render(); return; // 有効範囲外 → キャンセル
+    playFeedback('cancel'); logKey('selectionCleared'); clearSelection(); render(); return; // 有効範囲外 → キャンセル
   }
   // 弧ポップアップ表示中：対象マス以外をタップ → キャンセル（閉じる）
   if(state.popup){
@@ -3014,6 +3043,19 @@ function tryShoot(p){
 
 function log(m){ const l=document.getElementById('log'); if(!l) return; const row=document.createElement('div'); row.dataset.source=String(m); row.textContent=localizeLegacyText(m); l.prepend(row); }
 function logKey(key,params={}){ const l=document.getElementById('log'); if(!l) return; const row=document.createElement('div'); row.dataset.i18nLog=key; row.dataset.i18nParams=JSON.stringify(params); row.textContent=tFmt(`matchLog.${key}`,params); l.prepend(row); }
+function logBattleDetail(message){
+  const m=String(message||''); let hit;
+  if(m==='相手GK不在 → ゴール') return logKey('noEnemyGkGoal');
+  if((hit=m.match(/^(.+)失敗後のCK判定 (\d+)% → (CK|GK)$/))) return logKey('ckDecision',{kick:localizeKickKind(hit[1]),probability:hit[2],result:hit[3]});
+  if((hit=m.match(/^CK (.+)→GK（(\d+)%）(成功|失敗)$/))) return logKey('ckAttempt',{piece:hit[1],probability:hit[2],result:hit[3]==='成功'?t('matchLog.success'):t('matchLog.failure')});
+  if((hit=m.match(/^CK(?:再判定)?上限（(\d+)）到達 → GK$/))) return logKey('ckLimit',{count:hit[1]});
+  if((hit=m.match(/^ファウル発生（守備(\d+)人, (\d+)%）$/))) return logKey('foulDetail',{defenders:hit[1],probability:hit[2]});
+  if((hit=m.match(/^(PK|FK) (.+)→GK（(\d+)%）(成功|失敗)$/))) return logKey('setPieceAttempt',{kick:hit[1],piece:hit[2],probability:hit[3],result:hit[4]==='成功'?t('matchLog.success'):t('matchLog.failure')});
+  if((hit=m.match(/^タックル成功（(\d+)%）→ ボール奪取$/))) return logKey('tackleDetailWon',{probability:hit[1]});
+  if((hit=m.match(/^タックル失敗（(\d+)%）→ ボールキープ$/))) return logKey('tackleDetailLost',{probability:hit[1]});
+  log('・'+m);
+}
+function localizeKickKind(kind){ return ({PenaltyAreaShoot:t('matchLog.paShot'),VitalAreaShoot:t('matchLog.vaShot'),PK:'PK',FK:'FK',CK:'CK'})[kind]||kind; }
 function relocalizeLog(){ document.querySelectorAll('#log [data-source]').forEach(row=>{ row.textContent=localizeLegacyText(row.dataset.source); }); document.querySelectorAll('#log [data-i18n-log]').forEach(row=>{ let params={}; try{ params=JSON.parse(row.dataset.i18nParams||'{}'); }catch{} row.textContent=tFmt(`matchLog.${row.dataset.i18nLog}`,params); }); }
 
 function snapshotHalfToLocal(half){ return half==='second' ? '後半' : '前半'; }
@@ -3059,15 +3101,19 @@ function applySnapshotToLocal(snapshot){
 }
 function eventTeamName(team){ return team==='b'?t('online.teamBlue'):(team==='r'?t('online.teamRed'):''); }
 function commandTypeLabel(type){
-  return ({move:'移動',dribble:'ドリブル',pass:'パス',throughpass:'スルーパス',shoot:'シュート'}[type])||type||'操作';
+  const key={move:'move',dribble:'dribble',pass:'pass',throughpass:'throughPass',shoot:'shoot'}[type];
+  return key?t(`action.${key}`):(type||t('action.operation'));
 }
 function pieceMoveReplayLabel(event){
-  if(event?.details?.carryBall) return 'ドリブル';
-  if(event?.details?.commandType==='dribble') return 'ドリブル移動';
-  return '移動';
+  if(event?.details?.carryBall) return t('action.dribble');
+  if(event?.details?.commandType==='dribble') return t('action.dribbleMove');
+  return t('action.move');
 }
 function kickKindReplayLabel(kind){
-  return ({shoot:'シュート',PenaltyAreaShoot:'PAシュート',VitalAreaShoot:'VAシュート',PK:'PK',FK:'FK',CK:'CK'}[kind])||'';
+  if(kind==='shoot') return t('action.shoot');
+  if(kind==='PenaltyAreaShoot') return `PA ${t('action.shoot')}`;
+  if(kind==='VitalAreaShoot') return `VA ${t('action.shoot')}`;
+  return ({PK:'PK',FK:'FK',CK:'CK'}[kind])||'';
 }
 function replayKickLabel(event){
   return kickKindReplayLabel(event?.details?.finalKickKind||event?.details?.source);
@@ -3081,9 +3127,9 @@ function onlineLogEvent(event){
   else if(event.type==='pass.cut'){
     const cutAt=event.details?.cutAt||event.to;
     const cutter=pieceById(event.details?.cutterId);
-    const reason=event.details?.reason==='goalAreaGK'?'（GAのGK）':'';
+    const reason=event.details?.reason==='goalAreaGK'?t('matchLog.goalAreaGk'):'';
     const at=cutAt?`(${cutAt.x},${cutAt.y}) `:'';
-    log(`${t} パスカット ${at}${reason}${cutter?`→ ${label(cutter)} が保持`:''}`);
+    logKey('passCutDetail',{team:t,at,reason,holder:cutter?tFmt('matchLog.holderSuffix',{piece:label(cutter)}):''});
   }
   else if(event.type==='pass.failed') logKey('passFailed',{team:t});
   else if(event.type==='command.skipped') logKey('commandSkipped',{team:t,action:localizeLegacyText(commandTypeLabel(event.details?.commandType)),reason:event.details?.reason||'-'});
@@ -3094,7 +3140,7 @@ function onlineLogEvent(event){
   else if(event.type==='tackle.foul') logKey('foul',{team:t});
   else if(event.type==='shot.goal'){
     const kick=replayKickLabel(event);
-    logKey('goal',{team:t,kick:kick?`${kick} `:''});
+    logKey('goal',{team:t,teamId:event.team,kick:kick?`${kick} `:''});
   }
   else if(event.type==='shot.miss') logKey('shotMiss',{team:t});
   else if(event.type==='shot.blocked') logKey('shotBlocked',{team:t});
@@ -3537,7 +3583,7 @@ async function connectOnlineRoom(roomCode,role,snapshot,options={}){
   ws.onerror=ev=>{
     const detail=onlineErrorText(ev);
     setOnlineStatusKey('connectionErrorTpl',{room:roomCode},'err');
-    log(`${roomCode} 接続エラー${detail?`（${detail}）`:''}`);
+    logKey('connectionError',{room:roomCode,detail:detail?` (${detail})`:''});
   };
   ws.onclose=ev=>{
     if(online.ws===ws){
@@ -3556,8 +3602,8 @@ async function connectOnlineRoom(roomCode,role,snapshot,options={}){
   ws.onmessage=ev=>{
     online.queue=online.queue.then(()=>handleOnlineEnvelope(JSON.parse(ev.data))).catch(err=>{
       console.error(err);
-      const message=onlineErrorText(err)||'オンライン処理エラー';
-      setOnlineStatus(`${message} / ログ確認`,'err');
+      const message=onlineErrorText(err)||t('online.processingError');
+      setOnlineStatus(tFmt('online.logCheckTpl',{error:message}),'err');
       logKey('onlineError',{error:message});
     });
   };
@@ -3608,8 +3654,8 @@ async function handleOnlineEnvelope(envelope){
   }
   if(envelope.type==='room.error'){
     const message=onlineRoomErrorText(payload);
-    setOnlineStatus(`${message} / 参加で再試行`,'err');
-    log(`ROOM ERROR: ${message}`);
+    setOnlineStatus(tFmt('online.retryJoinTpl',{error:message}),'err');
+    logKey('roomError',{error:message});
     return;
   }
   if(envelope.type==='match.intent.received'){
@@ -3667,20 +3713,20 @@ async function copyOnlineRoomUrl(){
   if(!online.roomCode){ setOnlineStatusKey('noRoom',{},'err'); return; }
   const playUrl=roomShareUrl(online.roomCode);
   const watchUrl=roomShareUrl(online.roomCode,'spectator');
-  const shareText=`参加URL: ${playUrl}\n観戦URL: ${watchUrl}`;
+  const shareText=`${tFmt('online.playerUrlTpl',{url:playUrl})}\n${tFmt('online.spectatorUrlTpl',{url:watchUrl})}`;
   try{
     await navigator.clipboard.writeText(shareText);
     setOnlineStatusKey('urlsCopied',{},'live');
   }catch{
-    log(`参加URL: ${playUrl}`);
-    log(`観戦URL: ${watchUrl}`);
+    logKey('playerUrl',{url:playUrl});
+    logKey('spectatorUrl',{url:watchUrl});
     setOnlineStatusKey('urlsLogged',{},'wait');
   }
 }
 function sendOnlineControl(type){
   if(!online.ws||online.ws.readyState!==WebSocket.OPEN){
     setOnlineStatus(t('online.offline'),'err');
-    log('オンライン接続がありません');
+    logKey('noOnlineConnection');
     return false;
   }
   online.ws.send(JSON.stringify({type}));
@@ -3703,7 +3749,7 @@ function leaveOnlineRoom(){
 }
 function resignOnlineMatch(){
   if(!online.enabled||!(online.role==='b'||online.role==='r')){ logKey('cannotResignSpectator'); return; }
-  if(state.matchOver){ log('試合は終了しています'); return; }
+  if(state.matchOver){ logKey('matchAlreadyEnded'); return; }
   if(!confirm(t('confirmResign'))) return;
   if(sendOnlineControl('match.resign')) setOnlineStatusKey('resigning',{},'wait');
 }
@@ -3721,10 +3767,10 @@ function autoJoinOnlineRoomFromUrl(){
   const input=document.getElementById('onlineRoomInput');
   if(input) input.value=roomCode;
   online.apiBase=defaultOnlineApiBase();
-  setOnlineStatus(`${roomCode} ${requestedRole==='spectator'?'観戦自動接続中':'自動接続中'}…`,'wait');
+  setOnlineStatus(tFmt(requestedRole==='spectator'?'online.autoSpectatingTpl':'online.autoConnectingTpl',{room:roomCode}),'wait');
   connectOnlineRoom(roomCode,requestedRole,null).catch(err=>{
     console.error(err);
-    setOnlineStatus(err.message||'自動参加失敗','err');
+    setOnlineStatus(err.message||t('online.autoJoinFailed'),'err');
   });
 }
 function submitOnlineIntent(){
@@ -3735,7 +3781,7 @@ function submitOnlineIntent(){
   }
   if(!online.enabled||!online.ws||online.ws.readyState!==WebSocket.OPEN){
     playFeedback('error');
-    log('オンライン接続がありません');
+    logKey('noOnlineConnection');
     return;
   }
   if(online.waiting){ playFeedback('error'); logKey('alreadySent'); return; }
@@ -3750,13 +3796,13 @@ function submitOnlineIntent(){
 }
 
 document.getElementById('onlineCreateBtn').addEventListener('click',()=>{
-  createOnlineRoom().catch(err=>{ console.error(err); setOnlineStatus(err.message||'ROOM作成失敗','err'); });
+  createOnlineRoom().catch(err=>{ console.error(err); setOnlineStatus(err.message||t('online.createFailed'),'err'); });
 });
 document.getElementById('onlineJoinBtn').addEventListener('click',()=>{
-  joinOnlineRoom().catch(err=>{ console.error(err); setOnlineStatus(err.message||'参加失敗','err'); });
+  joinOnlineRoom().catch(err=>{ console.error(err); setOnlineStatus(err.message||t('online.joinFailed'),'err'); });
 });
 document.getElementById('onlineShareBtn').addEventListener('click',()=>{
-  copyOnlineRoomUrl().catch(err=>{ console.error(err); setOnlineStatus(err.message||'URLコピー失敗','err'); });
+  copyOnlineRoomUrl().catch(err=>{ console.error(err); setOnlineStatus(err.message||t('online.copyFailed'),'err'); });
 });
 document.getElementById('onlineNameInput').value=online.displayName;
 document.getElementById('onlineNameInput').addEventListener('change',()=>{
@@ -3808,20 +3854,21 @@ document.getElementById('menuToggleBtn').addEventListener('click',()=>{
 });
 document.getElementById('offsideDemoBtn').addEventListener('click',()=>{
   const holder=ballHolder();
-  if(!holder||holder.team!==localPlayerTeam()){ log('自分のボール保持駒がいません'); return; }
+  if(!holder||holder.team!==localPlayerTeam()){ logKey('noHolder'); return; }
   // 実プレイと同じ方向対応ロジックで判定（青=-Y方向へ攻める）
   const dir=attackDir(holder.team);
   const offsideLine=offsideLineFor(holder.team==='b'?'r':'b');
   const p=(offsideLine==null)?0:calcOffside(offsideLine, holder.y, holder.y, dir);
   const isOff=rollPercent(p);
-  log(`―― オフサイド実演：ライン y=${offsideLine}, 受け手 y=${holder.y}（相対:${['前','線上','後'][relLine(offsideLine,holder.y,dir)]}）――`);
-  log(`・オフサイドになる確率 ${p}% → ${isOff?'オフサイド！':'セーフ'}`);
+  const relation=[t('matchLog.relationAhead'),t('matchLog.relationLevel'),t('matchLog.relationBehind')][relLine(offsideLine,holder.y,dir)];
+  logKey('offsideDemo',{line:offsideLine,receiver:holder.y,relation});
+  logKey('offsideChance',{probability:p,result:t(`matchLog.${isOff?'offsideResult':'safeResult'}`)});
   // 成立時は実際の成立後処理（位置戻し＋こぼれ球＋駒追従演出）を発火
   if(isOff){ handleOffside(holder, holder.x, holder.y).then(()=>render()); }
 });
 document.getElementById('endTurnBtn').addEventListener('click',()=>{
-  if(state.phase==='replay'){ playFeedback('error'); log('再生中です…'); return; }
-  if(state.phase==='ended'){ playFeedback('error'); log('試合は終了しています。「リセット」で再開できます'); return; }
+  if(state.phase==='replay'){ playFeedback('error'); logKey('replayInProgress'); return; }
+  if(state.phase==='ended'){ playFeedback('error'); logKey('replayEnded'); return; }
   if(online.connected||online.enabled){ submitOnlineIntent(); return; }
   playFeedback('submit');
   resolveSimultaneousTurn();
@@ -3841,7 +3888,7 @@ async function resolveSimultaneousTurn(){
   pieces.filter(p=>p.team==='r').forEach(p=>{ p.sx=p.x; p.sy=p.y; });
   planOpponentAI();
 
-  logKey('turnReplay',{turn:state.turn});
+  logKey('turnReplay',{turn:state.turn,halfId:state.half==='後半'?'second':'first'});
   // Unity BattleSequence.TurnElement 準拠：入力終了（決定/時間切れ）で「ターンエンド」帯→リプレイ再生
   await showCutin('turnEnd',800);
 
@@ -3914,7 +3961,7 @@ async function resolveSimultaneousTurn(){
   state.phase='input';
   // Unity準拠：新しいターンの入力開始で「ターンスタート」帯（タイマーは帯の後のrender()で始動）
   await showCutin('turnStart',800);
-  logKey('turnStartInput',{half:state.half==='後半'?t('match.secondHalf'):t('match.firstHalf'),at:state.turn>REGULAR_TURNS?' AT':'',turn:state.turn});
+  logKey('turnStartInput',{half:state.half==='後半'?t('match.secondHalf'):t('match.firstHalf'),halfId:state.half==='後半'?'second':'first',at:state.turn>REGULAR_TURNS?' AT':'',turn:state.turn});
   render();
 }
 
@@ -3953,7 +4000,7 @@ async function advanceMatchClock(){
     // レギュラー15ターン消化直後にAT(0〜1)を一度だけ抽選
     if(state.atFirst===null && state.turn>REGULAR_TURNS){
       state.atFirst=rollAT('前半');
-      if(state.atFirst>0) log(`⏱ 前半アディショナルタイム ${state.atFirst} ターン`);
+      if(state.atFirst>0) logKey('additionalTime',{half:t('match.firstHalf'),turns:state.atFirst});
     }
     const total=REGULAR_TURNS+(state.atFirst||0);
     if(state.turn>total){          // 前半（AT含む）消化完了 → ハーフタイム → 後半へ
@@ -3964,7 +4011,7 @@ async function advanceMatchClock(){
   }else{
     if(state.atSecond===null && state.turn>REGULAR_TURNS){
       state.atSecond=rollAT('後半');
-      log(`⏱ 後半アディショナルタイム ${state.atSecond} ターン`);
+      logKey('additionalTime',{half:t('match.secondHalf'),turns:state.atSecond});
     }
     const total=REGULAR_TURNS+(state.atSecond||0);
     if(state.turn>total){          // 後半（AT含む）消化完了 → 試合終了
@@ -4082,7 +4129,7 @@ async function execCommand(cmd,turnStartHasBallTeam=ballHolder()?.team||null){
     const passRoute=getRoute(p.x,p.y,to.x,to.y);
     const contested=hasDefensiveContact(p,passRoute,to.x,to.y);
     // 守備側（カットを狙う側）に消極的戦術ペナルティが効いている場合のみサブラベルで明示
-    const passiveSub=passivePenaltyTeams.has(opponentTeam(p.team))?{sublabel:'消極的戦術ペナルティ適用中（パスカット-20%）'}:null;
+    const passiveSub=passivePenaltyTeams.has(opponentTeam(p.team))?{sublabel:t('cutinSub.passivePassCut')}:null;
     if(contested) await showCutin('pass',850);
     // 1. 経路上の敵マスでのパスカット判定（敵を通り越すと取られる）
     const path=resolveFlyingPassPath(p, to.x, to.y);
@@ -4112,7 +4159,7 @@ async function execCommand(cmd,turnStartHasBallTeam=ballHolder()?.team||null){
       const cutter=goalAreaPassCutGK(p.team,to.x,to.y)||highestCostPiece(piecesAt(to.x,to.y).filter(q=>q.team!==p.team));
       logKey('landingCut');
       if(cutter){ setBallToPiece(cutter,true); logKey('pieceKeepsBall',{piece:label(cutter)}); }
-      else placeLooseBallDefensive(to.x,to.y,'→ こぼれ球',p.team);
+      else placeLooseBallDefensive(to.x,to.y,'looseBall',p.team);
       resetBattleDelayCount();
     }
     render();
@@ -4120,7 +4167,7 @@ async function execCommand(cmd,turnStartHasBallTeam=ballHolder()?.team||null){
     // 演出は経路上／着地マスに敵駒がいて奪取判定（チェック）が起こり得る場合のみ。素通りでは出さない。
     const thruRoute=getRoute(p.x,p.y,cmd.tx,cmd.ty);
     const thruContested=hasDefensiveContact(p,thruRoute,cmd.tx,cmd.ty);
-    const thruPassiveSub=passivePenaltyTeams.has(opponentTeam(p.team))?{sublabel:'消極的戦術ペナルティ適用中（パスカット-20%）'}:null;
+    const thruPassiveSub=passivePenaltyTeams.has(opponentTeam(p.team))?{sublabel:t('cutinSub.passivePassCut')}:null;
     if(thruContested) await showCutin('thruPass',850);
     // 1. 経路上の敵マスでのパスカット判定
     const path=resolveFlyingPassPath(p, cmd.tx, cmd.ty);
@@ -4158,7 +4205,7 @@ async function execCommand(cmd,turnStartHasBallTeam=ballHolder()?.team||null){
       const cutter=goalAreaPassCutGK(p.team,cmd.tx,cmd.ty)||highestCostPiece(piecesAt(cmd.tx,cmd.ty).filter(q=>q.team!==p.team));
       logKey('landingCut');
       if(cutter){ setBallToPiece(cutter,true); logKey('pieceKeepsBall',{piece:label(cutter)}); }
-      else placeLooseBallDefensive(cmd.tx,cmd.ty,'→ こぼれ球',p.team);
+      else placeLooseBallDefensive(cmd.tx,cmd.ty,'looseBall',p.team);
       resetBattleDelayCount();
     }
     render();
@@ -4308,9 +4355,10 @@ function clearPushCell(x,y){
   return {x, y:ny, cleared:true};
 }
 /* 守備成功時のこぼれ球配置（クリア判定込み）。共通関数placeLooseBallはそのまま流用。 */
-function placeLooseBallDefensive(x,y,baseMsg,lastTeam=lastHadBallTeam){
+function placeLooseBallDefensive(x,y,baseLogKey,lastTeam=lastHadBallTeam){
   const r=clearPushCell(x,y);
-  placeLooseBall(r.x, r.y, r.cleared ? '→ クリア！こぼれ球を中盤方向へ押し出し' : (baseMsg||'→ こぼれ球'), lastTeam);
+  placeLooseBall(r.x,r.y,null,lastTeam);
+  logKey(r.cleared?'looseBallCleared':(baseLogKey||'looseBall'));
   return r.cleared;
 }
 
@@ -4339,7 +4387,7 @@ async function handleOffside(receiver, atX, atY, sourceTeam=lastHadBallTeam){
     setBallToPiece(kicker,true);
     logKey('restartWith',{piece:label(kicker)});
   }else{
-    placeLooseBall(atX, atY, '→ こぼれ球', sourceTeam); // 相手駒が1体もいない場合の保険（通常起こらない）
+    placeLooseBall(atX,atY,null,sourceTeam); logKey('looseBall'); // 相手駒が1体もいない場合の保険（通常起こらない）
   }
   resetBattleDelayCount();
   render();
@@ -4388,7 +4436,6 @@ async function pickupLooseBall(){
    2. PA/VAシュート成功抽選（GKが関与しない位置なら100%）
    3. 失敗時はCK/GK分岐、成功時はゴール */
 async function resolveShootCommand(p){
-  const teamName=teamLabel(p.team);
   const goalCell=goalCellFor(p.team);
   const enemyGK=enemyGKFor(p.team);
   await showCutin('shoot',850);
@@ -4398,16 +4445,16 @@ async function resolveShootCommand(p){
   for(const [rx,ry] of route){
     const avoidProb=shootBlockAvoidanceProbability(p,rx,ry);
     const avoidOk=rollPercent(avoidProb);
-    if(avoidProb<100) log(`${teamName}シュートブロック回避 (${rx},${ry}) ${avoidProb}% → ${avoidOk?'回避':'STOP'}`);
+    if(avoidProb<100) logKey('shotAvoid',{team:eventTeamName(p.team),x:rx,y:ry,probability:avoidProb,result:avoidOk?'AVOID':'STOP'});
     if(!avoidOk){
       const blocker=highestCostPiece(piecesAt(rx,ry).filter(q=>q.team!==p.team && q.posType!=='gk'));
       await animateBallFlight({x:p.x,y:p.y},{x:rx,y:ry},p.team,{kind:'shoot',duration:360,arc:30});
       await showCutinAtPiece('shootStop',900,rx,ry);
       if(blocker){
         setBallToPiece(blocker,true);
-        log(`→ ${label(blocker)} がシュートストップ`);
+        logKey('shotStopped',{piece:label(blocker)});
       }else{
-        placeLooseBallDefensive(rx,ry,'→ シュートストップ → こぼれ球',p.team);
+        placeLooseBallDefensive(rx,ry,'shotStoppedLoose',p.team);
       }
       resetBattleDelayCount();
       return;
@@ -4416,9 +4463,9 @@ async function resolveShootCommand(p){
 
   // ステップ2: シュート成功判定。
   const sh=calcShoot(p);
-  if(sh.area==='-'){ log(`${teamName} ${label(p)} はシュート可能エリア外`); return; }
+  if(sh.area==='-'){ logKey('shotOutside',{team:eventTeamName(p.team),piece:label(p)}); return; }
   const ok=rollPercent(sh.prob);
-  log(`${teamName}シュート（${sh.area} ${sh.prob}%）${ok?'成功':'失敗'}`);
+  logKey('shotResult',{team:eventTeamName(p.team),area:sh.area,probability:sh.prob,result:t(`matchLog.${ok?'success':'failure'}`)});
   if(!ok){
     await showCutinAtPiece('failedShoot',900,p.x,p.y);
     const failedKind=sh.area==='VA'?'VitalAreaShoot':'PenaltyAreaShoot';
@@ -4464,6 +4511,7 @@ const OG_FORMATIONS=[
    costs:[1.5,2.5,1,1,2,1,1,1.5,2,1,1.5]},
 ];
 function ogFormation(id){ return OG_FORMATIONS.find(f=>f.id===id)||OG_FORMATIONS[0]; }
+function ogFormationStyle(f){ return t(`formation.${({1:'standard',2:'oneTop',3:'attacking',4:'possession',5:'balance',6:'ultraAttacking'})[f.id]||'standard'}`); }
 function ogDefaultDeck(){ const f=OG_FORMATIONS[0]; return {formationId:f.id,costs:f.costs.slice()}; }
 function ogValidDeck(d){
   return d && typeof d==='object' && ogFormation(d.formationId) && Array.isArray(d.costs) && d.costs.length===11 &&
@@ -4506,24 +4554,28 @@ function resultOutcome(){
   const d=state.scoreSelf-state.scoreOpp;
   return d>0?'win':d<0?'lose':'draw';
 }
-/* 既存ログ(#log)から得点タイムラインを復元する（新規の記録機構は作らない）。
-   ターン区切り行「―― 前半 ターン N 開始」で現在ターンを追跡し、
-   得点行（オフライン:「⚽ ゴール！/⚽ 相手ゴール！」、オンライン:「青/赤 … ゴール」）を拾う。 */
+/* 構造化ログのキーとパラメータから得点タイムラインを復元する。
+   表示済みテキストは言語変更で変わるため解析に使用しない。 */
 function collectGoalTimelineFromLog(){
   const l=document.getElementById('log');
   if(!l) return [];
-  const lines=[...l.children].map(e=>e.textContent).reverse(); // ログは新しい順に前置されるため反転して古い順に
-  let half='前半', turn=1;
+  const rows=[...l.children].reverse(); // ログは新しい順に前置されるため反転して古い順に
+  let halfId='first', turn=1;
   const out=[];
-  const sep=/――\s*(前半|後半)(?:\s*AT)?\s*ターン\s*(\d+)/;
-  for(const text of lines){
-    const m=text.match(sep);
-    if(m){ half=m[1]; turn=parseInt(m[2],10); continue; }
+  for(const row of rows){
+    const key=row.dataset.i18nLog;
+    if(!key) continue;
+    let params={}; try{ params=JSON.parse(row.dataset.i18nParams||'{}'); }catch{}
+    if(key==='turnStartInput'||key==='turnReplay'){
+      if(params.halfId==='first'||params.halfId==='second') halfId=params.halfId;
+      if(Number.isFinite(Number(params.turn))) turn=Number(params.turn);
+      continue;
+    }
     let team=null;
-    if(/⚽\s*相手ゴール/.test(text)) team='r';
-    else if(/⚽\s*ゴール/.test(text)) team='b';
-    else{ const g=text.match(/^(青|赤)\s.*ゴール$/); if(g) team=(g[1]==='青'?'b':'r'); }
-    if(team) out.push({half,turn,team});
+    if(key==='goalFor') team='b';
+    else if(key==='goalAgainst') team='r';
+    else if(key==='goal'&&(params.teamId==='b'||params.teamId==='r')) team=params.teamId;
+    if(team) out.push({halfId,turn,team});
   }
   return out;
 }
@@ -4558,7 +4610,7 @@ function openResultOverlay(){
     timeline.forEach(g=>{
       const row=document.createElement('div');
       row.className='g '+(g.team===selfTeam?'b':'r'); // 自分視点の色分け
-      row.textContent=`${g.half} ターン${g.turn}　${t('rsGoal')}（${g.team===selfTeam?t('you'):t('opp')}）`;
+      row.textContent=tFmt('matchLog.goalTimeline',{half:g.halfId==='second'?t('match.secondHalf'):t('match.firstHalf'),turn:g.turn,goal:t('rsGoal'),side:g.team===selfTeam?t('you'):t('opp')});
       goals.appendChild(row);
     });
   }
@@ -4706,11 +4758,11 @@ function ogRenderDeck(){
   OG_FORMATIONS.forEach(fm=>{
     const b=document.createElement('button');
     b.className='ogFormBtn'+(fm.id===ogDeck.formationId?' active':'');
-    b.innerHTML=`${fm.name}<span class="sub">${fm.sub}・COST ${fm.costs.reduce((a,c)=>a+c,0).toFixed(1)}</span>`;
+    b.innerHTML=`${fm.name}<span class="sub">${ogFormationStyle(fm)} · COST ${fm.costs.reduce((a,c)=>a+c,0).toFixed(1)}</span>`;
     b.addEventListener('click',()=>{
       ogDeck={formationId:fm.id,costs:fm.costs.slice()};
       ogSelectedPiece=-1; ogSaveDeck(); ogRenderDeck();
-      ogToast(tFmt('home.formationChangedTpl',{name:fm.name,style:fm.sub}),true);
+      ogToast(tFmt('home.formationChangedTpl',{name:fm.name,style:ogFormationStyle(fm)}),true);
     });
     fl.appendChild(b);
   });
@@ -4785,7 +4837,7 @@ function ogOpenCostPicker(pi){
       });
     }else if(premium&&overLimit){
       b.addEventListener('click',()=>{
-        ogToast(`チームコスト上限 ${OG_MAX_TEAM_COST} を超えます（${ogCostPreviewTotal(pi,c).toFixed(1)}）`);
+        ogToast(tFmt('accountUi.costOverTpl',{max:OG_MAX_TEAM_COST,total:ogCostPreviewTotal(pi,c).toFixed(1)}));
       });
     }
     opts.appendChild(b);
@@ -4864,9 +4916,9 @@ async function ogHandleUfSsoFromHash(){
   if(!accessToken) return false;
   try{
     const r=await ogApi('/auth/uf-sso','POST',{access_token:accessToken});
-    if(r.ok){ ogAuth={token:r.token,user:r.user}; ogSaveSession(); ogApplyUser(); ogToast('UniversoFutbol会員でログインしました',true); }
-    else ogToast(r.error||'UniversoFutbolログインに失敗しました');
-  }catch{ ogToast('UniversoFutbolログインに失敗しました'); }
+    if(r.ok){ ogAuth={token:r.token,user:r.user}; ogSaveSession(); ogApplyUser(); ogToast(t('accountUi.ufLoginSuccess'),true); }
+    else ogToast(r.error||t('accountUi.ufLoginFailed'));
+  }catch{ ogToast(t('accountUi.ufLoginFailed')); }
   return true;
 }
 async function ogHandleSsoFromUrl(){
@@ -4874,9 +4926,9 @@ async function ogHandleSsoFromUrl(){
   if(!t) return false;
   try{
     const r=await ogApi('/auth/sso','POST',{token:t});
-    if(r.ok){ ogAuth={token:r.token,user:r.user}; ogSaveSession(); ogApplyUser(); ogToast('UniversoFutbol会員でログインしました',true); }
-    else ogToast(r.error||'SSOログインに失敗しました');
-  }catch{ ogToast('SSOログインに失敗しました'); }
+    if(r.ok){ ogAuth={token:r.token,user:r.user}; ogSaveSession(); ogApplyUser(); ogToast(t('accountUi.ufLoginSuccess'),true); }
+    else ogToast(r.error||t('accountUi.ssoFailed'));
+  }catch{ ogToast(t('accountUi.ssoFailed')); }
   try{ const u=new URL(location.href); u.searchParams.delete('sso'); history.replaceState(null,'',u.toString()); }catch{}
   return true;
 }
@@ -4885,7 +4937,7 @@ function ogSetLoginMode(m){
   ogLoginMode=m;
   document.getElementById('ogLoginModeLogin').classList.toggle('active',m==='login');
   document.getElementById('ogLoginModeReg').classList.toggle('active',m==='register');
-  document.getElementById('ogLoginSubmit').textContent=(m==='login')?'ログイン':'新規登録';
+  document.getElementById('ogLoginSubmit').textContent=t(m==='login'?'auth.login':'auth.register');
 }
 async function ogSubmitLogin(){
   const name=document.getElementById('ogLoginName').value;
@@ -4897,29 +4949,29 @@ async function ogSubmitLogin(){
     if(r.ok){
       ogAuth={token:r.token,user:r.user}; ogSaveSession(); ogApplyUser();
       ogShow('ogLogin',false); ogShowHome();
-      ogToast(ogLoginMode==='login'?'ログインしました':'アカウントを作成しました',true);
+      ogToast(t(ogLoginMode==='login'?'accountUi.loginSuccess':'accountUi.registerSuccess'),true);
     }else{
-      ogToast(r.error||'失敗しました');
+      ogToast(r.error||t('accountUi.requestFailed'));
     }
-  }catch{ ogToast('サーバーに接続できません'); }
+  }catch{ ogToast(t('accountUi.serverUnavailable')); }
   btn.disabled=false;
 }
 async function ogLogout(){
   try{ await ogApi('/auth/logout','POST',{}); }catch{}
   ogAuth={token:null,user:null}; ogSaveSession(); ogRenderAuth();
-  ogToast('ログアウトしました',true);
+  ogToast(t('accountUi.logoutSuccess'),true);
 }
 function ogRenderAuth(){
   const badge=document.getElementById('ogHeadBadge');
   if(badge){
-    badge.textContent=ogIsLoggedIn()?(ogIsPremium()?'★ PREMIUM':'FREE'):'ゲスト';
+    badge.textContent=ogIsLoggedIn()?(ogIsPremium()?'★ PREMIUM':'FREE'):t('accountUi.guest');
     badge.className='badge '+(ogIsPremium()?'premium':(ogIsLoggedIn()?'free':'guest'));
   }
   const acc=document.getElementById('ogAccountStatus');
   if(acc){
     acc.textContent=ogIsLoggedIn()
-      ? `ログイン中: ${ogAuth.user.name}（${ogIsPremium()?'プレミアム':'無料プラン'}）`
-      : 'ゲストプレイ中。ログインするとサブスク（ランク変更解放）を利用できます。';
+      ? tFmt('accountUi.loggedInTpl',{name:ogAuth.user.name,plan:t(ogIsPremium()?'accountUi.premium':'accountUi.free')})
+      : t('accountUi.guestStatus');
     document.getElementById('ogLogoutBtn').style.display=ogIsLoggedIn()?'':'none';
     document.getElementById('ogGotoLoginBtn').style.display=ogIsLoggedIn()?'none':'';
   }
@@ -4932,12 +4984,12 @@ function ogRenderSubPage(){
   if(!st) return;
   const sub=ogAuth.user&&ogAuth.user.subscription;
   if(!ogIsLoggedIn()){
-    st.innerHTML='<b>未ログイン</b><br>サブスクリプションの利用にはログイン（無料）が必要です。';
+    st.innerHTML=`<b>${t('accountUi.notLoggedIn')}</b><br>${t('accountUi.loginRequired')}`;
   }else if(ogIsPremium()){
-    const until=sub.until?new Date(sub.until).toLocaleDateString('ja-JP'):'';
-    st.innerHTML=`<b>プレミアム加入中</b>${sub.demo?'（デモ）':''}${until?`<br>有効期限: ${until}`:''}`;
+    const until=sub.until?new Date(sub.until).toLocaleDateString(currentLocale):'';
+    st.innerHTML=`<b>${t('accountUi.premiumActive')}</b>${sub.demo?t('accountUi.demo'):''}${until?`<br>${tFmt('accountUi.validUntilTpl',{date:until})}`:''}`;
   }else{
-    st.innerHTML='<b>無料プランです</b><br>プレミアムに加入すると駒のランク変更（コスト変更）が解放されます。';
+    st.innerHTML=`<b>${t('accountUi.freeStatus')}</b><br>${t('accountUi.freeDescription')}`;
   }
   document.getElementById('ogSubBtn').style.display=(ogIsLoggedIn()&&!ogIsPremium())?'':'none';
   document.getElementById('ogSubCancelBtn').style.display=ogIsPremium()?'':'none';
@@ -4946,14 +4998,14 @@ function ogRenderSubPage(){
 async function ogSubscribe(){
   let r=null;
   try{ r=await ogApi('/billing/subscribe','POST',{}); }catch{}
-  if(r&&r.ok){ ogAuth.user=r.user; ogRenderAuth(); ogRenderDeck(); ogToast('プレミアムに加入しました（デモ・請求なし）',true); }
-  else ogToast((r&&r.error)||'加入に失敗しました');
+  if(r&&r.ok){ ogAuth.user=r.user; ogRenderAuth(); ogRenderDeck(); ogToast(t('accountUi.subscribed'),true); }
+  else ogToast((r&&r.error)||t('accountUi.subscribeFailed'));
 }
 async function ogCancelSub(){
   let r=null;
   try{ r=await ogApi('/billing/cancel','POST',{}); }catch{}
-  if(r&&r.ok){ ogAuth.user=r.user; ogRenderAuth(); ogRenderDeck(); ogToast('サブスクを解約しました',true); }
-  else ogToast((r&&r.error)||'解約に失敗しました');
+  if(r&&r.ok){ ogAuth.user=r.user; ogRenderAuth(); ogRenderDeck(); ogToast(t('accountUi.cancelled'),true); }
+  else ogToast((r&&r.error)||t('accountUi.cancelFailed'));
 }
 function ogSelectTab(tab){
   const map={deck:'ogPageDeck',sub:'ogPageSub',settings:'ogPageSettings'};
@@ -4963,7 +5015,7 @@ function ogSelectTab(tab){
   document.getElementById('ogTabSettings')?.classList.toggle('active',tab==='settings');
 }
 function ogShowSubRequired(){
-  ogToast('ランク変更はプレミアム（サブスク）限定です');
+  ogToast(t('accountUi.premiumRequired'));
   ogSelectTab('sub');
 }
 function setFeedbackSetting(kind,enabled){
@@ -5062,13 +5114,13 @@ async function startMatchmaking(){
       if(!mmActive) return; // ポーリング中にキャンセルされた
       if(data.status==='matched'){
         stopMatchmaking(false);
-        log(`マッチング成立：${data.opponentName} と対戦します（ROOM ${data.roomCode}）`);
+        log(tFmt('matching.matchedTpl',{opponent:data.opponentName,room:data.roomCode}));
         ogShow('ogHome',false);
         try{
           await connectOnlineRoom(data.roomCode,null,null); // 席は接続の先着順（先=青/後=赤）
         }catch(err){
           console.error(err);
-          setOnlineStatus('マッチング後の接続に失敗しました','err');
+          setOnlineStatus(t('matching.connectFailed'),'err');
           ogShowHome();
         }
         return;
@@ -5103,9 +5155,9 @@ async function frCopy(btnId,text){
     btn.classList.add('copied');
     const orig=btn.dataset.label||btn.textContent;
     btn.dataset.label=orig;
-    btn.textContent='コピーしました!';
+    btn.textContent=t('friend.copied');
     setTimeout(()=>{ btn.classList.remove('copied'); btn.textContent=btn.dataset.label; },1500);
-  }catch{ document.getElementById('frError').textContent='コピーに失敗しました（手動で選択してください）'; }
+  }catch{ document.getElementById('frError').textContent=t('friend.copyFailed'); }
 }
 document.getElementById('ogFriendBtn').addEventListener('click',()=>{ playFeedback('tap'); ogSaveDeck(); frOpen(); });
 document.getElementById('frCloseBtn').addEventListener('click',()=>{ playFeedback('cancel'); frClose(); });
@@ -5119,7 +5171,7 @@ document.getElementById('frCreateBtn').addEventListener('click',async()=>{
     frSetMode('hosting');
   }catch(err){
     console.error(err);
-    document.getElementById('frError').textContent='部屋の作成に失敗しました。通信環境を確認してください';
+    document.getElementById('frError').textContent=t('friend.createFailed');
   }
 });
 document.getElementById('frCopyIdBtn').addEventListener('click',()=>frCopy('frCopyIdBtn',online.roomCode||''));
@@ -5128,7 +5180,7 @@ document.getElementById('frJoinModeBtn').addEventListener('click',()=>{ playFeed
 document.getElementById('frJoinBtn').addEventListener('click',async()=>{
   playFeedback('submit');
   const raw=(document.getElementById('frJoinInput').value||'').trim().toUpperCase();
-  if(!raw){ document.getElementById('frError').textContent='ルームIDを入力してください'; return; }
+  if(!raw){ document.getElementById('frError').textContent=t('friend.roomRequired'); return; }
   document.getElementById('frError').textContent='';
   try{
     online.apiBase=defaultOnlineApiBase();
@@ -5139,7 +5191,7 @@ document.getElementById('frJoinBtn').addEventListener('click',async()=>{
     console.error(err);
     ogShowHome();
     frOpen(); frSetMode('joining');
-    document.getElementById('frError').textContent='ルームが見つかりません（IDを確認してください）';
+    document.getElementById('frError').textContent=t('friend.roomNotFound');
   }
 });
 /* 相手が席に着いたらホスト側のフレンド待機を自動で閉じて対戦画面へ */
@@ -5152,7 +5204,7 @@ function frOnPresenceUpdate(){
   if(bothSeated){
     frClose();
     ogShow('ogHome',false); // 対戦画面へ（既に接続済み）
-    log('フレンドが参加しました。対戦開始！');
+    log(t('friend.joined'));
   }
 }
 document.getElementById('mmCancelBtn').addEventListener('click',()=>{ playFeedback('cancel'); stopMatchmaking(true); });
@@ -5207,7 +5259,7 @@ function ogBoot(){
 
 buildTeams();
 resetChain();
-log('同時ターン制：味方の未行動コマへ何度でもパスをつなげます。仕込んだら「実行（リプレイ）」。');
+logKey('initialHelp');
 applyI18n();
 render();
 autoJoinOnlineRoomFromUrl();
