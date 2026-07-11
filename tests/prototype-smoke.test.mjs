@@ -152,6 +152,7 @@ test("battle pieces display the requested five rank labels", () => {
   assert.match(html, /rank\.style\.backgroundImage=`var\(--cost\$\{p\.cost\*10\}\)`/);
   assert.match(html, /rank\.setAttribute\('aria-label',pieceRankLabel\(p\.cost\)\)/);
   assert.match(html, /className='pieceRank'/);
+  assert.match(html, /\.piece \.pieceRank\{position:absolute;inset:0;width:100%;height:100%/);
 });
 
 test("command ghosts use the same flipped view coordinates as battle pieces", () => {

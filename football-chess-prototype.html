@@ -200,8 +200,9 @@
   .piece.psel::before{content:""; position:absolute; inset:-3px; border:2px solid #ffe14d;
     border-radius:6px; box-shadow:0 0 6px #ffe14d; pointer-events:none;}
   .piece.hasball::after{pointer-events:none;}
-  /* 対戦中もメニュー画面と同じランク画像（--cost10〜30）を使う。独自の文字バッジにしない */
-  .piece .pieceRank{position:absolute;right:-22%;bottom:-8%;width:62%;aspect-ratio:40/34;
+  /* Unity Piece.prefab準拠：main_img_elm / cost_img_elm は同じ1.28×1.10・同一位置。
+     対戦中のランク画像もコマ画像と100%同サイズで重ね、縮小バッジにしない。 */
+  .piece .pieceRank{position:absolute;inset:0;width:100%;height:100%;
     background-size:100% 100%;background-repeat:no-repeat;pointer-events:none;z-index:7;
     filter:drop-shadow(0 1px 1px rgba(0,0,0,.6));}
   .piece.expanded{width:56%; max-width:48px; z-index:6;}
