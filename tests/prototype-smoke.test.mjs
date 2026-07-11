@@ -126,6 +126,27 @@ test("player name persists across reloads (session restore must not overwrite it
   assert.match(html, /addEventListener\('input',e=>ogSaveNameFromInput/);
 });
 
+test("authentication remains consistent on shared-room boot and network failures", () => {
+  const restoreBlock = html.match(/async function ogRestoreSession\(\)[\s\S]*?\n}/)?.[0] ?? "";
+  assert.match(restoreBlock, /catch\{[\s\S]*?ogAuth=\{token:null,user:null\}/);
+
+  const logoutBlock = html.match(/async function ogLogout\(\)[\s\S]*?\n}/)?.[0] ?? "";
+  assert.match(logoutBlock, /if\(!r\.ok\)/);
+  assert.match(logoutBlock, /logoutFailed/);
+
+  const bootBlock = html.match(/function ogBoot\(\)[\s\S]*?\n}/)?.[0] ?? "";
+  const roomBranch = bootBlock.match(/if\(roomCodeFromUrl\(\)\)\{[\s\S]*?return;/)?.[0] ?? "";
+  assert.match(roomBranch, /ogHandleUfSsoFromHash/);
+  assert.match(roomBranch, /ogHandleSsoFromUrl/);
+  assert.match(roomBranch, /ogRestoreSession/);
+});
+
+test("account identity and match name are shown as separate concepts", () => {
+  assert.match(html, /playerNameTpl:'Match name: \{name\}'/);
+  assert.match(html, /playerNameTpl:'対戦名: \{name\}'/);
+  assert.match(html, /accountUi\.playerNameTpl/);
+});
+
 test("ranking is publicly viewable while session binding remains available for eligible players", () => {
   for (const id of ["ogTabRanking", "ogPageRanking", "ogRankingBody"]) {
     assert.match(html, new RegExp(`id="${id}"`));

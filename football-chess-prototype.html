@@ -2448,8 +2448,8 @@ Object.assign(L10N.en.matchLog,{inputTimeout:'Input time expired; the unsubmitte
 Object.assign(L10N.ja.matchLog,{inputTimeout:'入力期限に達したため、未送信側は操作なしで解決します',reconnectFailed:'{room} の自動再接続に失敗しました。参加で再試行できます',reconnectError:'再接続失敗: {error}',disconnected:'{room} から切断されました。自動再接続を試します',onlineError:'オンライン処理エラー: {error}',joinedTeam:'{room} に {team} で参加しました',joinedSpectator:'{room} に観戦で参加しました',leftRoom:'ROOMから退出しました',teamLeft:'{team} が退出しました',inputReceived:'{team} の入力を受信',resigned:'{loser} が投了しました。{winner} の勝利',rematchRequested:'再戦希望を送信しました',opponentRematch:'{team} が再戦を希望しています',rematchStarted:'―― 再戦開始 ――',cannotResignSpectator:'観戦中は投了できません',cannotRematchSpectator:'観戦中は再戦希望を送れません',rematchAfterMatch:'再戦は試合終了後に使えます',cannotInputSpectator:'観戦中は入力できません',alreadySent:'送信済みです',turnReplay:'―― ターン {turn} 実行（リプレイ）――',matchResult:'―― 試合終了（フルタイム）　あなた {self} - {opp} 相手 ――',turnStartInput:'―― {half}{at} ターン {turn} 開始：行動を仕込んでください ――',halftimeSimple:'―― ハーフタイム ――',secondHalfKickoff:'後半は{team}ボールでキックオフ'});
 for(const dict of Object.values(L10N)){ dict.confirmResign='Resign this match?'; }
 L10N.ja.confirmResign='投了しますか？';
-for(const dict of Object.values(L10N)){ dict.accountUi={guest:'Guest',premium:'Premium',free:'Free plan',loggedInTpl:'Signed in as {name} ({plan})',guestStatus:'Playing as guest. Sign in to use subscription features.',notLoggedIn:'Not signed in',loginRequired:'Sign in to use the subscription.',premiumActive:'Premium active',demo:' (demo)',validUntilTpl:'Valid until: {date}',freeStatus:'Free plan',freeDescription:'Join Premium to unlock piece rank and cost changes.',loginSuccess:'Signed in',registerSuccess:'Account created',logoutSuccess:'Signed out',serverUnavailable:'Cannot connect to the server',requestFailed:'Request failed',ufLoginSuccess:'Signed in with UniversoFutbol',ufLoginFailed:'UniversoFutbol sign-in failed',ssoFailed:'SSO sign-in failed',subscribed:'Premium enabled (demo; no charge)',subscribeFailed:'Could not enable Premium',cancelled:'Subscription cancelled',cancelFailed:'Could not cancel subscription',premiumRequired:'Rank changes require Premium',costOverTpl:'Team cost limit {max} exceeded ({total})'}; }
-L10N.ja.accountUi={guest:'ゲスト',premium:'プレミアム',free:'無料プラン',loggedInTpl:'ログイン中: {name}（{plan}）',guestStatus:'ゲストプレイ中。ログインするとサブスク機能を利用できます。',notLoggedIn:'未ログイン',loginRequired:'サブスクリプションの利用にはログインが必要です。',premiumActive:'プレミアム加入中',demo:'（デモ）',validUntilTpl:'有効期限: {date}',freeStatus:'無料プランです',freeDescription:'プレミアムに加入すると駒のランク変更が解放されます。',loginSuccess:'ログインしました',registerSuccess:'アカウントを作成しました',logoutSuccess:'ログアウトしました',serverUnavailable:'サーバーに接続できません',requestFailed:'失敗しました',ufLoginSuccess:'UniversoFutbol会員でログインしました',ufLoginFailed:'UniversoFutbolログインに失敗しました',ssoFailed:'SSOログインに失敗しました',subscribed:'プレミアムに加入しました（デモ・請求なし）',subscribeFailed:'加入に失敗しました',cancelled:'サブスクを解約しました',cancelFailed:'解約に失敗しました',premiumRequired:'ランク変更はプレミアム限定です',costOverTpl:'チームコスト上限 {max} を超えます（{total}）'};
+for(const dict of Object.values(L10N)){ dict.accountUi={guest:'Guest',premium:'Premium',free:'Free plan',loggedInTpl:'Signed in as {name} ({plan})',playerNameTpl:'Match name: {name}',guestStatus:'Playing as guest. Sign in to use subscription features.',notLoggedIn:'Not signed in',loginRequired:'Sign in to use the subscription.',premiumActive:'Premium active',demo:' (demo)',validUntilTpl:'Valid until: {date}',freeStatus:'Free plan',freeDescription:'Join Premium to unlock piece rank and cost changes.',loginSuccess:'Signed in',registerSuccess:'Account created',logoutSuccess:'Signed out',logoutFailed:'Could not sign out. Please check your connection and try again.',serverUnavailable:'Cannot connect to the server',requestFailed:'Request failed',ufLoginSuccess:'Signed in with UniversoFutbol',ufLoginFailed:'UniversoFutbol sign-in failed',ssoFailed:'SSO sign-in failed',subscribed:'Premium enabled (demo; no charge)',subscribeFailed:'Could not enable Premium',cancelled:'Subscription cancelled',cancelFailed:'Could not cancel subscription',premiumRequired:'Rank changes require Premium',costOverTpl:'Team cost limit {max} exceeded ({total})'}; }
+L10N.ja.accountUi={guest:'ゲスト',premium:'プレミアム',free:'無料プラン',loggedInTpl:'アカウント: {name}（{plan}）',playerNameTpl:'対戦名: {name}',guestStatus:'ゲストプレイ中。ログインするとサブスク機能を利用できます。',notLoggedIn:'未ログイン',loginRequired:'サブスクリプションの利用にはログインが必要です。',premiumActive:'プレミアム加入中',demo:'（デモ）',validUntilTpl:'有効期限: {date}',freeStatus:'無料プランです',freeDescription:'プレミアムに加入すると駒のランク変更が解放されます。',loginSuccess:'ログインしました',registerSuccess:'アカウントを作成しました',logoutSuccess:'ログアウトしました',logoutFailed:'ログアウトできませんでした。通信を確認して、もう一度お試しください。',serverUnavailable:'サーバーに接続できません',requestFailed:'失敗しました',ufLoginSuccess:'UniversoFutbol会員でログインしました',ufLoginFailed:'UniversoFutbolログインに失敗しました',ssoFailed:'SSOログインに失敗しました',subscribed:'プレミアムに加入しました（デモ・請求なし）',subscribeFailed:'加入に失敗しました',cancelled:'サブスクを解約しました',cancelFailed:'解約に失敗しました',premiumRequired:'ランク変更はプレミアム限定です',costOverTpl:'チームコスト上限 {max} を超えます（{total}）'};
 for(const dict of Object.values(L10N)){ Object.assign(dict.matching,{matchedTpl:'Matched with {opponent} (ROOM {room})',connectFailed:'Could not connect after matching'}); Object.assign(dict.friend,{copied:'Copied!',copyFailed:'Copy failed. Select the text manually.',createFailed:'Could not create the room. Check your connection.',roomRequired:'Enter a room ID',roomNotFound:'Room not found. Check the ID.',joined:'Your friend joined. The match is starting!'}); }
 Object.assign(L10N.ja.matching,{matchedTpl:'マッチング成立：{opponent} と対戦します（ROOM {room}）',connectFailed:'マッチング後の接続に失敗しました'});
 /* 対戦モード選択・15秒COMフォールバック・ランキング（2026-07-10追加。入れ子辞書は初期化ガード付きで追加すること） */
@@ -5182,7 +5182,11 @@ async function ogRestoreSession(){
     const r=await ogApi('/auth/me');
     if(r.ok){ ogAuth.user=r.user; }
     else{ ogAuth={token:null,user:null}; ogSaveSession(); }
-  }catch{ /* オフラインでもゲストとして起動継続 */ }
+  }catch{
+    // 保存トークンは次回の再試行用に残すが、今回の実行中は送信しない。
+    // 「画面はゲストなのに古いBearerだけ送る」半端な状態を作らない。
+    ogAuth={token:null,user:null};
+  }
   ogApplyUser();
 }
 /* Universo Futbol ポータル(/api/auth/launch)からのSSOハンドオフを消費する。
@@ -5251,7 +5255,10 @@ async function ogSubmitLogin(){
   btn.disabled=false;
 }
 async function ogLogout(){
-  try{ await ogApi('/auth/logout','POST',{}); }catch{}
+  try{
+    const r=await ogApi('/auth/logout','POST',{});
+    if(!r.ok){ ogToast(r.error||t('accountUi.logoutFailed')); return; }
+  }catch{ ogToast(t('accountUi.logoutFailed')); return; }
   ogAuth={token:null,user:null}; ogSaveSession(); ogRenderAuth();
   ogToast(t('accountUi.logoutSuccess'),true);
 }
@@ -5264,7 +5271,7 @@ function ogRenderAuth(){
   const acc=document.getElementById('ogAccountStatus');
   if(acc){
     acc.textContent=ogIsLoggedIn()
-      ? tFmt('accountUi.loggedInTpl',{name:ogAuth.user.name,plan:t(ogIsPremium()?'accountUi.premium':'accountUi.free')})
+      ? tFmt('accountUi.loggedInTpl',{name:ogAuth.user.name,plan:t(ogIsPremium()?'accountUi.premium':'accountUi.free')})+' / '+tFmt('accountUi.playerNameTpl',{name:ogUserName()})
       : t('accountUi.guestStatus');
     document.getElementById('ogLogoutBtn').style.display=ogIsLoggedIn()?'':'none';
     document.getElementById('ogGotoLoginBtn').style.display=ogIsLoggedIn()?'none':'';
@@ -5738,8 +5745,12 @@ document.getElementById('ogHomeBtn').addEventListener('click',()=>{ ogShowHome()
 
 /* ---- 起動 ---- */
 function ogBoot(){
-  // ?room= 付き共有URLは従来どおり直接試合画面（自動参加）へ（セッションだけ裏で復元）
-  if(roomCodeFromUrl()){ ogRestoreSession(); return; }
+  // ?room= 付き共有URLでもSSOハンドオフを先に処理する。
+  // 画面は従来どおり直接試合へ進め、ホームだけを表示しない。
+  if(roomCodeFromUrl()){
+    (async()=>{ if(!(await ogHandleUfSsoFromHash())) await ogHandleSsoFromUrl(); await ogRestoreSession(); })();
+    return;
+  }
   // 他のUniversoFutbolコンテンツとの整合性のため、タイトル画面・自動ログインダイアログは廃止（2026-07-10）。
   // 直接ホームを表示し、ログインは右上のログインボタンから任意で行う（タイトル画像はホーム背景に転用）
   ogShowHome();

@@ -34,7 +34,7 @@ Football Chess Web版を universofutbol.com に組み込むためのログイン
 ## Universo Platform SSO ハンドオフ（2026-07-09 実装・現行の本番経路）
 
 ポータル（universo-frontpage、universo-futbol.com）のゲームカードは
-`GET /api/auth/launch?to=https://mini.footballchess.io` を経由し、ログイン済みなら
+`https://universo-futbol.com/api/auth/launch?to=https://mini.footballchess.io` を経由し、ログイン済みなら
 `https://mini.footballchess.io/#uf_sso=<base64url JSON>` に 302 リダイレクトする
 （payload: `{access_token, refresh_token, expires_in, user_id, email, source}`。fragment なのでサーバーには送られない）。
 
