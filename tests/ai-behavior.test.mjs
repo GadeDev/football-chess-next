@@ -163,3 +163,32 @@ test("攻撃: 受け手の隣の強い駒（SS級）リスク関数が働いて�
   assert.equal(r.far, 0, `誰も届かない位置でリスクが出ている（far=${r.far}）`);
   assert.ok(r.near > 0, `隣接する高ランク駒のリスクが0（near=${r.near}）`);
 });
+
+test("攻撃: 1ターン先読みはゴールへつながる地点を高く評価する", () => {
+  const { run } = loadPrototype();
+  const result = JSON.parse(run(`
+    (()=>{
+      buildKickoffForTeam('r');
+      const p=ballHolder();
+      const deep=aiFollowUpAttackValue(p,0,-2);
+      const advanced=aiFollowUpAttackValue(p,0,1);
+      return JSON.stringify({deep,advanced});
+    })()
+  `));
+  assert.ok(result.advanced > result.deep,
+    `前進地点の次手期待が自陣より高くない（deep=${result.deep}, advanced=${result.advanced}）`);
+});
+
+test("攻撃: 負けている後半終盤は攻撃性が上がる", () => {
+  const { run } = loadPrototype();
+  const result = JSON.parse(run(`
+    (()=>{
+      state.half='後半'; state.turn=14;
+      state.scoreSelf=2; state.scoreOpp=0; const losing=aiAttackUrgency();
+      state.scoreSelf=0; state.scoreOpp=2; const winning=aiAttackUrgency();
+      return JSON.stringify({losing,winning});
+    })()
+  `));
+  assert.ok(result.losing > 20, `負けている終盤の攻撃性が弱い（${result.losing}）`);
+  assert.ok(result.winning < 0, `リード中終盤の抑制が働かない（${result.winning}）`);
+});

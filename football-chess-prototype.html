@@ -2106,12 +2106,13 @@ function bestRedMoveToward(p,x,y){
    良手の範囲内でだけ散らすので、弱くならずに試合ごとの展開が変わる。 */
 function aiPickTop(options){
   const s=options.filter(o=>o&&o.score>0)
-    .map(o=>({...o,score:o.score+(Math.random()*10-5)}))
+    .map(o=>({...o,score:o.score+(Math.random()*4-2)}))
     .sort((a,b)=>b.score-a.score);
   if(!s.length) return null;
   const best=s[0].score;
-  const cands=s.filter(o=>o.score>=best*0.82).slice(0,4);
-  const weight=o=>Math.max(1,o.score-best*0.75);
+  // 強さ優先：最善手の90%未満は候補から外す。ただし同等の良手間では展開を散らす。
+  const cands=s.filter(o=>o.score>=best*0.90).slice(0,3);
+  const weight=o=>Math.max(1,o.score-best*0.84);
   let r=Math.random()*cands.reduce((n,o)=>n+weight(o),0);
   for(const o of cands){ r-=weight(o); if(r<=0) return o; }
   return cands[0];
@@ -2138,15 +2139,43 @@ function aiTackleRiskAt(piece,x,y){
   if(!enemies.length) return 0;
   return Math.max(...enemies.map(e=>calcTackleSuccess({...piece,x,y},e)));
 }
+/* 2手目の攻撃期待：その地点で保持した次ターンに、現在地または1回のドリブル後から
+   どれだけ良いシュートを作れるか。目先の成功率だけで横パスを続けず、ゴールまでの
+   連続した攻撃を選ぶための軽量な1ターン先読み。盤面は変更しない。 */
+function aiFollowUpAttackValue(piece,x,y){
+  const at={...piece,x,y,sx:x,sy:y};
+  const shot=calcShoot(at);
+  let best=shot.area==='-'?0:shot.prob+(shot.area==='VA'?8:20);
+  moveLimitList(pieceCost(piece)).forEach(([dx,dy])=>{
+    const nx=x+dx, ny=y+dy, c=cellAt(nx,ny);
+    if(!c||c.t==='selfgoal'||c.t==='oppgoal'||piecesAt(nx,ny).length>=MAX_PER_CELL) return;
+    const moved={...at,x:nx,y:ny};
+    const next=calcShoot(moved);
+    if(next.area==='-') return;
+    const danger=Math.max(aiTackleRiskAt(piece,nx,ny),aiReachThreatAt(piece,nx,ny));
+    best=Math.max(best,next.prob+(next.area==='VA'?8:20)-danger*0.35);
+  });
+  return Math.max(0,best);
+}
+/* 試合状況による攻撃性。赤(COM)は scoreOpp。負けている終盤ほどシュート/前進を優先し、
+   リード中の終盤は成功率の低い突撃を少し抑える。 */
+function aiAttackUrgency(){
+  const diff=(state.scoreOpp||0)-(state.scoreSelf||0);
+  const late=state.half==='後半' ? Math.min(1,(state.turn||1)/REGULAR_TURNS) : 0;
+  if(diff<0) return 8+18*late;
+  if(diff>0) return -6*late;
+  return 4*late;
+}
 function aiPlanHolder(p){
   const options=[];
+  const urgency=aiAttackUrgency();
   // シュート：成功率＋エリアボーナス（2026-07-10強化。ユーザー指摘「攻撃が弱すぎてシュートに至らない」対策：
   // 静的な守備壁の前で安全な横パス回しがシュートを上回ってしまうため、
   // PA/GAでは強め・VAでも一定のボーナスを与えて「撃てる時は撃つ」寄りにする）
   const sh=calcShoot(p);
   if(sh.area!=='-'){
     const areaBonus=sh.area==='VA'?12:30; // PA/GA=30, VA=12
-    options.push({score:sh.prob*1.2+areaBonus, act:{type:'shoot',pieceId:p.id,tx:p.x,ty:p.y,team:'r'}});
+    options.push({score:sh.prob*1.2+areaBonus+urgency, act:{type:'shoot',pieceId:p.id,tx:p.x,ty:p.y,team:'r'}});
   }
   // 通常パス：実質成功率（経路×着地×(1-オフサイド率)×被タックル割引）＋前進価値＋受け手のシュート期待
   redPassTargets(p).forEach(q=>{
@@ -2161,7 +2190,8 @@ function aiPlanHolder(p){
     const gain=(redGoalDistance(p.x,p.y)-redGoalDistance(q.x,q.y))*8;
     const qShoot=calcShoot(q);
     const chainShoot=(qShoot.area!=='-'&&qShoot.prob>=30)?q:null; // パス→シュート連鎖の候補（45→30に緩和）
-    options.push({score:succ*0.6+gain+(chainShoot?qShoot.prob*0.5:0),
+    const follow=aiFollowUpAttackValue(q,q.x,q.y);
+    options.push({score:succ*0.6+gain+(chainShoot?qShoot.prob*0.5:0)+follow*0.28+Math.max(0,gain)*urgency*0.015,
       act:{type:'pass',pieceId:p.id,targetId:q.id,tx:q.x,ty:q.y,team:'r'}, chainShoot});
   });
   // スルーパス：前方の空きマスへ。着地への回収レース（赤の方が近い時だけ）
@@ -2188,7 +2218,8 @@ function aiPlanHolder(p){
     const gain=(redGoalDistance(p.x,p.y)-redGoalDistance(x,y))*10;
     // PA/GA（ゴール至近）への持ち込みは強めのボーナス＝守備壁への突入を恐れすぎない
     const areaBonus=isRedAttackingArea(x,y)?(redGoalDistance(x,y)<=2?30:14):0;
-    options.push({score:(100-risk)*0.35+gain+areaBonus-reach*0.18,
+    const follow=aiFollowUpAttackValue(p,x,y);
+    options.push({score:(100-risk)*0.35+gain+areaBonus-reach*0.18+follow*0.38+Math.max(0,gain)*urgency*0.02,
       act:{type:'dribble',pieceId:p.id,tx:x,ty:y,team:'r'}});
   });
   // 自陣停滞の解消（2026-07-10。ユーザー指摘「プレイヤーが動かないとAIが自陣から出てこず
@@ -2290,7 +2321,7 @@ function planOpponentAI(){
 
     // ① シュートレーン封鎖：保持者→自ゴールの経路＋ゴール前(±1,-2)の空きマスへ、届く駒のうち
     //    高ランク（＝ブロック/カット抽選に強い）を優先して置く。シュート圏内=2体、接近中=1体
-    const laneSlots=holderShoot.area!=='-'?2:(goalDist<=5?1:0);
+    const laneSlots=holderShoot.area!=='-'?3:(goalDist<=5?2:0);
     if(laneSlots>0){
       const laneCells=[];
       getRoute(holder.x,holder.y,0,-3).forEach(([x,y])=>laneCells.push([x,y]));
