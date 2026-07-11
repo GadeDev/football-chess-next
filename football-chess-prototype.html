@@ -2951,7 +2951,9 @@ function render(){
   if(state.phase==='input'){
     myCommands.forEach(cmd=>{
       const p=pieceById(cmd.pieceId); if(!p) return;
-      const ci=COLS.indexOf(cmd.tx), ri=ROWS.indexOf(cmd.ty);
+      // 命令座標はゲーム座標。赤席では通常コマと同じ視点座標へ反転してから描画する。
+      const vg=toViewXY(cmd.tx,cmd.ty);
+      const ci=COLS.indexOf(vg.x), ri=ROWS.indexOf(vg.y);
       if(ci<0||ri<0) return;
       // マス中心からわずかにずらして描画し、既存駒と完全に重ならないようにする（視認性対策）。
       const gx=(ci+0.68)*cw, gy=(ri+0.32)*ch;

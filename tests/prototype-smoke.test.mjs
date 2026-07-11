@@ -153,3 +153,10 @@ test("battle pieces display the requested five rank labels", () => {
   assert.match(html, /rank\.setAttribute\('aria-label',pieceRankLabel\(p\.cost\)\)/);
   assert.match(html, /className='pieceRank'/);
 });
+
+test("command ghosts use the same flipped view coordinates as battle pieces", () => {
+  const ghostBlock = html.match(/\/\/ 移動先\/パス先ゴースト[\s\S]*?document\.getElementById\('scoreSelf'\)/)?.[0] ?? "";
+  assert.match(ghostBlock, /const vg=toViewXY\(cmd\.tx,cmd\.ty\)/);
+  assert.match(ghostBlock, /COLS\.indexOf\(vg\.x\), ri=ROWS\.indexOf\(vg\.y\)/);
+  assert.match(ghostBlock, /IMG\[p\.posType\+'_'\+viewTeam\(p\.team\)\]/);
+});
