@@ -146,3 +146,9 @@ test("ranking records only active subscribers but exposes the list without authe
   assert.doesNotMatch(topBlock, /reason: "login"/);
   assert.doesNotMatch(topBlock, /reason: "premium"/);
 });
+
+test("battle pieces display the requested five rank labels", () => {
+  assert.match(html, /const PIECE_RANK_LABELS=\{1:'☆',1\.5:'☆\+',2:'☆☆',2\.5:'☆☆\+',3:'SS'\}/);
+  assert.match(html, /rank\.textContent=pieceRankLabel\(p\.cost\)/);
+  assert.match(html, /className='pieceRank'/);
+});
