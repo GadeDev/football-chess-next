@@ -200,13 +200,10 @@
   .piece.psel::before{content:""; position:absolute; inset:-3px; border:2px solid #ffe14d;
     border-radius:6px; box-shadow:0 0 6px #ffe14d; pointer-events:none;}
   .piece.hasball::after{pointer-events:none;}
-  /* 対戦中のランクバッジ。小さい駒でも ☆ / ☆+ / ☆☆ / ☆☆+ / SS を判読できる固定サイズ */
-  .piece .pieceRank{position:absolute;right:-11px;bottom:-6px;min-width:18px;height:13px;
-    box-sizing:border-box;padding:0 2px;border:1px solid rgba(255,232,128,.92);border-radius:7px;
-    background:rgba(4,18,34,.94);color:#ffe680;font:900 8px/11px ui-sans-serif,system-ui,sans-serif;
-    letter-spacing:0;text-align:center;white-space:nowrap;pointer-events:none;z-index:7;
-    text-shadow:0 1px 1px #000;box-shadow:0 1px 3px rgba(0,0,0,.75);}
-  .piece.expanded .pieceRank{right:-9px;bottom:-5px;transform:scale(1.08);}
+  /* 対戦中もメニュー画面と同じランク画像（--cost10〜30）を使う。独自の文字バッジにしない */
+  .piece .pieceRank{position:absolute;right:-22%;bottom:-8%;width:62%;aspect-ratio:40/34;
+    background-size:100% 100%;background-repeat:no-repeat;pointer-events:none;z-index:7;
+    filter:drop-shadow(0 1px 1px rgba(0,0,0,.6));}
   .piece.expanded{width:56%; max-width:48px; z-index:6;}
   /* 移動先/パス先ゴースト（自分の予約コマンドの半透明プレビュー・仕込み中のみ）
      既存駒（z-index:4）より手前に出し、点線の丸枠＋点滅で「そこに来る予定」だと重なっても分かるようにする。 */
@@ -2913,8 +2910,9 @@ function render(){
         // ランク（コスト）を試合中も常時表示する。
         const rank=document.createElement('span');
         rank.className='pieceRank';
-        rank.textContent=pieceRankLabel(p.cost);
-        rank.setAttribute('aria-hidden','true');
+        rank.style.backgroundImage=`var(--cost${p.cost*10})`;
+        rank.setAttribute('aria-label',pieceRankLabel(p.cost));
+        rank.setAttribute('role','img');
         pe.appendChild(rank);
         // 金色シュートマーク：扇形メニューのSHOOT項目と同一の判定関数(calcShoot)を参照（複製・改変禁止）
         if(hasBall && state.phase==='input' && p.team===localPlayerTeam() && calcShoot(p).area!=='-'){

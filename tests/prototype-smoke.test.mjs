@@ -149,6 +149,7 @@ test("ranking records only active subscribers but exposes the list without authe
 
 test("battle pieces display the requested five rank labels", () => {
   assert.match(html, /const PIECE_RANK_LABELS=\{1:'☆',1\.5:'☆\+',2:'☆☆',2\.5:'☆☆\+',3:'SS'\}/);
-  assert.match(html, /rank\.textContent=pieceRankLabel\(p\.cost\)/);
+  assert.match(html, /rank\.style\.backgroundImage=`var\(--cost\$\{p\.cost\*10\}\)`/);
+  assert.match(html, /rank\.setAttribute\('aria-label',pieceRankLabel\(p\.cost\)\)/);
   assert.match(html, /className='pieceRank'/);
 });
