@@ -669,7 +669,20 @@ body.replaying .boardWrap::after{content:"";position:absolute;inset:0;}
 .tutorialArrow.gold::after{border-left-color:#ffd75e;filter:drop-shadow(0 0 4px #f7c948);}
 .tutorialArrow.red{background:#ff8d9b;box-shadow:0 0 8px #ff5c70;}
 .tutorialArrow.red::after{border-left-color:#ff8d9b;filter:drop-shadow(0 0 4px #ff5c70);}
-/* ③制限時間のモック図（残り時間バー＋TURN END） */
+/* ③駒の種類とランクの図 */
+.tgPieceGuide{background:#081a2c;border:1px solid #1d466b;border-radius:10px;padding:12px;}
+.tgPieceRow{display:flex;justify-content:space-around;margin-bottom:12px;}
+.tgPieceCell{display:flex;flex-direction:column;align-items:center;gap:6px;}
+/* .tutorialPiece（後方で定義・absolute）に勝つため2クラスで指定する */
+.tutorialPiece.tgPieceStatic{position:static;width:40px;height:40px;transform:none;transition:none;}
+.tgPieceRole{font-size:10.5px;font-weight:700;color:#9fc0e2;}
+.tgRankRow{display:flex;align-items:center;justify-content:center;gap:10px;}
+.tgRankBadge{color:#ffd75e;font-weight:900;text-shadow:0 0 6px #f7c94866;}
+.tgRankBadge.r0{font-size:13px;opacity:.75;}
+.tgRankBadge.r1{font-size:17px;opacity:.9;}
+.tgRankBadge.r2{font-size:22px;filter:drop-shadow(0 0 6px #f7c948);}
+.tgRankSep{color:#6f93b8;font-size:13px;font-weight:900;}
+/* ④制限時間のモック図（残り時間バー＋TURN END） */
 .tgTimerDemo{display:flex;align-items:center;gap:10px;background:#081a2c;border:1px solid #1d466b;border-radius:10px;padding:12px;}
 .tgTimerLabel{min-width:34px;text-align:center;font-size:18px;font-weight:900;color:#ffe14d;font-variant-numeric:tabular-nums;}
 .tgTimerBar{flex:1;height:10px;border-radius:999px;background:#183a53;overflow:hidden;}
@@ -2447,9 +2460,9 @@ for(const dict of Object.values(L10N)){
   dict.ranking={short:'Ranking',title:'Ranking',loginMsg:'The ranking is a premium feature. Log in to view it.',premiumMsg:'The ranking is a premium feature',loading:'Loading…',loadFailed:'Could not load the ranking. Please try again later.',empty:'No ranked players yet. Play an online match!',unranked:'Play an online match to enter the ranking',myRankTpl:'Your rank: #{rank} / Rating {rating} ({wins}W {draws}D {losses}L)',recordTpl:'{wins}W {draws}D {losses}L',note:'Ratings change with online match results (auto matching / friend match). Only premium members are listed.'};
 }
 for(const dict of Object.values(L10N)){
-  Object.assign(dict.tutorial||(dict.tutorial={}),{promptTitle:'First time here?',promptBody:'A one-page illustrated guide covers the rules and controls. You can reopen it anytime from “How to play” on the home screen.',promptWatch:'See how to play',promptLater:'Maybe later',turnsTitle:'Simultaneous turns',controlsTitle:'How to control your pieces',timeTitle:'Time limit',time1:'You have {seconds} seconds per turn. When time runs out, the turn ends automatically with the moves you planned.'});
+  Object.assign(dict.tutorial||(dict.tutorial={}),{promptTitle:'First time here?',promptBody:'A one-page illustrated guide covers the rules and controls. You can reopen it anytime from “How to play” on the home screen.',promptWatch:'See how to play',promptLater:'Maybe later',turnsTitle:'Simultaneous turns',controlsTitle:'How to control your pieces',timeTitle:'Time limit',time1:'You have {seconds} seconds per turn. When time runs out, the turn ends automatically with the moves you planned.',piecesTitle:'Piece types and ranks',pieces1:'There are four piece types: FW (attack), MF (midfield), DF (defense), and GK (guards the goal).',pieces2:'Higher-rank (★) pieces are stronger in duels such as tackles, pass cuts, and shots.',pieces3:'Your team cost is capped at {max} in total. Balance your squad in the formation screen.',roleFw:'Attack',roleMf:'Midfield',roleDf:'Defense',roleGk:'Goalkeeper'});
 }
-Object.assign(L10N.ja.tutorial,{promptTitle:'はじめてですか？',promptBody:'ルールと操作を1枚の図解でご紹介します。あとからホームの「遊び方」でいつでも見られます。',promptWatch:'遊び方を見る',promptLater:'あとで見る',turnsTitle:'同時ターン制',controlsTitle:'駒の操作',timeTitle:'制限時間',time1:'1ターンの持ち時間は{seconds}秒。時間切れになると、仕込んだ操作のまま自動でターンが終了します。'});
+Object.assign(L10N.ja.tutorial,{promptTitle:'はじめてですか？',promptBody:'ルールと操作を1枚の図解でご紹介します。あとからホームの「遊び方」でいつでも見られます。',promptWatch:'遊び方を見る',promptLater:'あとで見る',turnsTitle:'同時ターン制',controlsTitle:'駒の操作',timeTitle:'制限時間',time1:'1ターンの持ち時間は{seconds}秒。時間切れになると、仕込んだ操作のまま自動でターンが終了します。',piecesTitle:'駒の種類とランク',pieces1:'駒は4種類：FW（攻撃）/ MF（中盤）/ DF（守備）/ GK（ゴールを守る）。',pieces2:'ランク（★）が高い駒ほど、タックル・パスカット・シュートなどの競り合いに強くなります。',pieces3:'チームの合計コストは{max}まで。編成画面で配分を調整しましょう。',roleFw:'攻撃',roleMf:'中盤',roleDf:'守備',roleGk:'ゴールを守る'});
 Object.assign(L10N.ja.home,{match:'対戦',matchSub:'モードを選ぶ'});
 L10N.ja.mode={title:'対戦モード',onlineDesc:'自動マッチングで対戦相手を探します',comDesc:'コンピューターとすぐに対戦',friendDesc:'招待コード/URLで友達と対戦'};
 Object.assign(L10N.ja.matching,{foundTpl:'対戦相手が見つかりました：{name}'});
@@ -5378,6 +5391,7 @@ const TUTORIAL_GUIDE=[
   {id:'controls',title:'tutorial.controlsTitle',captions:['tutorial.move1','tutorial.pass1','tutorial.shoot1'],
    pieces:[['b','MF',35,65],['b','FW',70,32],['r','GK',50,12]],ball:[35,65],
    arrows:[[35,65,55,50]],goldArrows:[[35,65,70,32]],redArrows:[]},
+  {id:'pieces',title:'tutorial.piecesTitle',captions:['tutorial.pieces1','tutorial.pieces2','tutorial.pieces3'],pieceGuide:true},
   {id:'time',title:'tutorial.timeTitle',captions:['tutorial.time1'],timer:true},
 ];
 function tutorialPieceNode(team,label,x,y,focus){ const el=document.createElement('div'); el.className=`tutorialPiece ${team}${focus?' focus':''}`; el.textContent=label; el.style.left=x+'%'; el.style.top=y+'%'; return el; }
@@ -5392,7 +5406,28 @@ function tutorialArrowNode(fx,fy,tx,ty,variant){
   el.style.transform=`rotate(${Math.atan2(dy,dx)*180/Math.PI}deg)`;
   return el;
 }
-/* ③制限時間のモック図：残り時間バー＋TURN ENDボタンの見た目を再現 */
+/* ③駒の種類とランクの図：4ポジションの駒＋役割ラベル、ランク（★）は大きいほど強い */
+function tutorialPieceGuideNode(){
+  const box=document.createElement('div'); box.className='tgPieceGuide';
+  const row=document.createElement('div'); row.className='tgPieceRow';
+  [['FW','tutorial.roleFw'],['MF','tutorial.roleMf'],['DF','tutorial.roleDf'],['GK','tutorial.roleGk']].forEach(([label,roleKey])=>{
+    const cell=document.createElement('div'); cell.className='tgPieceCell';
+    const pc=document.createElement('div'); pc.className='tutorialPiece b tgPieceStatic'; pc.textContent=label;
+    const role=document.createElement('div'); role.className='tgPieceRole'; role.textContent=t(roleKey);
+    cell.appendChild(pc); cell.appendChild(role);
+    row.appendChild(cell);
+  });
+  box.appendChild(row);
+  const ranks=document.createElement('div'); ranks.className='tgRankRow';
+  ['★','★★','★★★'].forEach((star,i)=>{
+    const b=document.createElement('div'); b.className='tgRankBadge r'+i; b.textContent=star;
+    ranks.appendChild(b);
+    if(i<2){ const sep=document.createElement('div'); sep.className='tgRankSep'; sep.textContent='<'; ranks.appendChild(sep); }
+  });
+  box.appendChild(ranks);
+  return box;
+}
+/* ④制限時間のモック図：残り時間バー＋TURN ENDボタンの見た目を再現 */
 function tutorialTimerDemoNode(){
   const box=document.createElement('div'); box.className='tgTimerDemo';
   const barWrap=document.createElement('div'); barWrap.className='tgTimerBar';
@@ -5412,6 +5447,8 @@ function tutorialRender(){
     box.appendChild(title);
     if(item.timer){
       box.appendChild(tutorialTimerDemoNode());
+    }else if(item.pieceGuide){
+      box.appendChild(tutorialPieceGuideNode());
     }else{
       const stage=document.createElement('div'); stage.className='tutorialStage tgStage';
       const pitch=document.createElement('div'); pitch.className='tutorialPitch';
@@ -5424,7 +5461,7 @@ function tutorialRender(){
       box.appendChild(stage);
     }
     const cap=document.createElement('div'); cap.className='tgCaption';
-    item.captions.forEach(key=>{ const line=document.createElement('div'); line.textContent=tFmt(key,{seconds:INPUT_TIME_SEC}); cap.appendChild(line); });
+    item.captions.forEach(key=>{ const line=document.createElement('div'); line.textContent=tFmt(key,{seconds:INPUT_TIME_SEC,max:OG_MAX_TEAM_COST.toFixed(1)}); cap.appendChild(line); });
     box.appendChild(cap);
     sheet.appendChild(box);
   });

@@ -63,7 +63,7 @@ test("初回起動時だけチュートリアル案内が出て、以後は「�
   // ホームの「遊び方」からいつでも開け、閲覧済みが保存される（静的1枚ガイド・5項目）
   await page.locator("#ogTutorialBtn").click();
   await expect(page.locator("#tutorialOverlay")).toBeVisible();
-  await expect(page.locator("#tutorialSheet .tgItem")).toHaveCount(3);
+  await expect(page.locator("#tutorialSheet .tgItem")).toHaveCount(4);
   await expect(page.locator("#tutorialSheet .tgCaption").first()).not.toHaveText("");
   expect(await page.evaluate(() => localStorage.getItem("fc.tutorial.seen"))).toBe("1");
   await page.locator("#tutorialCloseBtn").click();
