@@ -155,6 +155,11 @@ test("battle pieces display the requested five rank labels", () => {
   assert.match(html, /\.piece \.pieceRank\{position:absolute;inset:0;width:100%;height:100%/);
 });
 
+test("formation menu ranks use the Unity PieceCell cost-image dimensions", () => {
+  assert.match(html, /\.ogPiece \.ogCost\{position:absolute;left:50%;top:50%;width:115%;height:91\.6667%/);
+  assert.match(html, /background-position:center;background-size:contain/);
+});
+
 test("command ghosts use the same flipped view coordinates as battle pieces", () => {
   const ghostBlock = html.match(/\/\/ 移動先\/パス先ゴースト[\s\S]*?document\.getElementById\('scoreSelf'\)/)?.[0] ?? "";
   assert.match(ghostBlock, /const vg=toViewXY\(cmd\.tx,cmd\.ty\)/);

@@ -469,7 +469,9 @@
 .ogPiece{position:absolute;width:58%;transform:translate(-50%,-50%);cursor:pointer;transition:filter .15s,transform .1s;}
 .ogPiece:active{filter:brightness(1.4);transform:translate(-50%,-50%) scale(.92);}
 .ogPiece img{width:100%;display:block;filter:drop-shadow(0 2px 3px rgba(0,0,0,.55));}
-.ogPiece .ogCost{position:absolute;right:-18%;bottom:-8%;width:73%;aspect-ratio:40/34;background-size:100% 100%;background-repeat:no-repeat;pointer-events:none;}
+/* Unity DeckEdit/PieceCell.prefab準拠：本体60×60に対してcost_img_elmは69×55、中央配置、PreserveAspect。 */
+.ogPiece .ogCost{position:absolute;left:50%;top:50%;width:115%;height:91.6667%;transform:translate(-50%,-50%);
+  background-position:center;background-size:contain;background-repeat:no-repeat;pointer-events:none;}
 .ogPiece.sel img{outline:2px solid #5ad1ff;outline-offset:2px;border-radius:8px;}
 .ogPiece.ogPulse{animation:ogPiecePulse .3s ease;}
 @keyframes ogPiecePulse{0%{transform:translate(-50%,-50%) scale(1);}50%{transform:translate(-50%,-50%) scale(1.15);}100%{transform:translate(-50%,-50%) scale(1);}}
