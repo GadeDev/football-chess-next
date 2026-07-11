@@ -120,8 +120,10 @@ export interface SeededRng {
 
 const COSTS = [1, 1.5, 2, 2.5, 3] as const;
 
+// 2026-07-11 縦8マス化（ユーザー指定）：プレー可能マスを縦6段→8段へ拡張（中盤ノーマル2段→4段）。
+// ゴール行を含む論理グリッドは10段。PA/VA/Cross/GAのゾーン構造は従来どおり両端2段ずつ。
 export const COLS = [-2, -1, 0, 1, 2] as const;
-export const ROWS = [-3, -2, -1, 0, 1, 2, 3, 4] as const;
+export const ROWS = [-4, -3, -2, -1, 0, 1, 2, 3, 4, 5] as const;
 export const MAX_PER_CELL = 3;
 export const TEAM_MEMBER_COUNT = 11;
 export const MAX_TEAM_COST = 16;
@@ -130,17 +132,22 @@ export const MAX_CK_NUM = 3;
 export const BATTLE_DELAY_COUNT = 3;
 
 export const BOARD: BoardCell[] = [
-  { x: 0, y: -3, t: "oppgoal", label: "敵G" },
+  { x: 0, y: -4, t: "oppgoal", label: "敵G" },
+  { x: -2, y: -3, t: "cross" },
+  { x: -1, y: -3, t: "pa", label: "PA" },
+  { x: 0, y: -3, t: "oppga", label: "GA" },
+  { x: 1, y: -3, t: "pa", label: "PA" },
+  { x: 2, y: -3, t: "cross" },
   { x: -2, y: -2, t: "cross" },
-  { x: -1, y: -2, t: "pa", label: "PA" },
-  { x: 0, y: -2, t: "oppga", label: "GA" },
-  { x: 1, y: -2, t: "pa", label: "PA" },
+  { x: -1, y: -2, t: "va", label: "VA" },
+  { x: 0, y: -2, t: "va", label: "VA" },
+  { x: 1, y: -2, t: "va", label: "VA" },
   { x: 2, y: -2, t: "cross" },
-  { x: -2, y: -1, t: "cross" },
-  { x: -1, y: -1, t: "va", label: "VA" },
-  { x: 0, y: -1, t: "va", label: "VA" },
-  { x: 1, y: -1, t: "va", label: "VA" },
-  { x: 2, y: -1, t: "cross" },
+  { x: -2, y: -1, t: "normal" },
+  { x: -1, y: -1, t: "normal" },
+  { x: 0, y: -1, t: "normal" },
+  { x: 1, y: -1, t: "normal" },
+  { x: 2, y: -1, t: "normal" },
   { x: -2, y: 0, t: "normal" },
   { x: -1, y: 0, t: "normal" },
   { x: 0, y: 0, t: "normal" },
@@ -151,19 +158,26 @@ export const BOARD: BoardCell[] = [
   { x: 0, y: 1, t: "normal" },
   { x: 1, y: 1, t: "normal" },
   { x: 2, y: 1, t: "normal" },
-  { x: -2, y: 2, t: "cross" },
-  { x: -1, y: 2, t: "va", label: "VA" },
-  { x: 0, y: 2, t: "va", label: "VA" },
-  { x: 1, y: 2, t: "va", label: "VA" },
-  { x: 2, y: 2, t: "cross" },
+  { x: -2, y: 2, t: "normal" },
+  { x: -1, y: 2, t: "normal" },
+  { x: 0, y: 2, t: "normal" },
+  { x: 1, y: 2, t: "normal" },
+  { x: 2, y: 2, t: "normal" },
   { x: -2, y: 3, t: "cross" },
-  { x: -1, y: 3, t: "pa", label: "PA" },
-  { x: 0, y: 3, t: "selfga", label: "GA" },
-  { x: 1, y: 3, t: "pa", label: "PA" },
+  { x: -1, y: 3, t: "va", label: "VA" },
+  { x: 0, y: 3, t: "va", label: "VA" },
+  { x: 1, y: 3, t: "va", label: "VA" },
   { x: 2, y: 3, t: "cross" },
-  { x: 0, y: 4, t: "selfgoal", label: "自G" },
+  { x: -2, y: 4, t: "cross" },
+  { x: -1, y: 4, t: "pa", label: "PA" },
+  { x: 0, y: 4, t: "selfga", label: "GA" },
+  { x: 1, y: 4, t: "pa", label: "PA" },
+  { x: 2, y: 4, t: "cross" },
+  { x: 0, y: 5, t: "selfgoal", label: "自G" },
 ];
 
+// 編成のマスタ座標（チームローカル）：y=0が最前列（ハーフウェイ際）、y=-3が最後列（PA/GA段）。
+// 縦8マス化で自陣が3段→4段になったため y=-3 を追加（GKは-3=GA段に置く）。
 export const DEFAULT_TEAM = [
   { id: 4, x: -1, y: 0 },
   { id: 1, x: 1, y: 0 },
@@ -175,7 +189,7 @@ export const DEFAULT_TEAM = [
   { id: 13, x: -1, y: -2 },
   { id: 11, x: 1, y: -2 },
   { id: 11, x: 2, y: -2 },
-  { id: 18, x: 0, y: -2 },
+  { id: 18, x: 0, y: -3 },
 ] as const;
 
 export const KICKOFF_CELLS: Record<Team, Array<{ x: number; y: number }>> = {
@@ -362,7 +376,7 @@ export function validateTeamDefinition(value: unknown): {
     const y = item.y;
     const validId = typeof id === "number" && Number.isInteger(id) && id >= 1 && id <= 20;
     const validX = typeof x === "number" && Number.isInteger(x) && (COLS as readonly number[]).includes(x);
-    const validY = typeof y === "number" && Number.isInteger(y) && [-2, -1, 0].includes(y);
+    const validY = typeof y === "number" && Number.isInteger(y) && [-3, -2, -1, 0].includes(y);
     if (!validId) errors.push(`Piece ${index + 1} has invalid id`);
     if (!validX) {
       errors.push(`Piece ${index + 1} has invalid x`);
@@ -394,13 +408,27 @@ export function validateTeamDefinition(value: unknown): {
   return { ok: errors.length === 0, definition, teamCost, errors };
 }
 
+/* 旧3段編成（縦6マス時代：y∈{0,-1,-2}、GA段=-2）の互換移行。
+   縦8マス化後のGA段は-3なので、旧形式は「y<0を1段下げる」とゾーン（VA/PA/GA）が完全に保存される。
+   新形式は必ずGA段(-3)に駒（GK）を持つため、-3が全く無い編成を旧形式とみなす。 */
+export function migrateLegacyTeamDefinition(value: unknown): unknown {
+  if (!Array.isArray(value) || value.length === 0) return value;
+  const rows = value.map((item) => (item && typeof item === "object" ? (item as Record<string, unknown>).y : undefined));
+  if (!rows.every((y) => typeof y === "number" && Number.isInteger(y) && y >= -2 && y <= 0)) return value;
+  return value.map((item) => {
+    const record = item as Record<string, unknown>;
+    const y = record.y as number;
+    return { ...record, y: y < 0 ? y - 1 : y };
+  });
+}
+
 export function normalizeTeamDefinitions(definitions?: TeamDefinitions): Record<Team, TeamPieceDefinition[]> {
   const normalized: Record<Team, TeamPieceDefinition[]> = {
     b: defaultTeamDefinition(),
     r: defaultTeamDefinition(),
   };
   for (const team of ["b", "r"] as Team[]) {
-    const validation = validateTeamDefinition(definitions?.[team]);
+    const validation = validateTeamDefinition(migrateLegacyTeamDefinition(definitions?.[team]));
     if (validation.ok) normalized[team] = validation.definition;
   }
   return normalized;
@@ -427,7 +455,7 @@ export function opponentTeam(team: Team): Team {
 }
 
 export function goalCellFor(team: Team): { x: number; y: number } {
-  return team === "b" ? { x: 0, y: -3 } : { x: 0, y: 4 };
+  return team === "b" ? { x: 0, y: -4 } : { x: 0, y: 5 };
 }
 
 export function makeDefaultPiece(
@@ -537,7 +565,8 @@ export function getRoute(sx: number, sy: number, ex: number, ey: number): Array<
   let cx = sx;
   let cy = sy;
   let i = 0;
-  while (i < 10 && !(cx === ex && cy === ey)) {
+  // 縦8マス化で最長縦距離が7→9になったため上限を12へ（暴走ガードとしての余裕込み）
+  while (i < 12 && !(cx === ex && cy === ey)) {
     i += 1;
     let tx = cx;
     let ty = cy;

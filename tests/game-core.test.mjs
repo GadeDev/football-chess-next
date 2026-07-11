@@ -274,15 +274,15 @@ test("a dribble command still moves the piece after an earlier same-turn pass cu
 test("a non-carrying dribble into the new enemy holder tackles like Unity", () => {
   const state = createInitialGameState("b", "dribble-counter-tackle-1");
   state.pieces = [
-    piece({ id: 1, team: "b", posType: "mf", cost: 3, x: 0, y: -1, sx: 0, sy: -1 }),
-    piece({ id: 2, team: "r", posType: "gk", cost: 1, x: 0, y: -2, sx: 0, sy: -2 }),
+    piece({ id: 1, team: "b", posType: "mf", cost: 3, x: 0, y: -2, sx: 0, sy: -2 }),
+    piece({ id: 2, team: "r", posType: "gk", cost: 1, x: 0, y: -3, sx: 0, sy: -3 }),
   ];
   state.ball = { target: "piece", pieceId: 1, x: null, y: null, lastTeam: "b" };
 
   const result = resolveServerTurn(state, {
     b: [
-      { type: "throughpass", pieceId: 1, tx: 0, ty: -2, team: "b" },
-      { type: "dribble", pieceId: 1, tx: 0, ty: -2, team: "b" },
+      { type: "throughpass", pieceId: 1, tx: 0, ty: -3, team: "b" },
+      { type: "dribble", pieceId: 1, tx: 0, ty: -3, team: "b" },
     ],
   });
 
@@ -441,13 +441,13 @@ test("a goal-area GK always cuts a landing pass and takes possession", () => {
 test("a goal-area GK always cuts a through pass target and takes possession", () => {
   const state = createInitialGameState("b", "goal-area-gk-through-cut");
   state.pieces = [
-    piece({ id: 1, team: "b", posType: "mf", cost: 1, x: 0, y: -1, sx: 0, sy: -1 }),
-    piece({ id: 2, team: "r", posType: "gk", cost: 3, x: 0, y: -2, sx: 0, sy: -2 }),
+    piece({ id: 1, team: "b", posType: "mf", cost: 1, x: 0, y: -2, sx: 0, sy: -2 }),
+    piece({ id: 2, team: "r", posType: "gk", cost: 3, x: 0, y: -3, sx: 0, sy: -3 }),
   ];
   state.ball = { target: "piece", pieceId: 1, x: null, y: null, lastTeam: "b" };
 
   const result = resolveServerTurn(state, {
-    b: [{ type: "throughpass", pieceId: 1, tx: 0, ty: -2, team: "b" }],
+    b: [{ type: "throughpass", pieceId: 1, tx: 0, ty: -3, team: "b" }],
   });
 
   assert.deepEqual(
@@ -507,16 +507,16 @@ test("a successful shot scores and returns kickoff possession to the conceding t
 test("a normal shot miss becomes a saving catch when the GK is in the goal area", () => {
   const state = createInitialGameState("b", "saving-0");
   state.pieces = [
-    piece({ id: 1, team: "b", posType: "fw", cost: 1, x: 0, y: -2, sx: 0, sy: -2 }),
+    piece({ id: 1, team: "b", posType: "fw", cost: 1, x: 0, y: -3, sx: 0, sy: -3 }),
     piece({ id: 2, team: "b", posType: "mf", cost: 1, x: 1, y: 1, sx: 1, sy: 1 }),
-    piece({ id: 3, team: "r", posType: "gk", cost: 3, x: 0, y: -2, sx: 0, sy: -2 }),
+    piece({ id: 3, team: "r", posType: "gk", cost: 3, x: 0, y: -3, sx: 0, sy: -3 }),
   ];
   state.ball = { target: "piece", pieceId: 1, x: null, y: null, lastTeam: "b" };
   state.battleDelayCounts = { b: 2, r: 0 };
 
   const result = resolveServerTurn(state, {
     b: [
-      { type: "shoot", pieceId: 1, tx: 0, ty: -3, team: "b" },
+      { type: "shoot", pieceId: 1, tx: 0, ty: -4, team: "b" },
       { type: "move", pieceId: 2, tx: 2, ty: 1, team: "b" },
     ],
   });
@@ -536,16 +536,16 @@ test("a normal shot miss becomes a saving catch when the GK is in the goal area"
 test("a normal shot miss outside the GK goal-area catch stops later commands as GK", () => {
   const state = createInitialGameState("b", "failed-0");
   state.pieces = [
-    piece({ id: 1, team: "b", posType: "fw", cost: 1, x: -1, y: -1, sx: -1, sy: -1 }),
+    piece({ id: 1, team: "b", posType: "fw", cost: 1, x: -1, y: -2, sx: -1, sy: -2 }),
     piece({ id: 2, team: "b", posType: "mf", cost: 1, x: 1, y: 1, sx: 1, sy: 1 }),
-    piece({ id: 3, team: "r", posType: "gk", cost: 3, x: -1, y: -1, sx: -1, sy: -1 }),
+    piece({ id: 3, team: "r", posType: "gk", cost: 3, x: -1, y: -2, sx: -1, sy: -2 }),
   ];
   state.ball = { target: "piece", pieceId: 1, x: null, y: null, lastTeam: "b" };
   state.battleDelayCounts = { b: 2, r: 0 };
 
   const result = resolveServerTurn(state, {
     b: [
-      { type: "shoot", pieceId: 1, tx: 0, ty: -3, team: "b" },
+      { type: "shoot", pieceId: 1, tx: 0, ty: -4, team: "b" },
       { type: "move", pieceId: 2, tx: 2, ty: 1, team: "b" },
     ],
   });
@@ -565,24 +565,24 @@ test("a normal shot miss outside the GK goal-area catch stops later commands as 
 test("a normal shot miss keeps replay metadata for the GK follow-up", () => {
   const state = createInitialGameState("b", "failed-0");
   state.pieces = [
-    piece({ id: 1, team: "b", posType: "fw", cost: 1, x: -1, y: -1, sx: -1, sy: -1 }),
-    piece({ id: 3, team: "r", posType: "gk", cost: 3, x: -1, y: -1, sx: -1, sy: -1 }),
+    piece({ id: 1, team: "b", posType: "fw", cost: 1, x: -1, y: -2, sx: -1, sy: -2 }),
+    piece({ id: 3, team: "r", posType: "gk", cost: 3, x: -1, y: -2, sx: -1, sy: -2 }),
   ];
   state.ball = { target: "piece", pieceId: 1, x: null, y: null, lastTeam: "b" };
 
   const result = resolveServerTurn(state, {
-    b: [{ type: "shoot", pieceId: 1, tx: 0, ty: -3, team: "b" }],
+    b: [{ type: "shoot", pieceId: 1, tx: 0, ty: -4, team: "b" }],
   });
   const [miss, saved] = result.events;
 
   assert.equal(miss.type, "shot.miss");
-  assert.deepEqual(miss.from, { x: -1, y: -1 });
+  assert.deepEqual(miss.from, { x: -1, y: -2 });
   assert.equal(miss.details?.area, "VA");
   assert.equal(saved.type, "shot.saved");
-  assert.deepEqual(saved.from, { x: -1, y: -1 });
+  assert.deepEqual(saved.from, { x: -1, y: -2 });
   assert.equal(saved.details?.source, "VitalAreaShoot");
   assert.equal(saved.details?.finalKickKind, "VitalAreaShoot");
-  assert.deepEqual(saved.details?.from, { x: -1, y: -1 });
+  assert.deepEqual(saved.details?.from, { x: -1, y: -2 });
   assert.deepEqual(saved.details?.kickLogs, ["VitalAreaShoot failed-to-CK 5% => GK"]);
   assert.deepEqual(saved.details?.kickSteps, [
     { type: "failed-to-ck", kind: "VitalAreaShoot", probability: 5, result: "GK" },
@@ -594,13 +594,13 @@ test("a normal shot miss keeps replay metadata for the GK follow-up", () => {
 test("a normal shot miss exposes structured CK replay steps", () => {
   const state = createInitialGameState("b", "ck-steps-35");
   state.pieces = [
-    piece({ id: 1, team: "b", posType: "fw", cost: 1, x: -1, y: -1, sx: -1, sy: -1 }),
-    piece({ id: 3, team: "r", posType: "gk", cost: 3, x: -1, y: -1, sx: -1, sy: -1 }),
+    piece({ id: 1, team: "b", posType: "fw", cost: 1, x: -1, y: -2, sx: -1, sy: -2 }),
+    piece({ id: 3, team: "r", posType: "gk", cost: 3, x: -1, y: -2, sx: -1, sy: -2 }),
   ];
   state.ball = { target: "piece", pieceId: 1, x: null, y: null, lastTeam: "b" };
 
   const result = resolveServerTurn(state, {
-    b: [{ type: "shoot", pieceId: 1, tx: 0, ty: -3, team: "b" }],
+    b: [{ type: "shoot", pieceId: 1, tx: 0, ty: -4, team: "b" }],
   });
   const saved = result.events.find((event) => event.type === "shot.saved");
 
@@ -624,13 +624,13 @@ test("a normal shot miss exposes structured CK replay steps", () => {
 test("a CK goal exposes the final kick kind for replay", () => {
   const state = createInitialGameState("b", "ck-goal-15");
   state.pieces = [
-    piece({ id: 1, team: "b", posType: "fw", cost: 1, x: -1, y: -1, sx: -1, sy: -1 }),
-    piece({ id: 3, team: "r", posType: "gk", cost: 3, x: -1, y: -1, sx: -1, sy: -1 }),
+    piece({ id: 1, team: "b", posType: "fw", cost: 1, x: -1, y: -2, sx: -1, sy: -2 }),
+    piece({ id: 3, team: "r", posType: "gk", cost: 3, x: -1, y: -2, sx: -1, sy: -2 }),
   ];
   state.ball = { target: "piece", pieceId: 1, x: null, y: null, lastTeam: "b" };
 
   const result = resolveServerTurn(state, {
-    b: [{ type: "shoot", pieceId: 1, tx: 0, ty: -3, team: "b" }],
+    b: [{ type: "shoot", pieceId: 1, tx: 0, ty: -4, team: "b" }],
   });
   const goal = result.events.find((event) => event.type === "shot.goal");
 
@@ -680,17 +680,17 @@ test("a foul set-piece that ends in GK stops later commands in the same turn", (
 test("a foul PK goal stops later commands and records the final kick kind", () => {
   const state = createInitialGameState("b", "foul-goal-stop-8");
   state.pieces = [
-    piece({ id: 1, team: "b", posType: "fw", cost: 1, x: 0, y: -1, sx: 0, sy: -1 }),
+    piece({ id: 1, team: "b", posType: "fw", cost: 1, x: 0, y: -2, sx: 0, sy: -2 }),
     piece({ id: 2, team: "b", posType: "mf", cost: 1, x: 1, y: 1, sx: 1, sy: 1 }),
     piece({ id: 5, team: "b", posType: "mf", cost: 3, x: 2, y: 1, sx: 2, sy: 1 }),
-    piece({ id: 3, team: "r", posType: "df", cost: 1, x: 0, y: -2, sx: 0, sy: -2 }),
-    piece({ id: 4, team: "r", posType: "gk", cost: 1, x: 2, y: -1, sx: 2, sy: -1 }),
+    piece({ id: 3, team: "r", posType: "df", cost: 1, x: 0, y: -3, sx: 0, sy: -3 }),
+    piece({ id: 4, team: "r", posType: "gk", cost: 1, x: 2, y: -2, sx: 2, sy: -2 }),
   ];
   state.ball = { target: "piece", pieceId: 1, x: null, y: null, lastTeam: "b" };
 
   const result = resolveServerTurn(state, {
     b: [
-      { type: "dribble", pieceId: 1, tx: 0, ty: -2, team: "b" },
+      { type: "dribble", pieceId: 1, tx: 0, ty: -3, team: "b" },
       { type: "move", pieceId: 2, tx: 2, ty: 1, team: "b" },
     ],
   });
@@ -872,15 +872,15 @@ test("battle delay restarts with the opponent team's kickoff like Unity", () => 
 test("passive tactics is flagged when nine pieces stay deep and the ball is outside that area", () => {
   const state = createInitialGameState("b", "passive-tactics-flag");
   state.pieces = [
-    piece({ id: 1, team: "b", posType: "fw", cost: 1, x: -2, y: 2, sx: -2, sy: 2 }),
-    piece({ id: 2, team: "b", posType: "fw", cost: 1, x: -1, y: 2, sx: -1, sy: 2 }),
-    piece({ id: 3, team: "b", posType: "mf", cost: 1, x: 0, y: 2, sx: 0, sy: 2 }),
-    piece({ id: 4, team: "b", posType: "mf", cost: 1, x: 1, y: 2, sx: 1, sy: 2 }),
-    piece({ id: 5, team: "b", posType: "mf", cost: 1, x: 2, y: 2, sx: 2, sy: 2 }),
-    piece({ id: 6, team: "b", posType: "df", cost: 1, x: -2, y: 3, sx: -2, sy: 3 }),
-    piece({ id: 7, team: "b", posType: "df", cost: 1, x: -1, y: 3, sx: -1, sy: 3 }),
-    piece({ id: 8, team: "b", posType: "df", cost: 1, x: 0, y: 3, sx: 0, sy: 3 }),
-    piece({ id: 9, team: "b", posType: "gk", cost: 1, x: 1, y: 3, sx: 1, sy: 3 }),
+    piece({ id: 1, team: "b", posType: "fw", cost: 1, x: -2, y: 3, sx: -2, sy: 3 }),
+    piece({ id: 2, team: "b", posType: "fw", cost: 1, x: -1, y: 3, sx: -1, sy: 3 }),
+    piece({ id: 3, team: "b", posType: "mf", cost: 1, x: 0, y: 3, sx: 0, sy: 3 }),
+    piece({ id: 4, team: "b", posType: "mf", cost: 1, x: 1, y: 3, sx: 1, sy: 3 }),
+    piece({ id: 5, team: "b", posType: "mf", cost: 1, x: 2, y: 3, sx: 2, sy: 3 }),
+    piece({ id: 6, team: "b", posType: "df", cost: 1, x: -2, y: 4, sx: -2, sy: 4 }),
+    piece({ id: 7, team: "b", posType: "df", cost: 1, x: -1, y: 4, sx: -1, sy: 4 }),
+    piece({ id: 8, team: "b", posType: "df", cost: 1, x: 0, y: 4, sx: 0, sy: 4 }),
+    piece({ id: 9, team: "b", posType: "gk", cost: 1, x: 1, y: 4, sx: 1, sy: 4 }),
   ];
   state.ball = { target: "cell", pieceId: null, x: 0, y: 0, lastTeam: "r" };
 
@@ -896,17 +896,17 @@ test("passive tactics is flagged when nine pieces stay deep and the ball is outs
 test("passive tactics does not trigger while the ball is inside that team's deep area", () => {
   const state = createInitialGameState("b", "passive-tactics-ball-deep");
   state.pieces = [
-    piece({ id: 1, team: "b", posType: "fw", cost: 1, x: -2, y: 2, sx: -2, sy: 2 }),
-    piece({ id: 2, team: "b", posType: "fw", cost: 1, x: -1, y: 2, sx: -1, sy: 2 }),
-    piece({ id: 3, team: "b", posType: "mf", cost: 1, x: 0, y: 2, sx: 0, sy: 2 }),
-    piece({ id: 4, team: "b", posType: "mf", cost: 1, x: 1, y: 2, sx: 1, sy: 2 }),
-    piece({ id: 5, team: "b", posType: "mf", cost: 1, x: 2, y: 2, sx: 2, sy: 2 }),
-    piece({ id: 6, team: "b", posType: "df", cost: 1, x: -2, y: 3, sx: -2, sy: 3 }),
-    piece({ id: 7, team: "b", posType: "df", cost: 1, x: -1, y: 3, sx: -1, sy: 3 }),
-    piece({ id: 8, team: "b", posType: "df", cost: 1, x: 0, y: 3, sx: 0, sy: 3 }),
-    piece({ id: 9, team: "b", posType: "gk", cost: 1, x: 1, y: 3, sx: 1, sy: 3 }),
+    piece({ id: 1, team: "b", posType: "fw", cost: 1, x: -2, y: 3, sx: -2, sy: 3 }),
+    piece({ id: 2, team: "b", posType: "fw", cost: 1, x: -1, y: 3, sx: -1, sy: 3 }),
+    piece({ id: 3, team: "b", posType: "mf", cost: 1, x: 0, y: 3, sx: 0, sy: 3 }),
+    piece({ id: 4, team: "b", posType: "mf", cost: 1, x: 1, y: 3, sx: 1, sy: 3 }),
+    piece({ id: 5, team: "b", posType: "mf", cost: 1, x: 2, y: 3, sx: 2, sy: 3 }),
+    piece({ id: 6, team: "b", posType: "df", cost: 1, x: -2, y: 4, sx: -2, sy: 4 }),
+    piece({ id: 7, team: "b", posType: "df", cost: 1, x: -1, y: 4, sx: -1, sy: 4 }),
+    piece({ id: 8, team: "b", posType: "df", cost: 1, x: 0, y: 4, sx: 0, sy: 4 }),
+    piece({ id: 9, team: "b", posType: "gk", cost: 1, x: 1, y: 4, sx: 1, sy: 4 }),
   ];
-  state.ball = { target: "cell", pieceId: null, x: 0, y: 2, lastTeam: "b" };
+  state.ball = { target: "cell", pieceId: null, x: 0, y: 3, lastTeam: "b" };
 
   const result = resolveServerTurn(state, {});
 

@@ -10,6 +10,7 @@ import {
   resolveServerTurn,
   setupKickoffForTeam,
   teamDefinitionCost,
+  migrateLegacyTeamDefinition,
   validateTeamDefinition,
   validateCommandsForTeam,
   type FootballChessGameState,
@@ -237,7 +238,8 @@ function teamDefinitionField(value: string | null): { definition?: TeamPieceDefi
   if (!value) return {};
   try {
     const parsed = JSON.parse(value) as unknown;
-    const validation = validateTeamDefinition(parsed);
+    // 旧クライアント（縦6マス時代の3段編成）互換：ゾーン保存で1段下げてから検証する
+    const validation = validateTeamDefinition(migrateLegacyTeamDefinition(parsed));
     if (!validation.ok) return { error: validation.errors.join("; ") };
     return { definition: validation.definition };
   } catch {

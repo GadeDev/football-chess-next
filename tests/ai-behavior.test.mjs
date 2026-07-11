@@ -29,11 +29,11 @@ test("守備: 青保持者がシュート圏に入ると、レーン封鎖また
     buildKickoffForTeam('b');
     (()=>{
       const h=ballHolder();
-      h.x=0; h.y=-1; h.sx=0; h.sy=-1; // 赤陣ゴール前へ（シュート脅威を作る）
+      h.x=0; h.y=-2; h.sx=0; h.sy=-2; // 赤陣ゴール前（VA段）へ（シュート脅威を作る）
       oppCommands=[];
       planOpponentAI();
-      const lane=new Set(['0,-2','-1,-2','1,-2']);
-      getRoute(h.x,h.y,0,-3).forEach(([x,y])=>lane.add(x+','+y));
+      const lane=new Set(['0,-3','-1,-3','1,-3']);
+      getRoute(h.x,h.y,0,-4).forEach(([x,y])=>lane.add(x+','+y));
       const laneMoves=oppCommands.filter(c=>c.type==='move'&&lane.has(c.tx+','+c.ty)).length;
       const charges=oppCommands.filter(c=>c.type==='move'&&c.tx===h.x&&c.ty===h.y).length;
       return JSON.stringify({area:calcShoot(h).area,laneMoves,charges,total:oppCommands.length});
@@ -57,7 +57,7 @@ test("守備: 保持者が遠くても、ゴール側に居ない駒は帰陣コ
       oppCommands=[];
       planOpponentAI();
       const h=ballHolder();
-      // 「保持者より自ゴール(0,-3)側へ動く」or「保持者へ寄せる」移動が存在すること
+      // 「保持者より自ゴール(0,-4)側へ動く」or「保持者へ寄せる」移動が存在すること
       const reactive=oppCommands.filter(c=>c.type==='move').length;
       return JSON.stringify({reactive});
     })()
@@ -171,7 +171,7 @@ test("攻撃: 1ターン先読みはゴールへつながる地点を高く評�
       buildKickoffForTeam('r');
       const p=ballHolder();
       const deep=aiFollowUpAttackValue(p,0,-2);
-      const advanced=aiFollowUpAttackValue(p,0,1);
+      const advanced=aiFollowUpAttackValue(p,0,2); // 縦8マス化：VA(y=3)の1マス手前
       return JSON.stringify({deep,advanced});
     })()
   `));
