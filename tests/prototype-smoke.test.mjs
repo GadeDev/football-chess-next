@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
 const html = readFileSync(new URL("../football-chess-prototype.html", import.meta.url), "utf8");
+const accountsSource = readFileSync(new URL("../src/accounts.ts", import.meta.url), "utf8");
 const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)].map((match) => match[1]);
 
 test("prototype inline scripts compile", () => {
@@ -125,14 +126,23 @@ test("player name persists across reloads (session restore must not overwrite it
   assert.match(html, /addEventListener\('input',e=>ogSaveNameFromInput/);
 });
 
-test("premium-only ranking page ships with locked states and session binding", () => {
+test("ranking is publicly viewable while session binding remains available for eligible players", () => {
   for (const id of ["ogTabRanking", "ogPageRanking", "ogRankingBody"]) {
     assert.match(html, new RegExp(`id="${id}"`));
   }
   const block = html.match(/async function ogRenderRanking\(\)[\s\S]*?\n}/)?.[0] ?? "";
-  assert.match(block, /ogIsPremium\(\)/);
-  assert.match(block, /ogIsLoggedIn\(\)/);
+  assert.doesNotMatch(block, /ogIsPremium\(\)/);
+  assert.doesNotMatch(block, /ogIsLoggedIn\(\)/);
   assert.match(block, /\/ranking\/top/);
   // オンライン席とアカウントの紐付け（ランキング記録用のsessionパラメータ）
   assert.match(html, /url\.searchParams\.set\('session',ogAuth\.token\)/);
+});
+
+test("ranking records only active subscribers but exposes the list without authentication", () => {
+  const recordBlock = accountsSource.match(/async recordRankedResult\([\s\S]*?\n  }/)?.[0] ?? "";
+  const topBlock = accountsSource.match(/async rankingTop\([\s\S]*?\n  }/)?.[0] ?? "";
+  assert.match(recordBlock, /subscription\.active/);
+  assert.match(topBlock, /if \(!row \|\| !isPremium\) return \{ ok: true, rankings \}/);
+  assert.doesNotMatch(topBlock, /reason: "login"/);
+  assert.doesNotMatch(topBlock, /reason: "premium"/);
 });

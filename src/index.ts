@@ -552,7 +552,7 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
     return receiveTelemetry(request, env);
   }
 
-  // ランキング（プレミアム限定）。閲覧・掲載ともサブスク有効なアカウントのみ。
+  // ランキング一覧は公開。掲載・戦績反映はサブスク有効なアカウントのみ。
   // 戦績の記録はMatchRoom（サーバー権威）からのみ行われ、クライアントが直接書き込むAPIは無い。
   if (url.pathname === `${API_PREFIX}/ranking/top` && request.method === "GET") {
     return json(await accountStub(env).rankingTop(bearerToken(request)));

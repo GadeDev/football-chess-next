@@ -719,10 +719,7 @@ body.replaying .boardWrap::after{content:"";position:absolute;inset:0;}
 #ogPageSettings .accStatus{background:#0d2038;border:1px solid #29517c;border-radius:8px;color:#cfe4fa;font-size:12px;padding:9px 11px;margin-bottom:8px;line-height:1.6;}
 #ogPageSettings .accBtn{border:none;border-radius:8px;background:#28425f;color:#dfeaf6;font-size:12px;font-weight:700;padding:9px 14px;cursor:pointer;margin-right:8px;}
 
-/* ランキング（プレミアム限定）。#ogPageRanking はサブスク/設定と同じページ枠を使う */
-#ogRankingBody .rkLocked{background:rgba(9,26,48,.9);border:1px solid #23496f;border-radius:12px;padding:22px 16px;text-align:center;color:#cfe4fa;font-size:13px;line-height:1.8;}
-#ogRankingBody .rkLocked .rkLockIco{font-size:30px;display:block;margin-bottom:6px;}
-#ogRankingBody .rkLocked .subBtn{display:block;width:100%;border:none;border-radius:9px;background:linear-gradient(180deg,#ffe48a,#d6a01e 60%,#a8780f);color:#3a2c05;font-size:13px;font-weight:900;padding:11px 0;cursor:pointer;margin-top:12px;}
+/* ランキング一覧は全員閲覧可能。掲載・戦績反映はプレミアム限定。 */
 #ogRankingBody .rkMe{background:rgba(38,72,112,.55);border:1px solid #3d76b4;border-radius:10px;color:#eaf4ff;font-size:12.5px;font-weight:700;padding:10px 12px;margin-bottom:10px;line-height:1.6;}
 #ogRankingBody .rkRow{display:flex;align-items:center;gap:10px;background:rgba(9,26,48,.9);border:1px solid #1d3d5f;border-radius:9px;padding:8px 12px;margin-bottom:6px;color:#dfeaf6;font-size:12.5px;}
 #ogRankingBody .rkRow.me{border-color:#5ab4ff;background:rgba(38,72,112,.5);}
@@ -2457,7 +2454,7 @@ for(const dict of Object.values(L10N)){
   Object.assign(dict.home||(dict.home={}),{match:'MATCH',matchSub:'Choose a mode'});
   dict.mode={title:'Match mode',onlineDesc:'Find an opponent with auto matching',comDesc:'Play the computer right away',friendDesc:'Play a friend with an invite code/URL'};
   Object.assign(dict.matching||(dict.matching={}),{foundTpl:'Opponent found: {name}'});
-  dict.ranking={short:'Ranking',title:'Ranking',loginMsg:'The ranking is a premium feature. Log in to view it.',premiumMsg:'The ranking is a premium feature',loading:'Loading…',loadFailed:'Could not load the ranking. Please try again later.',empty:'No ranked players yet. Play an online match!',unranked:'Play an online match to enter the ranking',myRankTpl:'Your rank: #{rank} / Rating {rating} ({wins}W {draws}D {losses}L)',recordTpl:'{wins}W {draws}D {losses}L',note:'Ratings change with online match results (auto matching / friend match). Only premium members are listed.'};
+  dict.ranking={short:'Ranking',title:'Ranking',loading:'Loading…',loadFailed:'Could not load the ranking. Please try again later.',empty:'No ranked players yet. Play an online match!',unranked:'Play an online match to enter the ranking',myRankTpl:'Your rank: #{rank} / Rating {rating} ({wins}W {draws}D {losses}L)',recordTpl:'{wins}W {draws}D {losses}L',note:'Everyone can view the ranking. Only active subscribers are listed and have online match results reflected.'};
 }
 for(const dict of Object.values(L10N)){
   Object.assign(dict.tutorial||(dict.tutorial={}),{promptTitle:'First time here?',promptBody:'A one-page illustrated guide covers the rules and controls. You can reopen it anytime from “How to play” on the home screen.',promptWatch:'See how to play',promptLater:'Maybe later',turnsTitle:'Simultaneous turns',controlsTitle:'How to control your pieces',timeTitle:'Time limit',time1:'You have {seconds} seconds per turn. When time runs out, the turn ends automatically with the moves you planned.',piecesTitle:'Piece types and ranks',pieces1:'There are four piece types: FW (attack), MF (midfield), DF (defense), and GK (guards the goal).',pieces2:'Higher-rank (★) pieces are stronger in duels such as tackles, pass cuts, and shots.',pieces3:'Your team cost is capped at {max} in total. Balance your squad in the formation screen.',roleFw:'Attack',roleMf:'Midfield',roleDf:'Defense',roleGk:'Goalkeeper'});
@@ -2466,7 +2463,7 @@ Object.assign(L10N.ja.tutorial,{promptTitle:'はじめてですか？',promptBod
 Object.assign(L10N.ja.home,{match:'対戦',matchSub:'モードを選ぶ'});
 L10N.ja.mode={title:'対戦モード',onlineDesc:'自動マッチングで対戦相手を探します',comDesc:'コンピューターとすぐに対戦',friendDesc:'招待コード/URLで友達と対戦'};
 Object.assign(L10N.ja.matching,{foundTpl:'対戦相手が見つかりました：{name}'});
-L10N.ja.ranking={short:'ランキング',title:'ランキング',loginMsg:'ランキングはプレミアム限定です。ログインしてご利用ください',premiumMsg:'ランキングはプレミアム限定です',loading:'読み込み中…',loadFailed:'ランキングを取得できませんでした。しばらくしてから再度お試しください',empty:'まだランキング対象のプレイヤーがいません。オンライン対戦をプレイしましょう！',unranked:'オンライン対戦をプレイするとランキングに掲載されます',myRankTpl:'あなたの順位：{rank}位　レート {rating}（{wins}勝{draws}分{losses}敗）',recordTpl:'{wins}勝{draws}分{losses}敗',note:'レートはオンライン対戦（自動マッチング/フレンド対戦）の結果で変動します。掲載はプレミアム会員のみです。'};
+L10N.ja.ranking={short:'ランキング',title:'ランキング',loading:'読み込み中…',loadFailed:'ランキングを取得できませんでした。しばらくしてから再度お試しください',empty:'まだランキング対象のプレイヤーがいません。オンライン対戦をプレイしましょう！',unranked:'オンライン対戦をプレイするとランキングに掲載されます',myRankTpl:'あなたの順位：{rank}位　レート {rating}（{wins}勝{draws}分{losses}敗）',recordTpl:'{wins}勝{draws}分{losses}敗',note:'ランキングは誰でも閲覧できます。掲載とオンライン対戦結果の反映はサブスク会員のみです。'};
 /* 「TEAM COST」表記の7言語化（ホームの合計表示＋ランク変更ウィンドウのプレビュー/トースト。
    英語固定だったのを各言語のラベルへ置換する。2026-07-10ユーザー指摘） */
 const TEAM_COST_LABELS={en:'TEAM COST',ja:'チームコスト',ko:'팀 코스트',es:'Coste del equipo',pt:'Custo da equipe',de:'Teamkosten','zh-CN':'球队成本'};
@@ -5305,34 +5302,17 @@ function ogSelectTab(tab){
   if(tab==='ranking') ogRenderRanking();
 }
 
-/* ===== ランキング（プレミアム限定。2026-07-10実装） =====
-   - 閲覧・掲載ともサブスク（プレミアム）会員のみ。未ログイン/未加入はロック表示から導線を出す。
+/* ===== ランキング（2026-07-10実装、2026-07-11閲覧公開） =====
+   - 閲覧は全員可能。掲載と戦績反映はサブスク（プレミアム）会員のみ。
    - 戦績はサーバー権威：MatchRoomがフルタイム/投了時にAccountStoreへ記録する
      （WebSocket接続時に session トークンで席とアカウントを紐付け）。クライアントから書き込むAPIは無い。
    - レートはElo簡略版（初期1000・K=32。src/ranking.ts）。オンライン対戦（自動マッチング/フレンド対戦）が対象。 */
-function ogRankingLocked(icon,msg,btnLabel,onClick){
-  const body=document.getElementById('ogRankingBody');
-  body.innerHTML='';
-  const box=document.createElement('div'); box.className='rkLocked';
-  const ico=document.createElement('span'); ico.className='rkLockIco'; ico.textContent=icon; box.appendChild(ico);
-  const txt=document.createElement('div'); txt.textContent=msg; box.appendChild(txt);
-  if(btnLabel){
-    const btn=document.createElement('button'); btn.className='subBtn'; btn.textContent=btnLabel;
-    btn.addEventListener('click',()=>{ playFeedback('tap'); onClick(); });
-    box.appendChild(btn);
-  }
-  body.appendChild(box);
-}
 async function ogRenderRanking(){
   const body=document.getElementById('ogRankingBody');
-  if(!ogIsLoggedIn()){ ogRankingLocked('🔒',t('ranking.loginMsg'),t('auth.loginRegister'),()=>ogShowLogin()); return; }
-  if(!ogIsPremium()){ ogRankingLocked('🔒',t('ranking.premiumMsg'),t('ogCostPremiumBtn'),()=>ogSelectTab('sub')); return; }
   body.innerHTML=`<div class="rkEmpty">${t('ranking.loading')}</div>`;
   let r=null;
   try{ r=await ogApi('/ranking/top'); }catch{}
   if(!r||!r.ok){
-    if(r&&r.reason==='premium'){ ogRankingLocked('🔒',t('ranking.premiumMsg'),t('ogCostPremiumBtn'),()=>ogSelectTab('sub')); return; }
-    if(r&&r.reason==='login'){ ogRankingLocked('🔒',t('ranking.loginMsg'),t('auth.loginRegister'),()=>ogShowLogin()); return; }
     body.innerHTML=`<div class="rkEmpty">${t('ranking.loadFailed')}</div>`;
     return;
   }
