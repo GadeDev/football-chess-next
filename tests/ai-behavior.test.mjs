@@ -192,3 +192,57 @@ test("攻撃: 負けている後半終盤は攻撃性が上がる", () => {
   assert.ok(result.losing > 20, `負けている終盤の攻撃性が弱い（${result.losing}）`);
   assert.ok(result.winning < 0, `リード中終盤の抑制が働かない（${result.winning}）`);
 });
+
+test("攻撃: ゴール前に受け手がいればパスから同ターンにシュートする", () => {
+  for (const seed of [1, 7, 17]) {
+    const { run, seedRandom } = loadPrototype();
+    seedRandom(seed);
+    const commands = JSON.parse(run(`
+      (()=>{
+        pieces=[
+          {id:1,team:'r',posType:'mf',x:0,y:2,sx:0,sy:2,cost:2.5},
+          {id:2,team:'r',posType:'fw',x:1,y:3,sx:1,sy:3,cost:1},
+          {id:3,team:'r',posType:'gk',x:0,y:-3,sx:0,sy:-3,cost:2},
+          {id:4,team:'b',posType:'gk',x:0,y:4,sx:0,sy:4,cost:2},
+          {id:5,team:'b',posType:'df',x:-1,y:4,sx:-1,sy:4,cost:2},
+        ];
+        ball={target:'piece',pieceId:1,x:0,y:2};
+        oppCommands=[]; aiPlanHolder(pieces[0]);
+        return JSON.stringify(oppCommands);
+      })()
+    `));
+    assert.deepEqual(
+      commands.map((c) => [c.type, c.pieceId, c.targetId ?? null]),
+      [["pass", 1, 2], ["shoot", 2, null]],
+      `seed=${seed}: ゴール前へのラストパスより別の手を選んだ`,
+    );
+  }
+});
+
+test("攻撃: 直接届かないゴール前へ中継パスからシュートまで連鎖する", () => {
+  const { run, seedRandom } = loadPrototype();
+  seedRandom(11);
+  const result = JSON.parse(run(`
+    (()=>{
+      pieces=[
+        {id:1,team:'r',posType:'mf',x:0,y:0,sx:0,sy:0,cost:2.5},
+        {id:2,team:'r',posType:'mf',x:0,y:2,sx:0,sy:2,cost:2},
+        {id:3,team:'r',posType:'fw',x:1,y:4,sx:1,sy:4,cost:3},
+        {id:4,team:'r',posType:'gk',x:0,y:-3,sx:0,sy:-3,cost:2},
+        {id:5,team:'b',posType:'gk',x:0,y:4,sx:0,sy:4,cost:2},
+        {id:6,team:'b',posType:'df',x:-1,y:4,sx:-1,sy:4,cost:2},
+      ];
+      ball={target:'piece',pieceId:1,x:0,y:0};
+      oppCommands=[]; aiPlanHolder(pieces[0]);
+      return JSON.stringify({
+        direct:isPassRangeRed(pieces[0],pieces[2].x,pieces[2].y),
+        commands:oppCommands,
+      });
+    })()
+  `));
+  assert.equal(result.direct, false, "テスト前提: 保持者からフィニッシャーへ直接は届かないこと");
+  assert.deepEqual(
+    result.commands.map((c) => [c.type, c.pieceId, c.targetId ?? null]),
+    [["pass", 1, 2], ["pass", 2, 3], ["shoot", 3, null]],
+  );
+});

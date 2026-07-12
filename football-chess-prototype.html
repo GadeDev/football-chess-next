@@ -2104,14 +2104,12 @@ function bestRedMoveToward(p,x,y){
 /* ===== 相手AI（2026-07-10全面強化）=====
    Unity StmBattleAICommandCalculate の Attack / Defence / BallCatch 構造を踏襲しつつ、
    ゲーム本体と同じ確率関数（calcShoot／経路・着地パス／タックル／オフサイド）で
-   各行動を期待値スコア化して選ぶ。乱数は「上位2択から85/15で選ぶ」ゆらぎのみ。
+   各行動を期待値スコア化して選ぶ。乱数は最善評価の90%以上にある良手間のゆらぎのみ。
    賢さの中身：①シュート/パス/スルーパス/ドリブルの定量比較 ②オフサイド率・着地被タックル率で割引
-   ③受け手のシュート期待が高ければパス→シュートを連鎖仕込み ④守備は突入タックル＋パスコースのマーク
+   ③得点期待値が高ければ最大2本のパス→シュートを連鎖仕込み ④守備は突入タックル＋パスコースのマーク
    ⑤非保持駒はオンサイドを保ちつつパスコースを作る */
-/* 行動選択（2026-07-10改修）：旧「上位2択から85/15」はスコア差が開くと毎試合同じ手になり
-   「キックオフから毎回同じ手順でシュートまで」というワンパターンの原因だった。
-   ①各候補に±5の評価ゆらぎを加える ②ベストの82%以上の候補（最大4つ）からスコア重みで抽選する。
-   良手の範囲内でだけ散らすので、弱くならずに試合ごとの展開が変わる。 */
+/* 行動選択：各候補へ±2の小さな評価ゆらぎを加え、ベストの90%以上（最大3つ）から重み付き抽選する。
+   弱い手へ散らさず、同等の良手間でだけ展開を変える。 */
 function aiPickTop(options){
   const s=options.filter(o=>o&&o.score>0)
     .map(o=>({...o,score:o.score+(Math.random()*4-2)}))
@@ -2165,14 +2163,30 @@ function aiFollowUpAttackValue(piece,x,y){
   });
   return Math.max(0,best);
 }
-/* 試合状況による攻撃性。赤(COM)は scoreOpp。負けている終盤ほどシュート/前進を優先し、
-   リード中の終盤は成功率の低い突撃を少し抑える。 */
+/* 試合状況による攻撃性。赤(COM)は scoreOpp。通常時から前進を促し、負けている終盤はさらに上げる。 */
 function aiAttackUrgency(){
   const diff=(state.scoreOpp||0)-(state.scoreSelf||0);
   const late=state.half==='後半' ? Math.min(1,(state.turn||1)/REGULAR_TURNS) : 0;
-  if(diff<0) return 8+18*late;
-  if(diff>0) return -6*late;
-  return 4*late;
+  if(diff<0) return 14+24*late;
+  if(diff>0) return 2-6*late;
+  return 8+8*late;
+}
+/* 連鎖中は守備駒の通常移動より先に次のパス/シュートが解決される。
+   そのため最終パスは着地後の被タックルではなく、経路・着地・オフサイドだけで評価する。 */
+function aiPassDeliveryChance(passer,receiver){
+  const route=calcRoutePassProbability(passer,receiver.x,receiver.y);
+  const landing=calcLandingPass(passer,receiver,receiver.x,receiver.y);
+  const off=aiOffsideProb(passer,receiver.y);
+  return clampProb(route*landing/100*(100-off)/100);
+}
+/* パス連鎖から同じターンに撃つ手の評価。delivery×shotが実質的な得点期待値。
+   8%以上の決定機だけを採用し、無謀な縦一本ではなく「通れば撃てる」手を強く優先する。 */
+function aiFinishingSequenceScore(delivery,shot,passCount,progress,urgency){
+  if(shot.area==='-'||delivery<20) return null;
+  const expectedGoal=delivery*shot.prob/100;
+  if(expectedGoal<8) return null;
+  const areaBonus=shot.area==='PA'?15:5;
+  return 75+expectedGoal*2+delivery*0.15+shot.prob*0.15+areaBonus+progress*8-passCount*7+urgency;
 }
 function aiPlanHolder(p){
   const options=[];
@@ -2182,25 +2196,55 @@ function aiPlanHolder(p){
   // PA/GAでは強め・VAでも一定のボーナスを与えて「撃てる時は撃つ」寄りにする）
   const sh=calcShoot(p);
   if(sh.area!=='-'){
-    const areaBonus=sh.area==='VA'?12:30; // PA/GA=30, VA=12
-    options.push({score:sh.prob*1.2+areaBonus+urgency, act:{type:'shoot',pieceId:p.id,tx:p.x,ty:p.y,team:'r'}});
+    const areaBonus=sh.area==='VA'?8:20;
+    options.push({score:80+sh.prob*2+areaBonus+urgency, act:{type:'shoot',pieceId:p.id,tx:p.x,ty:p.y,team:'r'}});
   }
-  // 通常パス：実質成功率（経路×着地×(1-オフサイド率)×被タックル割引）＋前進価値＋受け手のシュート期待
-  redPassTargets(p).forEach(q=>{
-    const base=calcPassDisplayProbability(p,q.x,q.y);
-    if(base==null) return;
-    const off=aiOffsideProb(p,q.y);
+  const passTargets=redPassTargets(p);
+  // 通常パス：決定機なら同ターンのパス→シュートを最優先。それ以外は保持後の危険も評価する。
+  passTargets.forEach(q=>{
+    const delivery=aiPassDeliveryChance(p,q);
+    const progress=redGoalDistance(p.x,p.y)-redGoalDistance(q.x,q.y);
+    const qShoot=calcShoot(q);
+    const finishScore=aiFinishingSequenceScore(delivery,qShoot,1,progress,urgency);
+    if(finishScore!=null){
+      options.push({score:finishScore,
+        act:{type:'pass',pieceId:p.id,targetId:q.id,tx:q.x,ty:q.y,team:'r'},
+        followCommands:[{type:'shoot',pieceId:q.id,tx:q.x,ty:q.y,team:'r'}]});
+      return;
+    }
     const risk=aiTackleRiskAt(q,q.x,q.y);
     const reach=aiReachThreatAt(q,q.x,q.y); // 受け手の隣に強い駒（SS級）が居るパスは割り引く
-    const succ=base*(100-off)/100*(100-risk*0.6)/100*(100-reach*0.35)/100;
-    if(succ<28) return; // 通る見込みの薄いパスは選ばない
-    // 前進価値はクランプしない（後戻り・横パスの回し続けを防ぐ。2026-07-10）
-    const gain=(redGoalDistance(p.x,p.y)-redGoalDistance(q.x,q.y))*8;
-    const qShoot=calcShoot(q);
-    const chainShoot=(qShoot.area!=='-'&&qShoot.prob>=30)?q:null; // パス→シュート連鎖の候補（45→30に緩和）
+    const succ=delivery*(100-risk*0.6)/100*(100-reach*0.35)/100;
+    if(succ<32) return;
+    const gain=progress*12;
+    const lateralPenalty=progress===0?8:(progress<0?Math.abs(progress)*14:0);
     const follow=aiFollowUpAttackValue(q,q.x,q.y);
-    options.push({score:succ*0.6+gain+(chainShoot?qShoot.prob*0.5:0)+follow*0.28+Math.max(0,gain)*urgency*0.015,
-      act:{type:'pass',pieceId:p.id,targetId:q.id,tx:q.x,ty:q.y,team:'r'}, chainShoot});
+    options.push({score:succ*0.45+gain-lateralPenalty+follow*0.34+Math.max(0,gain)*urgency*0.02,
+      act:{type:'pass',pieceId:p.id,targetId:q.id,tx:q.x,ty:q.y,team:'r'}});
+  });
+  // 8段盤では1本で届かない決定機が増える。安全な中継点を経由し、2本目から即シュートまで仕込む。
+  passTargets.filter(relay=>relay.posType!=='gk'
+    &&redGoalDistance(relay.x,relay.y)<=redGoalDistance(p.x,p.y)).forEach(relay=>{
+    const first=aiPassDeliveryChance(p,relay);
+    if(first<45) return;
+    aiTeamPieces().filter(finisher=>finisher.id!==p.id&&finisher.id!==relay.id
+      &&finisher.posType!=='gk'
+      &&redGoalDistance(finisher.x,finisher.y)<redGoalDistance(relay.x,relay.y)
+      &&isPassRangeRed(relay,finisher.x,finisher.y)
+      &&!isPassRangeRed(p,finisher.x,finisher.y)).forEach(finisher=>{
+      const second=aiPassDeliveryChance(relay,finisher);
+      const combined=first*second/100;
+      const shot=calcShoot(finisher);
+      const progress=redGoalDistance(p.x,p.y)-redGoalDistance(finisher.x,finisher.y);
+      const score=aiFinishingSequenceScore(combined,shot,2,progress,urgency);
+      if(score==null) return;
+      options.push({score,
+        act:{type:'pass',pieceId:p.id,targetId:relay.id,tx:relay.x,ty:relay.y,team:'r'},
+        followCommands:[
+          {type:'pass',pieceId:relay.id,targetId:finisher.id,tx:finisher.x,ty:finisher.y,team:'r'},
+          {type:'shoot',pieceId:finisher.id,tx:finisher.x,ty:finisher.y,team:'r'},
+        ]});
+    });
   });
   // スルーパス：前方の空きマスへ。着地への回収レース（赤の方が近い時だけ）
   BALL_LIMIT.forEach(([dx,dy])=>{
@@ -2214,8 +2258,9 @@ function aiPlanHolder(p){
     const redNear=mates.length?Math.min(...mates.map(q=>manhattan(q.x,q.y,x,y))):9;
     const blueNear=Math.min(...pieces.filter(q=>q.team==='b').map(q=>manhattan(q.x,q.y,x,y)),9);
     if(redNear>blueNear) return; // 回収負けしそうなスペースには出さない
-    const gain=Math.max(0,(redGoalDistance(p.x,p.y)-redGoalDistance(x,y))*8);
-    options.push({score:prob*0.45+gain+(blueNear-redNear)*6,
+    const gain=(redGoalDistance(p.x,p.y)-redGoalDistance(x,y))*12;
+    const finalThirdBonus=y>=3?18:0;
+    options.push({score:prob*0.35+gain+finalThirdBonus+(blueNear-redNear)*8,
       act:{type:'throughpass',pieceId:p.id,tx:x,ty:y,team:'r'}});
   });
   // ドリブル：前進価値＋攻撃エリア到達ボーナス−被タックル期待−踏み込まれリスク（近くの強い駒）
@@ -2223,11 +2268,11 @@ function aiPlanHolder(p){
     const risk=aiTackleRiskAt(p,x,y);
     const reach=aiReachThreatAt(p,x,y);
     // 前進価値はクランプしない（後戻りは減点。2026-07-10）
-    const gain=(redGoalDistance(p.x,p.y)-redGoalDistance(x,y))*10;
+    const gain=(redGoalDistance(p.x,p.y)-redGoalDistance(x,y))*14;
     // PA/GA（ゴール至近）への持ち込みは強めのボーナス＝守備壁への突入を恐れすぎない
-    const areaBonus=isRedAttackingArea(x,y)?(redGoalDistance(x,y)<=2?30:14):0;
+    const areaBonus=isRedAttackingArea(x,y)?(redGoalDistance(x,y)<=2?40:18):0;
     const follow=aiFollowUpAttackValue(p,x,y);
-    options.push({score:(100-risk)*0.35+gain+areaBonus-reach*0.18+follow*0.38+Math.max(0,gain)*urgency*0.02,
+    options.push({score:(100-risk)*0.25+gain+areaBonus-reach*0.14+follow*0.42+Math.max(0,gain)*urgency*0.025,
       act:{type:'dribble',pieceId:p.id,tx:x,ty:y,team:'r'}});
   });
   // 自陣停滞の解消（2026-07-10。ユーザー指摘「プレイヤーが動かないとAIが自陣から出てこず
@@ -2246,10 +2291,7 @@ function aiPlanHolder(p){
   const top=aiPickTop(options);
   if(!top) return;
   oppCommands.push(top.act);
-  // パス→シュートの連鎖仕込み（受け手のシュート期待が高い場合。パス失敗時は実行側の保持チェックで自動中止）
-  if(top.act.type==='pass'&&top.chainShoot){
-    oppCommands.push({type:'shoot',pieceId:top.chainShoot.id,tx:top.chainShoot.x,ty:top.chainShoot.y,team:'r'});
-  }
+  if(top.followCommands) oppCommands.push(...top.followCommands);
 }
 /* 赤陣深く（最終ライン付近 y<=-2＝VAより深い側）に張っている青駒＝「SS1トップ張り付き」対策の常時マーク対象。
    GKの脇のマスに高ランクFWを置かれると、パス→至近シュートでほぼ確実に失点するため、
@@ -2293,9 +2335,10 @@ function planOpponentAI(){
     redPieces.filter(p=>p.id!==holder.id&&p.posType!=='gk'&&!guardIds.has(p.id)).forEach(p=>{
       let best=null, bestScore=0;
       redMoveTargets(p).forEach(([x,y])=>{
-        let s=(redGoalDistance(p.sx,p.sy)-redGoalDistance(x,y))*10;
-        if(line!=null && y>line) s-=25;                        // オフサイドポジションは減点
-        if(!supportAssigned && isPassRangeRed(holder,x,y)) s+=18; // パスコース形成（1体だけ強く）
+        let s=(redGoalDistance(p.sx,p.sy)-redGoalDistance(x,y))*12;
+        if(line!=null && y>line) s-=40;                        // オフサイドポジションは強く減点
+        if(!supportAssigned && isPassRangeRed(holder,x,y)) s+=26; // 前向きなパスコース形成
+        if(y>=3) s+=10;                                        // 次ターンのシュート圏へ人数をかける
         s-=piecesAt(x,y).length*6;                              // 混雑回避
         s-=aiReachThreatAt(p,x,y)*0.12;                         // 強い駒（SS級）の目前は避け気味に
         s+=Math.random()*6-3;                                   // 展開のゆらぎ（毎試合同型の陣形回避）
