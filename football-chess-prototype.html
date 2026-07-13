@@ -2034,6 +2034,24 @@ async function resolveTurnEndRules(turnStartHasBallTeam){
    各駒ごとに 止まる/移動/パス/スルーパス/シュート を抽選して実行。
    座標は赤チーム視点（自陣＝上側 y<0、攻撃方向＝下＝自分のゴール y=5 を目指す）。 */
 function aiTeamPieces(){ return pieces.filter(p=>p.team==='r'); }
+const AI_SS_COST=3;
+function aiIsSS(p){ return !!p&&pieceCost(p)>=AI_SS_COST; }
+/* SSの有無で戦術を明示的に分ける。
+   - ace: COMのSSフィールドプレーヤーをフィニッシャーとして優先
+   - collective: SS不在。安全な中継と複数サポートで決定機を作る
+   相手SSは攻撃モードと独立して専属マーク対象にする。 */
+function aiTacticalProfile(){
+  const ownAces=aiTeamPieces().filter(p=>p.posType!=='gk'&&aiIsSS(p));
+  const enemyAces=pieces.filter(p=>p.team==='b'&&p.posType!=='gk'&&aiIsSS(p));
+  return {
+    attackMode:ownAces.length?'ace':'collective',
+    ownAces,
+    ownAceIds:new Set(ownAces.map(p=>p.id)),
+    enemyAces,
+    enemyAceIds:new Set(enemyAces.map(p=>p.id)),
+    supportSlots:ownAces.length?1:2,
+  };
+}
 
 // 赤から見た「攻撃エリア」＝自分(青)のゴール側。赤の攻める先は y が大きいマス（自陣ゴール前）
 function isRedAttackingArea(x,y){ const c=cellAt(x,y); return c && (c.t==='selfga'||(c.t==='pa'&&y>0)||(c.t==='va'&&y>0)); }
@@ -2181,14 +2199,16 @@ function aiPassDeliveryChance(passer,receiver){
 }
 /* パス連鎖から同じターンに撃つ手の評価。delivery×shotが実質的な得点期待値。
    8%以上の決定機だけを採用し、無謀な縦一本ではなく「通れば撃てる」手を強く優先する。 */
-function aiFinishingSequenceScore(delivery,shot,passCount,progress,urgency){
+function aiFinishingSequenceScore(delivery,shot,passCount,progress,urgency,profile,finisher){
   if(shot.area==='-'||delivery<20) return null;
   const expectedGoal=delivery*shot.prob/100;
-  if(expectedGoal<8) return null;
+  const aceFinish=profile?.ownAceIds.has(finisher?.id)||false;
+  if(expectedGoal<(aceFinish?6:8)) return null;
   const areaBonus=shot.area==='PA'?15:5;
-  return 75+expectedGoal*2+delivery*0.15+shot.prob*0.15+areaBonus+progress*8-passCount*7+urgency;
+  const styleBonus=aceFinish?28:(profile?.attackMode==='collective'&&passCount===2?14:0);
+  return 75+expectedGoal*2+delivery*0.15+shot.prob*0.15+areaBonus+progress*8-passCount*7+urgency+styleBonus;
 }
-function aiPlanHolder(p){
+function aiPlanHolder(p,profile=aiTacticalProfile()){
   const options=[];
   const urgency=aiAttackUrgency();
   // シュート：成功率＋エリアボーナス（2026-07-10強化。ユーザー指摘「攻撃が弱すぎてシュートに至らない」対策：
@@ -2197,7 +2217,8 @@ function aiPlanHolder(p){
   const sh=calcShoot(p);
   if(sh.area!=='-'){
     const areaBonus=sh.area==='VA'?8:20;
-    options.push({score:80+sh.prob*2+areaBonus+urgency, act:{type:'shoot',pieceId:p.id,tx:p.x,ty:p.y,team:'r'}});
+    const aceBonus=profile.ownAceIds.has(p.id)?22:0;
+    options.push({score:80+sh.prob*2+areaBonus+urgency+aceBonus, act:{type:'shoot',pieceId:p.id,tx:p.x,ty:p.y,team:'r'}});
   }
   const passTargets=redPassTargets(p);
   // 通常パス：決定機なら同ターンのパス→シュートを最優先。それ以外は保持後の危険も評価する。
@@ -2205,7 +2226,7 @@ function aiPlanHolder(p){
     const delivery=aiPassDeliveryChance(p,q);
     const progress=redGoalDistance(p.x,p.y)-redGoalDistance(q.x,q.y);
     const qShoot=calcShoot(q);
-    const finishScore=aiFinishingSequenceScore(delivery,qShoot,1,progress,urgency);
+    const finishScore=aiFinishingSequenceScore(delivery,qShoot,1,progress,urgency,profile,q);
     if(finishScore!=null){
       options.push({score:finishScore,
         act:{type:'pass',pieceId:p.id,targetId:q.id,tx:q.x,ty:q.y,team:'r'},
@@ -2219,14 +2240,15 @@ function aiPlanHolder(p){
     const gain=progress*12;
     const lateralPenalty=progress===0?8:(progress<0?Math.abs(progress)*14:0);
     const follow=aiFollowUpAttackValue(q,q.x,q.y);
-    options.push({score:succ*0.45+gain-lateralPenalty+follow*0.34+Math.max(0,gain)*urgency*0.02,
+    const aceTargetBonus=profile.ownAceIds.has(q.id)?18:0;
+    options.push({score:succ*0.45+gain-lateralPenalty+follow*0.34+Math.max(0,gain)*urgency*0.02+aceTargetBonus,
       act:{type:'pass',pieceId:p.id,targetId:q.id,tx:q.x,ty:q.y,team:'r'}});
   });
   // 8段盤では1本で届かない決定機が増える。安全な中継点を経由し、2本目から即シュートまで仕込む。
   passTargets.filter(relay=>relay.posType!=='gk'
     &&redGoalDistance(relay.x,relay.y)<=redGoalDistance(p.x,p.y)).forEach(relay=>{
     const first=aiPassDeliveryChance(p,relay);
-    if(first<45) return;
+    if(first<(profile.attackMode==='ace'?45:50)) return;
     aiTeamPieces().filter(finisher=>finisher.id!==p.id&&finisher.id!==relay.id
       &&finisher.posType!=='gk'
       &&redGoalDistance(finisher.x,finisher.y)<redGoalDistance(relay.x,relay.y)
@@ -2236,7 +2258,7 @@ function aiPlanHolder(p){
       const combined=first*second/100;
       const shot=calcShoot(finisher);
       const progress=redGoalDistance(p.x,p.y)-redGoalDistance(finisher.x,finisher.y);
-      const score=aiFinishingSequenceScore(combined,shot,2,progress,urgency);
+      const score=aiFinishingSequenceScore(combined,shot,2,progress,urgency,profile,finisher);
       if(score==null) return;
       options.push({score,
         act:{type:'pass',pieceId:p.id,targetId:relay.id,tx:relay.x,ty:relay.y,team:'r'},
@@ -2272,7 +2294,8 @@ function aiPlanHolder(p){
     // PA/GA（ゴール至近）への持ち込みは強めのボーナス＝守備壁への突入を恐れすぎない
     const areaBonus=isRedAttackingArea(x,y)?(redGoalDistance(x,y)<=2?40:18):0;
     const follow=aiFollowUpAttackValue(p,x,y);
-    options.push({score:(100-risk)*0.25+gain+areaBonus-reach*0.14+follow*0.42+Math.max(0,gain)*urgency*0.025,
+    const aceCarryBonus=profile.ownAceIds.has(p.id)&&gain>0?14:0;
+    options.push({score:(100-risk)*0.25+gain+areaBonus-reach*0.14+follow*0.42+Math.max(0,gain)*urgency*0.025+aceCarryBonus,
       act:{type:'dribble',pieceId:p.id,tx:x,ty:y,team:'r'}});
   });
   // 自陣停滞の解消（2026-07-10。ユーザー指摘「プレイヤーが動かないとAIが自陣から出てこず
@@ -2306,9 +2329,10 @@ function planOpponentAI(){
   oppCommands=[];
   const holder=ballHolder();
   const redPieces=aiTeamPieces();
+  const profile=aiTacticalProfile();
   // --- Attack：赤がボール保持 ---
   if(holder && holder.team==='r'){
-    aiPlanHolder(holder);
+    aiPlanHolder(holder,profile);
     // 攻撃時も、赤陣深くに張る青駒（SS1トップ等）には見張りを残す（最大2体）。
     // 見張りは脅威のマスに乗る（着地パスカット＋タックル圏）。届かなければ寄せる。
     // これが無いと全員が攻め上がり、カウンターの縦1本で張り付きFWに合わされて失点する
@@ -2330,14 +2354,19 @@ function planOpponentAI(){
       if(mv&&!(mv[0]===marker.x&&mv[1]===marker.y)) oppCommands.push({type:'move',pieceId:marker.id,tx:mv[0],ty:mv[1],team:'r'});
     }
     // 非保持駒：オンサイドを保って前進。1体は「次のパス先」を作る（保持駒のパス範囲内へ）
-    let supportAssigned=false;
+    let supportCount=0;
     const line=offsideLineFor('b');
     redPieces.filter(p=>p.id!==holder.id&&p.posType!=='gk'&&!guardIds.has(p.id)).forEach(p=>{
       let best=null, bestScore=0;
       redMoveTargets(p).forEach(([x,y])=>{
         let s=(redGoalDistance(p.sx,p.sy)-redGoalDistance(x,y))*12;
         if(line!=null && y>line) s-=40;                        // オフサイドポジションは強く減点
-        if(!supportAssigned && isPassRangeRed(holder,x,y)) s+=26; // 前向きなパスコース形成
+        const supportsHolder=isPassRangeRed(holder,x,y);
+        if(supportCount<profile.supportSlots&&supportsHolder) s+=26; // SSなしは2枚で連携、SSありは1枚で支援
+        if(profile.ownAceIds.has(p.id)){
+          if(y>=2) s+=20;                                      // SSはフィニッシュ可能な高さへ
+          if(supportsHolder) s+=14;                            // 保持者からSSへの供給路を作る
+        }
         if(y>=3) s+=10;                                        // 次ターンのシュート圏へ人数をかける
         s-=piecesAt(x,y).length*6;                              // 混雑回避
         s-=aiReachThreatAt(p,x,y)*0.12;                         // 強い駒（SS級）の目前は避け気味に
@@ -2345,7 +2374,7 @@ function planOpponentAI(){
         if(s>bestScore){ bestScore=s; best=[x,y]; }
       });
       if(best){
-        if(isPassRangeRed(holder,best[0],best[1])) supportAssigned=true;
+        if(isPassRangeRed(holder,best[0],best[1])) supportCount++;
         oppCommands.push({type:'move',pieceId:p.id,tx:best[0],ty:best[1],team:'r'});
       }
     });
@@ -2394,11 +2423,24 @@ function planOpponentAI(){
       }
     }
 
-    // ② 突入タックル：保持者のマスへ直接入れる駒から近い順に最大2体（ターン末タックルで奪取を狙う）
+    // 相手にSSがいる場合だけ専属マークを付ける。保持者から遠くても放置せず、最大2枚を追跡する。
+    let aceMarks=0;
+    for(const ace of profile.enemyAces){
+      if(ace.id===holder.id||aceMarks>=2) continue;
+      if(piecesAt(ace.x,ace.y).some(q=>q.team==='r')) continue;
+      const direct=free().filter(p=>canStep(p,ace.x,ace.y)).sort((a,b)=>pieceCost(b)-pieceCost(a))[0];
+      if(direct){ plan(direct,ace.x,ace.y); aceMarks++; continue; }
+      const marker=free().sort((a,b)=>manhattan(a.x,a.y,ace.x,ace.y)-manhattan(b.x,b.y,ace.x,ace.y))[0];
+      const mv=marker&&bestRedMoveToward(marker,ace.x,ace.y);
+      if(mv&&!(mv[0]===marker.x&&mv[1]===marker.y)){ plan(marker,mv[0],mv[1]); aceMarks++; }
+    }
+
+    // ② 突入タックル：通常は最大2体。SS保持者には最大3体で奪取を狙う。
+    const chargerLimit=profile.enemyAceIds.has(holder.id)?3:2;
     let chargers=0;
     free().sort((a,b)=>manhattan(a.x,a.y,holder.x,holder.y)-manhattan(b.x,b.y,holder.x,holder.y))
       .forEach(p=>{
-        if(chargers>=2) return;
+        if(chargers>=chargerLimit) return;
         if(canStep(p,holder.x,holder.y)){ chargers++; plan(p,holder.x,holder.y); }
       });
 
@@ -5618,22 +5660,24 @@ function startComMatch(){
    名前に「COM」「AI」を含めないこと（秘匿方針）。 */
 const COM_PERSONAS=[
   {formationId:1,name:'Leo10'},   // 4-4-2 スタンダード
-  {formationId:2,name:'TORA'},    // 4-5-1 ワントップ
-  {formationId:3,name:'Falcao9'}, // 4-3-3 アタッキング
+  {formationId:2,name:'TORA',rankTweaks:[[0,3],[3,1.5]]},    // 4-5-1 SSワントップ
+  {formationId:3,name:'Falcao9',rankTweaks:[[1,3],[3,1.5]]}, // 4-3-3 SSセンター
   {formationId:4,name:'Marco'},   // 3-6-1 ポゼッション
   {formationId:5,name:'KENGO'},   // 3-5-2 バランス
-  {formationId:6,name:'Sora11'},  // 3-4-3 超攻撃
+  {formationId:6,name:'Sora11',rankTweaks:[[1,3],[4,1.5]]},  // 3-4-3 SSセンター
 ];
 let comPersona=null;      // 進行中のCOM試合のペルソナ（試合中は固定。resetBtnで再抽選）
                           // .stealth=true はオンラインマッチングからの秘匿フォールバック
                           // （ペルソナ名を表示。明示的なCOM対戦では「COM」と表示＝オンラインとの差別化。2026-07-10ユーザー指定）
 let comPersonaNext=null;  // マッチングフォールバックで先に名前を見せた場合の予約
 function pickComPersona(){ return COM_PERSONAS[Math.floor(Math.random()*COM_PERSONAS.length)]; }
-/* COM(赤)の編成定義。ペルソナのフォーメーション＋そのフォーメーションの既定コスト（合計16.0） */
+/* COM(赤)の編成定義。3チームはSSエース型、3チームはSSなし連携型。いずれも合計16.0。 */
 function comTeamDef(){
   if(!comPersona) return DEFAULT_TEAM;
   const f=ogFormation(comPersona.formationId);
-  return f.pos.map((p,i)=>({id:ogMasterPieceId(p[0],f.costs[i]),x:p[1],y:p[2]}));
+  const costs=f.costs.slice();
+  for(const [index,cost] of comPersona.rankTweaks||[]) costs[index]=cost;
+  return f.pos.map((p,i)=>({id:ogMasterPieceId(p[0],costs[i]),x:p[1],y:p[2]}));
 }
 /* マッチングフォールバックの成立演出用：ペルソナを予約して名前だけ先に返す */
 function aiOpponentName(){ comPersonaNext=pickComPersona(); return comPersonaNext.name; }

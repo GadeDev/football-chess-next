@@ -246,3 +246,85 @@ test("攻撃: 直接届かないゴール前へ中継パスからシュートま
     [["pass", 1, 2], ["pass", 2, 3], ["shoot", 3, null]],
   );
 });
+
+test("COM編成: SSエース型3チームとSSなし連携型3チームをコスト16で使い分ける", () => {
+  const { run } = loadPrototype();
+  const teams = JSON.parse(run(`JSON.stringify(COM_PERSONAS.map(persona=>{
+    comPersona=persona;
+    const team=comTeamDef();
+    return {
+      name:persona.name,
+      total:team.reduce((sum,p)=>sum+costOf(p.id),0),
+      ss:team.filter(p=>p.id%5===0).length,
+    };
+  }))`));
+  assert.equal(teams.filter((team) => team.ss > 0).length, 3, "SSありCOMが3チームではない");
+  assert.equal(teams.filter((team) => team.ss === 0).length, 3, "SSなしCOMが3チームではない");
+  for (const team of teams) assert.equal(team.total, 16, `${team.name}のチームコストが16ではない`);
+});
+
+test("攻撃戦術: SSありはエースへ預け、SSなしは前方スペースを使う", () => {
+  const decide = (aceCost) => {
+    const { run, seedRandom } = loadPrototype();
+    seedRandom(7);
+    return JSON.parse(run(`
+      (()=>{
+        pieces=[
+          {id:1,team:'r',posType:'mf',x:0,y:0,sx:0,sy:0,cost:2},
+          {id:2,team:'r',posType:'fw',x:0,y:1,sx:0,sy:1,cost:${aceCost}},
+          {id:3,team:'r',posType:'mf',x:-2,y:-1,sx:-2,sy:-1,cost:2},
+          {id:4,team:'r',posType:'gk',x:0,y:-3,sx:0,sy:-3,cost:2},
+          {id:10,team:'b',posType:'gk',x:0,y:4,sx:0,sy:4,cost:2},
+          {id:11,team:'b',posType:'df',x:-1,y:4,sx:-1,sy:4,cost:2},
+        ];
+        ball={target:'piece',pieceId:1,x:0,y:0};
+        oppCommands=[]; aiPlanHolder(pieces[0]);
+        return JSON.stringify({mode:aiTacticalProfile().attackMode,commands:oppCommands});
+      })()
+    `));
+  };
+  const withSS = decide(3);
+  const withoutSS = decide(2.5);
+  assert.equal(withSS.mode, "ace");
+  assert.deepEqual(
+    withSS.commands.map((c) => [c.type, c.targetId ?? null]),
+    [["pass", 2]],
+    "SSありなのにエースへボールを集めていない",
+  );
+  assert.equal(withoutSS.mode, "collective");
+  assert.equal(withoutSS.commands[0]?.type, "throughpass", "SSなしで連携型のスペース攻撃を選んでいない");
+});
+
+test("守備戦術: 相手SSが保持者から遠くても専属マーカーを付ける", () => {
+  const defend = (aceCost) => {
+    const { run, seedRandom } = loadPrototype();
+    seedRandom(4);
+    return JSON.parse(run(`
+      (()=>{
+        pieces=[
+          {id:1,team:'b',posType:'mf',x:2,y:1,sx:2,sy:1,cost:2},
+          {id:2,team:'b',posType:'fw',x:-2,y:0,sx:-2,sy:0,cost:${aceCost}},
+          {id:3,team:'b',posType:'gk',x:0,y:4,sx:0,sy:4,cost:2},
+          {id:11,team:'r',posType:'df',x:-2,y:-1,sx:-2,sy:-1,cost:2.5},
+          {id:12,team:'r',posType:'df',x:-1,y:-1,sx:-1,sy:-1,cost:2},
+          {id:13,team:'r',posType:'df',x:0,y:-1,sx:0,sy:-1,cost:2},
+          {id:14,team:'r',posType:'mf',x:1,y:-1,sx:1,sy:-1,cost:2},
+          {id:15,team:'r',posType:'gk',x:0,y:-3,sx:0,sy:-3,cost:2},
+        ];
+        ball={target:'piece',pieceId:1,x:2,y:1};
+        oppCommands=[]; planOpponentAI();
+        return JSON.stringify(oppCommands);
+      })()
+    `));
+  };
+  const withSS = defend(3);
+  const withoutSS = defend(2.5);
+  assert.ok(
+    withSS.some((c) => c.type === "move" && c.tx === -2 && c.ty === 0),
+    "相手SSのいるマスへ専属マーカーを付けていない",
+  );
+  assert.ok(
+    !withoutSS.some((c) => c.type === "move" && c.tx === -2 && c.ty === 0),
+    "SSなしでも不要な専属マークを続けている",
+  );
+});
