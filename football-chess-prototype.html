@@ -4245,8 +4245,8 @@ document.getElementById('onlineRematchBtn').addEventListener('click',()=>{
 document.getElementById('resetBtn').addEventListener('click',ev=>{
   if(ev.isTrusted) playFeedback('cancel');
   goOffline('OFFLINE','');
-  // COMペルソナを抽選（マッチングフォールバックで名前を先に見せた場合はその予約を使う）。
-  // フォーメーション＝ペルソナ由来なので、buildTeams()より前に確定させること。
+  // COMペルソナ×フォーメーションを抽選（マッチングフォールバックで名前を先に見せた場合はその予約を使う）。
+  // 予約にはフォーメーションも含むため、buildTeams()より前に組み合わせを確定させること。
   // stealth: フォールバック由来ならペルソナ名を表示（秘匿）、明示的なCOM対戦なら「COM」と表示
   comPersona={...(comPersonaNext||pickComPersona()), stealth:!!comPersonaNext};
   comPersonaNext=null;
@@ -5653,30 +5653,62 @@ function startComMatch(){
   telemetryMatchStartedAt=Date.now(); sendTelemetry('match.start',{mode:'com'}); // 集計は正直にcom（非表示情報）
   document.getElementById('resetBtn').click(); // 編成を反映してキックオフ配置を作り直す
 }
-/* ===== COM対戦の対戦相手ペルソナ（2026-07-10実装・ユーザー指定） =====
-   6つのフォーメーションごとに実在プレイヤー風の名前を1人ずつ用意し、
-   COM対戦では①ヘッダーの相手名に表示 ②COM(赤)の編成もそのフォーメーションで組む。
+/* ===== COM対戦の対戦相手ペルソナ（2026-07-10実装・2026-07-13に36通り化） =====
+   実在プレイヤー風の6人と6フォーメーションを独立に組み合わせ、36通りから均等抽選する。
+   COM対戦では①ヘッダーの相手名に表示 ②COM(赤)の編成を抽選フォーメーションで組む。
    マッチングのCOMフォールバック時は成立演出の名前とヘッダー名が同一人物になる。
    名前に「COM」「AI」を含めないこと（秘匿方針）。 */
 const COM_PERSONAS=[
-  {formationId:1,name:'Leo10'},   // 4-4-2 スタンダード
-  {formationId:2,name:'TORA',rankTweaks:[[0,3],[3,1.5]]},    // 4-5-1 SSワントップ
-  {formationId:3,name:'Falcao9',rankTweaks:[[1,3],[3,1.5]]}, // 4-3-3 SSセンター
-  {formationId:4,name:'Marco'},   // 3-6-1 ポゼッション
-  {formationId:5,name:'KENGO'},   // 3-5-2 バランス
-  {formationId:6,name:'Sora11',rankTweaks:[[1,3],[4,1.5]]},  // 3-4-3 SSセンター
+  {name:'Leo10',hasSS:false,focusRole:'fw'},
+  {name:'TORA',hasSS:true,donorRole:'mf'},
+  {name:'Falcao9',hasSS:true,donorRole:'df'},
+  {name:'Marco',hasSS:false,focusRole:'mf'},
+  {name:'KENGO',hasSS:false,focusRole:'df'},
+  {name:'Sora11',hasSS:true,donorRole:'gk'},
 ];
 let comPersona=null;      // 進行中のCOM試合のペルソナ（試合中は固定。resetBtnで再抽選）
                           // .stealth=true はオンラインマッチングからの秘匿フォールバック
                           // （ペルソナ名を表示。明示的なCOM対戦では「COM」と表示＝オンラインとの差別化。2026-07-10ユーザー指定）
 let comPersonaNext=null;  // マッチングフォールバックで先に名前を見せた場合の予約
-function pickComPersona(){ return COM_PERSONAS[Math.floor(Math.random()*COM_PERSONAS.length)]; }
-/* COM(赤)の編成定義。3チームはSSエース型、3チームはSSなし連携型。いずれも合計16.0。 */
+function comPersonaVariants(){
+  return COM_PERSONAS.flatMap(persona=>OG_FORMATIONS.map(f=>({...persona,formationId:f.id})));
+}
+function pickComPersona(){
+  const variants=comPersonaVariants();
+  return variants[Math.floor(Math.random()*variants.length)];
+}
+/* SSなし型はFW/MF/DFのどこへ最高ランクを置くか、SS型はSS化の0.5を
+   MF/DF/GKのどこから捻出するかを変え、同じフォーメーションでも6人を別編成にする。 */
+function comPersonaCosts(persona,f){
+  const costs=f.costs.slice();
+  const slots=f.pos.map((p,index)=>({index,type:p[0],x:p[1],cost:costs[index]}));
+  if(!persona.hasSS){
+    const strongest=slots.filter(s=>s.type!=='gk')
+      .sort((a,b)=>b.cost-a.cost||(a.type==='fw'?0:1)-(b.type==='fw'?0:1)||Math.abs(a.x)-Math.abs(b.x)||a.index-b.index)[0];
+    const focus=slots.filter(s=>s.type===persona.focusRole)
+      .sort((a,b)=>Math.abs(a.x)-Math.abs(b.x)||b.cost-a.cost||a.index-b.index)[0];
+    if(strongest&&focus&&strongest.index!==focus.index){
+      [costs[strongest.index],costs[focus.index]]=[costs[focus.index],costs[strongest.index]];
+    }
+    return costs;
+  }
+  const ace=slots.filter(s=>s.type==='fw')
+    .sort((a,b)=>b.cost-a.cost||Math.abs(a.x)-Math.abs(b.x)||a.index-b.index)[0];
+  if(!ace) return costs;
+  const upgrade=AI_SS_COST-ace.cost;
+  if(upgrade<=0) return costs;
+  const donor=slots.filter(s=>s.index!==ace.index&&s.type===persona.donorRole&&s.cost-upgrade>=1)
+    .sort((a,b)=>b.cost-a.cost||Math.abs(a.x)-Math.abs(b.x)||a.index-b.index)[0];
+  if(!donor) return costs;
+  costs[ace.index]=AI_SS_COST;
+  costs[donor.index]-=upgrade;
+  return costs;
+}
+/* COM(赤)の編成定義。6ペルソナ×6フォーメーション＝36通り。 */
 function comTeamDef(){
   if(!comPersona) return DEFAULT_TEAM;
   const f=ogFormation(comPersona.formationId);
-  const costs=f.costs.slice();
-  for(const [index,cost] of comPersona.rankTweaks||[]) costs[index]=cost;
+  const costs=comPersonaCosts(comPersona,f);
   return f.pos.map((p,i)=>({id:ogMasterPieceId(p[0],costs[i]),x:p[1],y:p[2]}));
 }
 /* マッチングフォールバックの成立演出用：ペルソナを予約して名前だけ先に返す */

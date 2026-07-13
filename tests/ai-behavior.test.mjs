@@ -247,20 +247,40 @@ test("攻撃: 直接届かないゴール前へ中継パスからシュートま
   );
 });
 
-test("COM編成: SSエース型3チームとSSなし連携型3チームをコスト16で使い分ける", () => {
+test("COM編成: 6ペルソナ×6フォーメーションの36通りをコスト16で使い分ける", () => {
   const { run } = loadPrototype();
-  const teams = JSON.parse(run(`JSON.stringify(COM_PERSONAS.map(persona=>{
+  const teams = JSON.parse(run(`JSON.stringify(comPersonaVariants().map(persona=>{
     comPersona=persona;
     const team=comTeamDef();
+    const formation=ogFormation(persona.formationId);
     return {
       name:persona.name,
+      formationId:persona.formationId,
+      expectedSS:persona.hasSS,
       total:team.reduce((sum,p)=>sum+costOf(p.id),0),
-      ss:team.filter(p=>p.id%5===0).length,
+      ss:team.filter(p=>costOf(p.id)===AI_SS_COST).length,
+      ssFw:team.filter((p,index)=>costOf(p.id)===AI_SS_COST&&formation.pos[index][0]==='fw').length,
+      signature:team.map(p=>p.id+'@'+p.x+','+p.y).join('|'),
     };
   }))`));
-  assert.equal(teams.filter((team) => team.ss > 0).length, 3, "SSありCOMが3チームではない");
-  assert.equal(teams.filter((team) => team.ss === 0).length, 3, "SSなしCOMが3チームではない");
-  for (const team of teams) assert.equal(team.total, 16, `${team.name}のチームコストが16ではない`);
+  assert.equal(teams.length, 36, "COM編成が36通りではない");
+  assert.equal(new Set(teams.map((team) => `${team.name}:${team.formationId}`)).size, 36, "COM編成に重複がある");
+  assert.equal(new Set(teams.map((team) => team.name)).size, 6, "COMペルソナが6人ではない");
+  for (const name of new Set(teams.map((team) => team.name))) {
+    assert.equal(teams.filter((team) => team.name === name).length, 6, `${name}が6フォーメーションを使わない`);
+  }
+  for (let formationId = 1; formationId <= 6; formationId += 1) {
+    const formationTeams = teams.filter((team) => team.formationId === formationId);
+    assert.equal(formationTeams.length, 6, `フォーメーション${formationId}が6人に割り当たらない`);
+    assert.equal(new Set(formationTeams.map((team) => team.signature)).size, 6, `フォーメーション${formationId}の駒構成が6種類ではない`);
+  }
+  assert.equal(teams.filter((team) => team.ss === 1).length, 18, "SSあり編成が18通りではない");
+  assert.equal(teams.filter((team) => team.ss === 0).length, 18, "SSなし編成が18通りではない");
+  for (const team of teams) {
+    assert.equal(team.total, 16, `${team.name}・フォーメーション${team.formationId}のコストが16ではない`);
+    assert.equal(team.ss, team.expectedSS ? 1 : 0, `${team.name}のSS設定が編成に反映されていない`);
+    assert.equal(team.ssFw, team.expectedSS ? 1 : 0, `${team.name}のSSがFWに配置されていない`);
+  }
 });
 
 test("攻撃戦術: SSありはエースへ預け、SSなしは前方スペースを使う", () => {

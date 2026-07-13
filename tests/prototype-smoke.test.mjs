@@ -102,16 +102,16 @@ test("TEAM COST label is localized for 7 locales and rank hint is premium-only",
   assert.match(html, /ogIsPremium\(\)\?t\('ogCostHint'\):''/);
 });
 
-test("header shows real names and COM personas cover all six formations", () => {
+test("header shows real names and six COM personas combine with all six formations", () => {
   // ヘッダーは「あなた/あいて」ではなく実名（自分=プレイヤー名/相手=オンライン名 or COMペルソナ）
   assert.match(html, /function headerTeamNames\(/);
   const personas = html.match(/const COM_PERSONAS=\[[\s\S]*?\];/)?.[0] ?? "";
-  for (const id of [1, 2, 3, 4, 5, 6]) {
-    assert.match(personas, new RegExp(`formationId:${id},`), `フォーメーション${id}のペルソナが無い`);
-  }
+  assert.equal((personas.match(/\{name:/g) ?? []).length, 6, "COMペルソナが6人ではない");
+  assert.match(html, /function comPersonaVariants\(\)/);
+  assert.match(html, /COM_PERSONAS\.flatMap\(persona=>OG_FORMATIONS\.map/);
   // 秘匿方針: ペルソナ名にCOM/AIを含めない
   assert.doesNotMatch(personas, /name:'[^']*(COM|AI|CPU)[^']*'/i);
-  // COM(赤)の編成はペルソナのフォーメーションで組む
+  // COM(赤)の編成は抽選したフォーメーションで組む
   assert.match(html, /comTeamDef\(\)\.forEach/);
 });
 
