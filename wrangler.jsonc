@@ -57,5 +57,55 @@
       "tag": "v3",
       "new_sqlite_classes": ["Matchmaker"]
     }
-  ]
+  ],
+  // Staging: connects to Football-Platform's Staging API, never production.
+  // No "routes"/custom domain at the top level to worry about inheriting (mini.footballchess.io
+  // is bound via the Cloudflare Dashboard, not this file) — only *.workers.dev is at risk, and a
+  // fresh script name avoids any collision. Fresh script name also means the Durable Object
+  // migration history starts over at v1 bundling all three classes as new.
+  "env": {
+    "staging": {
+      "name": "universofutbol-football-chess-staging",
+      // workers_dev is not inherited from the top level into named environments —
+      // without this, Cloudflare disables the *.workers.dev URL for this environment
+      // by default (confirmed live: root path returned Cloudflare error 1042 until
+      // this was added).
+      "workers_dev": true,
+      "vars": {
+        "ENVIRONMENT": "staging",
+        "CONTENT_SLUG": "universofutbol-football-chess",
+        "PUBLIC_BASE_PATH": "/universofutbol/football-chess",
+        "UNIVERSO_FUTBOL_URL": "https://universofutbol.com",
+        "PLATFORM_API_ORIGIN": "https://fc-platform-api-staging.yanagiho.workers.dev"
+      },
+      "services": [
+        {
+          "binding": "PLATFORM_API",
+          "service": "fc-platform-api-staging"
+        }
+      ],
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "MATCH_ROOM",
+            "class_name": "MatchRoom"
+          },
+          {
+            "name": "ACCOUNTS",
+            "class_name": "AccountStore"
+          },
+          {
+            "name": "MATCHMAKER",
+            "class_name": "Matchmaker"
+          }
+        ]
+      },
+      "migrations": [
+        {
+          "tag": "v1",
+          "new_sqlite_classes": ["MatchRoom", "AccountStore", "Matchmaker"]
+        }
+      ]
+    }
+  }
 }
