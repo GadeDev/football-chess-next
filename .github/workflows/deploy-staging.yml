@@ -1,0 +1,60 @@
+name: Deploy Staging
+
+# Manual-only, exact-commit-SHA deploy of the Worker
+# (universofutbol-football-chess-staging.yanagiho.workers.dev) to Football-
+# Platform Staging. Never touches the production Worker or its custom
+# domain (mini.footballchess.io, bound via the Cloudflare Dashboard, not
+# this repo's wrangler.jsonc).
+on:
+  workflow_dispatch:
+    inputs:
+      commit_sha:
+        description: "Exact 40-character commit SHA to deploy to staging"
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 15
+    steps:
+      - name: Validate commit SHA format
+        run: |
+          sha="${{ inputs.commit_sha }}"
+          if ! [[ "$sha" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::commit_sha must be an exact 40-character hex commit SHA"
+            exit 1
+          fi
+      - name: Require Cloudflare credentials
+        run: |
+          if [ -z "${{ secrets.CLOUDFLARE_API_TOKEN }}" ] || [ -z "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}" ]; then
+            echo "::error::CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID repository secrets are not set. Staging deploy cannot run until they are configured."
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit_sha }}
+      - name: Verify checked-out commit matches requested SHA
+        run: |
+          actual="$(git rev-parse HEAD)"
+          if [ "$actual" != "${{ inputs.commit_sha }}" ]; then
+            echo "::error::Checked out $actual, expected ${{ inputs.commit_sha }}"
+            exit 1
+          fi
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm run build:assets
+      - name: Deploy Worker (staging)
+        run: npx --yes wrangler@4 deploy --env staging
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
