@@ -174,3 +174,4 @@ Claude Code がこのリポジトリで作業する際の指針。詳細な背�
 ## UniversoFutbol決済導線（2026-07-19）
 - 月額CTAは UniversoFutbol `/shop` へ `game_id=football_chess`、`subscription_sku=uf_subscription_monthly_premium`、現在のHTTPSパスを `return_to` として渡す。ローカルの模擬サブスク完了や直接Stripe呼び出しへ戻さない。
 - 決済方法の選択、ログイン、Hosted Checkout、解約はUniversoFutbol側が正本。ゲーム内にはプロバイダ固有の秘密情報や決済SDKを置かない。
+- TEST Workerではログインと月額CTAの両方を `universo-frontpage-staging.pages.dev` へ送る。main相当の同じHTMLを使い、ホスト名でポータルだけを切り替える。TESTのPlatform service binding、DB、Worker名を本番へ向けない。

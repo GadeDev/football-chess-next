@@ -17,7 +17,7 @@
     "ENVIRONMENT": "production",
     "CONTENT_SLUG": "universofutbol-football-chess",
     "PUBLIC_BASE_PATH": "/universofutbol/football-chess",
-    "UNIVERSO_FUTBOL_URL": "https://universofutbol.com",
+    "UNIVERSO_FUTBOL_URL": "https://universo-futbol.com",
     "PLATFORM_API_ORIGIN": "https://fc-platform-api.yanagiho.workers.dev"
   },
   // 同一アカウントの workers.dev 同士は素の fetch() では相手のWorkerに到達しないため、
@@ -75,7 +75,7 @@
         "ENVIRONMENT": "staging",
         "CONTENT_SLUG": "universofutbol-football-chess",
         "PUBLIC_BASE_PATH": "/universofutbol/football-chess",
-        "UNIVERSO_FUTBOL_URL": "https://universofutbol.com",
+        "UNIVERSO_FUTBOL_URL": "https://universo-frontpage-staging.pages.dev",
         "PLATFORM_API_ORIGIN": "https://fc-platform-api-staging.yanagiho.workers.dev"
       },
       "services": [

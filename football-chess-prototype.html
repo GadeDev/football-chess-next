@@ -5422,8 +5422,13 @@ function ogRenderSubPage(){
   document.getElementById('ogSubCancelBtn').style.display=ogIsPremium()?'':'none';
   document.getElementById('ogSubLoginBtn').style.display=ogIsLoggedIn()?'none':'';
 }
+function ogPortalOrigin(){
+  return location.hostname==='universofutbol-football-chess-staging.yanagiho.workers.dev'
+    ? 'https://universo-frontpage-staging.pages.dev'
+    : 'https://universo-futbol.com';
+}
 function ogPortalSubscriptionUrl(path='/shop'){
-  const u=new URL('https://universo-futbol.com'+path);
+  const u=new URL(ogPortalOrigin()+path);
   u.searchParams.set('game_id','football_chess');
   u.searchParams.set('return_to',location.origin+location.pathname);
   if(path==='/shop') u.searchParams.set('subscription_sku','uf_subscription_monthly_premium');
@@ -5878,8 +5883,8 @@ document.getElementById('ogLoginClose').addEventListener('click',()=>{ playFeedb
 // UniversoFutbolポータル経由ログイン（Google等の外部認証はポータル側が処理し #uf_sso で戻る）
 document.getElementById('ogUfLoginBtn').addEventListener('click',()=>{
   playFeedback('submit');
-  const to = location.hostname==='mini.footballchess.io' ? location.origin : 'https://mini.footballchess.io';
-  location.href='https://universo-futbol.com/api/auth/launch?to='+encodeURIComponent(to);
+  const to = location.protocol==='https:' ? location.origin : 'https://mini.footballchess.io';
+  location.href=ogPortalOrigin()+'/api/auth/launch?to='+encodeURIComponent(to);
 });
 document.getElementById('ogTabSettings').addEventListener('click',()=>ogSelectTab('settings'));
 /* プレイヤー名は input（入力の都度）と change（確定）の両方で保存する。
