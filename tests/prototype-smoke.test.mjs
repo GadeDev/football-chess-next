@@ -168,6 +168,16 @@ test("ranking records only active subscribers but exposes the list without authe
   assert.doesNotMatch(topBlock, /reason: "premium"/);
 });
 
+test("subscription CTA opens the shared UniversoFutbol monthly product and preserves return path", () => {
+  const block = html.match(/function ogPortalSubscriptionUrl[\s\S]*?function ogSelectTab/)?.[0] ?? "";
+  assert.match(block, /https:\/\/universo-futbol\.com/);
+  assert.match(block, /game_id','football_chess'/);
+  assert.match(block, /subscription_sku','uf_subscription_monthly_premium'/);
+  assert.match(block, /return_to',location\.origin\+location\.pathname/);
+  assert.match(block, /location\.assign\(ogPortalSubscriptionUrl\('\/shop'\)\)/);
+  assert.doesNotMatch(html, /ogApi\('\/billing\/(?:subscribe|cancel)'/);
+});
+
 test("battle pieces display the requested five rank labels", () => {
   assert.match(html, /const PIECE_RANK_LABELS=\{1:'☆',1\.5:'☆\+',2:'☆☆',2\.5:'☆☆\+',3:'SS'\}/);
   assert.match(html, /rank\.style\.backgroundImage=`var\(--cost\$\{p\.cost\*10\}\)`/);

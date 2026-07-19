@@ -840,7 +840,7 @@ body.replaying .boardWrap::after{content:"";position:absolute;inset:0;}
       <div class="ogSectionTitle" data-i18n="subscription.title">サブスクリプション</div>
       <div class="ogSubCard">
         <div class="plan" data-i18n="subscription.plan">UniversoFutbol サブスクリプション</div>
-        <div class="price"><span data-i18n="subscription.price">月額 ¥2,000</span> <span class="demo" data-i18n="subscription.demoNote">※現在はデモ（実際の請求は発生しません。本番はUniversoFutbol共通サブスクに連動）</span></div>
+        <div class="price"><span data-i18n="subscription.price">月額 ¥2,000</span> <span class="demo" data-i18n="subscription.demoNote">StripeまたはXsollaで決済できます</span></div>
         <ul class="benefits">
           <li data-i18n="subscription.benefitAll">UniversoFutbolの全コンテンツで共通のサブスクリプション</li>
           <li data-i18n="subscription.benefitRank">駒のランク変更（コスト変更）の解放（Unity版と同じプレミアム特典）</li>
@@ -848,10 +848,10 @@ body.replaying .boardWrap::after{content:"";position:absolute;inset:0;}
           <li data-i18n="subscription.benefitFuture">今後追加: 限定フォーメーション・リプレイ保存 など</li>
         </ul>
         <div class="status" id="ogSubStatus"></div>
-        <button class="subBtn" id="ogSubBtn" data-i18n="subscription.joinDemo">プレミアムに加入する（デモ）</button>
+        <button class="subBtn" id="ogSubBtn" data-i18n="subscription.joinDemo">プレミアムに加入する</button>
         <button class="subCancel" id="ogSubCancelBtn" data-i18n="subscription.cancel">解約する</button>
         <button class="subBtn" id="ogSubLoginBtn" data-i18n="subscription.loginToJoin">ログインして加入する</button>
-        <div class="note" data-i18n="subscription.billingNote">決済はUniversoFutbol側で一元化されます（月額¥2,000・全コンテンツ共通）。デモ加入は30日で自動的に切れます。</div>
+        <div class="note" data-i18n="subscription.billingNote">決済と会員状態はUniversoFutbolで一元管理されます（月額¥2,000・全コンテンツ共通）。</div>
       </div>
     </div>
     <div class="ogPage" id="ogPageSettings" style="display:none">
@@ -2547,7 +2547,7 @@ const EN={
   online:{create:'Create room',leave:'Leave',resign:'Resign'},match:{firstHalf:'1ST HALF',secondHalf:'2ND HALF',endTurn:'TURN END (Confirm)',offsideDemo:'Offside demo',spectating:'SPECTATING',sent:'Sent'},
   home:{teamFormation:'Team formation',formations:'Formations',saveSlots:'Save slots',comMatch:'COM match',onlineMatch:'Online match',autoMatch:'Auto matching',formationChangedTpl:'Changed to {name} {style}',slotEmpty:'(empty)',save:'Save',load:'Load',slotSavedTpl:'Saved to SLOT{slot}',slotLoadedTpl:'Loaded SLOT{slot}'},tutorial:{open:'How to play',title:'How to play',intro:'Football Chess',move:'Move',pass:'Pass',defend:'Defend',shoot:'Shoot',intro1:'Both teams plan their moves at the same time.',intro2:'End the turn to resolve every move together.',move1:'Select a piece and choose a highlighted cell.',move2:'Read the opponent and move into useful space.',pass1:'Select the ball and pass to a teammate.',pass2:'A free receiver can continue the passing chain.',defend1:'Move defenders onto the ball holder to challenge.',defend2:'Position and piece cost affect the result.',shoot1:'From the attacking area, select the holder and shoot.',shoot2:'Score more goals before full time to win.'},
   settings:{title:'Settings',playerName:'Player name (also used online)',clubName:'Club name',account:'Account',sound:'Sound effects',haptic:'Haptic feedback',language:'Language',note:'Your formation and player name are saved on this browser.'},
-  subscription:{title:'Subscription',short:'Subscription',plan:'UniversoFutbol subscription',price:'¥2,000 / month',demoNote:'Demo only. No charge is made; production will use the shared UniversoFutbol subscription.',benefitAll:'One subscription for all UniversoFutbol content',benefitRank:'Unlock piece rank and cost changes',benefitNoAds:'Play without ads',benefitFuture:'Coming later: exclusive formations and replay storage',billingNote:'Billing will be managed by UniversoFutbol. Demo access expires automatically after 30 days.',joinDemo:'Join premium (demo)',cancel:'Cancel subscription',loginToJoin:'Log in to join'},
+  subscription:{title:'Subscription',short:'Subscription',plan:'UniversoFutbol subscription',price:'¥2,000 / month',demoNote:'Pay with Stripe or Xsolla.',benefitAll:'One subscription for all UniversoFutbol content',benefitRank:'Unlock piece rank and cost changes',benefitNoAds:'Play without ads',benefitFuture:'Coming later: exclusive formations and replay storage',billingNote:'Billing and membership are managed by UniversoFutbol.',joinDemo:'Join premium',cancel:'Manage subscription',loginToJoin:'Continue to subscribe'},
   friend:{open:'🤝 Friend match (invite code/URL)',title:'Friend match',create:'Create room',joinRoom:'Join a room',copyId:'Copy ID',copyUrl:'Copy URL',roomId:'Room ID',waiting:'Waiting for your opponent…',enterRoomId:'Enter a room ID'},
   matching:{searching:'Looking for an opponent…',elapsedTpl:'{seconds}s',myNameTpl:'Name: {name}'},
   auth:{login:'Log in',register:'Register',loginRegister:'Log in / Register',logout:'Log out',accountTitle:'UniversoFutbol account',universoLogin:'Log in with UniversoFutbol',continueGuest:'Continue as guest',username:'Username (2–16 characters)',password:'Password (8 characters or more)',demoNote:'Production will use your universofutbol.com account. This is a demo account; do not reuse a password.'},
@@ -2555,7 +2555,7 @@ const EN={
   ogCostHint:'Tap a piece to change its rank',ogCostCurrentBadge:'Current',ogCostOverLabel:'Over limit',ogCostPremiumMsg:'Rank change is a premium feature',ogCostPremiumBtn:'About Premium',ogCostTitleTpl:'{pos} rank — current {rank} (cost {cost})',ogCostPreviewTpl:'TEAM COST {total} / {max}',ogCostToastTpl:'Changed {pos} to rank {rank} (TEAM COST {total}/{max})',
   lang_ja:'日本語',lang_en:'English',lang_ko:'한국어',lang_es:'Español',lang_pt:'Português',lang_de:'Deutsch',lang_zhCN:'简体中文'
 };
-const JA={...EN,you:'あなた',opp:'あいて',nav:{online:'オンライン対戦',menu:'メニュー'},common:{back:'← 戻る',join:'参加',cancel:'キャンセル',close:'閉じる',or:'または',selectionCleared:'選択を解除しました'},online:{create:'ROOM作成',leave:'退出',resign:'投了'},match:{firstHalf:'前半',secondHalf:'後半',endTurn:'TURN END（決定）',offsideDemo:'オフサイド実演',spectating:'観戦中',sent:'送信済み'},home:{teamFormation:'チーム編成',formations:'フォーメーション',saveSlots:'保存スロット',comMatch:'COM対戦',onlineMatch:'オンライン対戦',autoMatch:'自動マッチング'},tutorial:{...EN.tutorial,open:'遊び方',title:'遊び方',intro:'Football Chessとは',move:'移動',pass:'パス',defend:'守備',shoot:'シュート',intro1:'両チームが同時に行動を考えます。',intro2:'TURN ENDを押すと、すべての行動が一斉に解決されます。',move1:'駒を選び、光っている移動先を選びます。',move2:'相手の狙いを読み、有利なスペースへ動かします。',pass1:'ボールを選び、味方の駒へパスします。',pass2:'フリーで受けた選手から、さらにパスを続けられます。',defend1:'ボール保持者と同じマスへ守備者を動かして競り合います。',defend2:'人数、位置、駒のコストによって結果が変わります。',shoot1:'攻撃エリアでは、ボール保持者を選んでシュートできます。',shoot2:'試合終了までに多く得点したチームの勝利です。'},settings:{title:'設定',playerName:'プレイヤー名（オンライン対戦の表示名と共通）',clubName:'クラブ名',account:'アカウント',sound:'効果音',haptic:'触覚フィードバック',language:'言語',note:'編成とプレイヤー名はこの端末（ブラウザ）に保存されます。'},subscription:{...EN.subscription,title:'サブスクリプション',short:'サブスク',plan:'UniversoFutbol サブスクリプション',price:'月額 ¥2,000',demoNote:'※現在はデモ（実際の請求は発生しません。本番はUniversoFutbol共通サブスクに連動）',benefitAll:'UniversoFutbolの全コンテンツで共通のサブスクリプション',benefitRank:'駒のランク変更（コスト変更）の解放',benefitNoAds:'広告なしでプレイ',benefitFuture:'今後追加: 限定フォーメーション・リプレイ保存 など',billingNote:'決済はUniversoFutbol側で一元化されます。デモ加入は30日で自動的に切れます。',joinDemo:'プレミアムに加入する（デモ）',cancel:'解約する',loginToJoin:'ログインして加入する'},friend:{...EN.friend,open:'🤝 フレンド対戦（招待コード/URLで友達と対戦）',title:'フレンド対戦',create:'部屋を作る',joinRoom:'部屋に入る',copyId:'IDをコピー',copyUrl:'URLをコピー',roomId:'ルームID',waiting:'相手の参加を待っています…',enterRoomId:'ルームIDを入力'},matching:{...EN.matching,searching:'対戦相手を探しています…',elapsedTpl:'{seconds}秒',myNameTpl:'表示名：{name}'},auth:{...EN.auth,login:'ログイン',register:'新規登録',loginRegister:'ログイン / 新規登録',logout:'ログアウト',accountTitle:'UniversoFutbol アカウント',universoLogin:'UniversoFutbolでログイン',continueGuest:'ゲストで続ける',username:'ユーザー名（2〜16文字）',password:'パスワード（8文字以上）',demoNote:'本番ではuniversofutbol.comの会員アカウントを利用します。現在はデモ用アカウントのため、パスワードは使い回さないでください。'},cost:{title:'ランク変更'},result:{rematch:'再戦',rsWin:'WIN',rsLose:'LOSE',rsDraw:'DRAW',rsHome:'HOME',rsGoal:'ゴール',rsOppWants:'相手が再戦を希望しています',rsRematchSent:'再戦希望を送信しました'},ogCostHint:'駒をタップでランク変更',ogCostCurrentBadge:'現在',ogCostOverLabel:'コスト超過',ogCostPremiumMsg:'ランク変更はプレミアム限定です',ogCostPremiumBtn:'プレミアムについて',ogCostTitleTpl:'{pos} のランク　現在 {rank}（コスト{cost}）',ogCostPreviewTpl:'TEAM COST {total} / {max}',ogCostToastTpl:'{pos} をランク{rank}に変更（TEAM COST {total}/{max}）'};
+const JA={...EN,you:'あなた',opp:'あいて',nav:{online:'オンライン対戦',menu:'メニュー'},common:{back:'← 戻る',join:'参加',cancel:'キャンセル',close:'閉じる',or:'または',selectionCleared:'選択を解除しました'},online:{create:'ROOM作成',leave:'退出',resign:'投了'},match:{firstHalf:'前半',secondHalf:'後半',endTurn:'TURN END（決定）',offsideDemo:'オフサイド実演',spectating:'観戦中',sent:'送信済み'},home:{teamFormation:'チーム編成',formations:'フォーメーション',saveSlots:'保存スロット',comMatch:'COM対戦',onlineMatch:'オンライン対戦',autoMatch:'自動マッチング'},tutorial:{...EN.tutorial,open:'遊び方',title:'遊び方',intro:'Football Chessとは',move:'移動',pass:'パス',defend:'守備',shoot:'シュート',intro1:'両チームが同時に行動を考えます。',intro2:'TURN ENDを押すと、すべての行動が一斉に解決されます。',move1:'駒を選び、光っている移動先を選びます。',move2:'相手の狙いを読み、有利なスペースへ動かします。',pass1:'ボールを選び、味方の駒へパスします。',pass2:'フリーで受けた選手から、さらにパスを続けられます。',defend1:'ボール保持者と同じマスへ守備者を動かして競り合います。',defend2:'人数、位置、駒のコストによって結果が変わります。',shoot1:'攻撃エリアでは、ボール保持者を選んでシュートできます。',shoot2:'試合終了までに多く得点したチームの勝利です。'},settings:{title:'設定',playerName:'プレイヤー名（オンライン対戦の表示名と共通）',clubName:'クラブ名',account:'アカウント',sound:'効果音',haptic:'触覚フィードバック',language:'言語',note:'編成とプレイヤー名はこの端末（ブラウザ）に保存されます。'},subscription:{...EN.subscription,title:'サブスクリプション',short:'サブスク',plan:'UniversoFutbol サブスクリプション',price:'月額 ¥2,000',demoNote:'StripeまたはXsollaで決済できます',benefitAll:'UniversoFutbolの全コンテンツで共通のサブスクリプション',benefitRank:'駒のランク変更（コスト変更）の解放',benefitNoAds:'広告なしでプレイ',benefitFuture:'今後追加: 限定フォーメーション・リプレイ保存 など',billingNote:'決済と会員状態はUniversoFutbolで一元管理されます。',joinDemo:'プレミアムに加入する',cancel:'サブスクを管理',loginToJoin:'加入手続きへ'},friend:{...EN.friend,open:'🤝 フレンド対戦（招待コード/URLで友達と対戦）',title:'フレンド対戦',create:'部屋を作る',joinRoom:'部屋に入る',copyId:'IDをコピー',copyUrl:'URLをコピー',roomId:'ルームID',waiting:'相手の参加を待っています…',enterRoomId:'ルームIDを入力'},matching:{...EN.matching,searching:'対戦相手を探しています…',elapsedTpl:'{seconds}秒',myNameTpl:'表示名：{name}'},auth:{...EN.auth,login:'ログイン',register:'新規登録',loginRegister:'ログイン / 新規登録',logout:'ログアウト',accountTitle:'UniversoFutbol アカウント',universoLogin:'UniversoFutbolでログイン',continueGuest:'ゲストで続ける',username:'ユーザー名（2〜16文字）',password:'パスワード（8文字以上）',demoNote:'本番ではuniversofutbol.comの会員アカウントを利用します。現在はデモ用アカウントのため、パスワードは使い回さないでください。'},cost:{title:'ランク変更'},result:{rematch:'再戦',rsWin:'WIN',rsLose:'LOSE',rsDraw:'DRAW',rsHome:'HOME',rsGoal:'ゴール',rsOppWants:'相手が再戦を希望しています',rsRematchSent:'再戦希望を送信しました'},ogCostHint:'駒をタップでランク変更',ogCostCurrentBadge:'現在',ogCostOverLabel:'コスト超過',ogCostPremiumMsg:'ランク変更はプレミアム限定です',ogCostPremiumBtn:'プレミアムについて',ogCostTitleTpl:'{pos} のランク　現在 {rank}（コスト{cost}）',ogCostPreviewTpl:'TEAM COST {total} / {max}',ogCostToastTpl:'{pos} をランク{rank}に変更（TEAM COST {total}/{max}）'};
 const L10N={ja:JA,en:EN,ko:{...EN,settings:{...EN.settings,title:'설정',language:'언어'},home:{...EN.home,teamFormation:'팀 편성',onlineMatch:'온라인 대전'},friend:{...EN.friend,title:'친구 대전'},lang_ja:'日本語'},es:{...EN,settings:{...EN.settings,title:'Ajustes',language:'Idioma'},home:{...EN.home,teamFormation:'Formación'},friend:{...EN.friend,title:'Partida con amigo'},lang_ja:'Japonés'},pt:{...EN,settings:{...EN.settings,title:'Configurações',language:'Idioma'},home:{...EN.home,teamFormation:'Formação'},friend:{...EN.friend,title:'Partida com amigo'},lang_ja:'Japonês'},de:{...EN,settings:{...EN.settings,title:'Einstellungen',language:'Sprache'},home:{...EN.home,teamFormation:'Teamaufstellung'},friend:{...EN.friend,title:'Freundschaftsspiel'},lang_ja:'Japanisch'},'zh-CN':{...EN,settings:{...EN.settings,title:'设置',language:'语言'},home:{...EN.home,teamFormation:'球队编成'},friend:{...EN.friend,title:'好友对战'},lang_ja:'日语'}};
 Object.assign(L10N.ja.home,{formationChangedTpl:'{name} {style} に変更しました',slotEmpty:'（空き）',save:'保存',load:'呼出',slotSavedTpl:'SLOT{slot} に保存しました',slotLoadedTpl:'SLOT{slot} を呼び出しました'});
 for(const dict of Object.values(L10N)){ Object.assign(dict.online,{teamBlue:'Blue',teamRed:'Red',emptySeat:'Empty',disconnected:'Disconnected',spectatorCountTpl:'Spectators {count}',abnormalClose:'Abnormal close'}); }
@@ -5422,17 +5422,18 @@ function ogRenderSubPage(){
   document.getElementById('ogSubCancelBtn').style.display=ogIsPremium()?'':'none';
   document.getElementById('ogSubLoginBtn').style.display=ogIsLoggedIn()?'none':'';
 }
-async function ogSubscribe(){
-  let r=null;
-  try{ r=await ogApi('/billing/subscribe','POST',{}); }catch{}
-  if(r&&r.ok){ ogAuth.user=r.user; ogRenderAuth(); ogRenderDeck(); ogToast(t('accountUi.subscribed'),true); }
-  else ogToast((r&&r.error)||t('accountUi.subscribeFailed'));
+function ogPortalSubscriptionUrl(path='/shop'){
+  const u=new URL('https://universo-futbol.com'+path);
+  u.searchParams.set('game_id','football_chess');
+  u.searchParams.set('return_to',location.origin+location.pathname);
+  if(path==='/shop') u.searchParams.set('subscription_sku','uf_subscription_monthly_premium');
+  return u.toString();
 }
-async function ogCancelSub(){
-  let r=null;
-  try{ r=await ogApi('/billing/cancel','POST',{}); }catch{}
-  if(r&&r.ok){ ogAuth.user=r.user; ogRenderAuth(); ogRenderDeck(); ogToast(t('accountUi.cancelled'),true); }
-  else ogToast((r&&r.error)||t('accountUi.cancelFailed'));
+function ogSubscribe(){
+  location.assign(ogPortalSubscriptionUrl('/shop'));
+}
+function ogCancelSub(){
+  location.assign(ogPortalSubscriptionUrl('/subscription'));
 }
 function ogSelectTab(tab){
   const map={deck:'ogPageDeck',ranking:'ogPageRanking',sub:'ogPageSub',settings:'ogPageSettings'};
@@ -5601,7 +5602,7 @@ document.getElementById('ogLogoutBtn').addEventListener('click',ogLogout);
 document.getElementById('ogGotoLoginBtn').addEventListener('click',()=>ogShowLogin());
 document.getElementById('ogSubBtn').addEventListener('click',ogSubscribe);
 document.getElementById('ogSubCancelBtn').addEventListener('click',ogCancelSub);
-document.getElementById('ogSubLoginBtn').addEventListener('click',()=>ogShowLogin());
+document.getElementById('ogSubLoginBtn').addEventListener('click',ogSubscribe);
 
 /* ---- イベント ---- */
 document.getElementById('ogTitle').addEventListener('click',()=>{ ogShow('ogTitle',false); if(ogIsLoggedIn()) ogShowHome(); else ogShowLogin(); });
