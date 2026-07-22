@@ -247,6 +247,86 @@ test("攻撃: 直接届かないゴール前へ中継パスからシュートま
   );
 });
 
+test("攻撃: PAの守備人数をPK誘発率10%・35%・60%として評価する", () => {
+  const { run } = loadPrototype();
+  const probabilities = JSON.parse(run(`JSON.stringify(
+    (()=>[1,2,3].map(count=>{
+      pieces=[
+        {id:1,team:'r',posType:'fw',x:-1,y:3,sx:-1,sy:3,cost:1},
+        {id:2,team:'r',posType:'gk',x:0,y:-3,sx:0,sy:-3,cost:2},
+        {id:10,team:'b',posType:'gk',x:0,y:4,sx:0,sy:4,cost:3},
+        ...Array.from({length:count},(_,index)=>({
+          id:11+index,team:'b',posType:'df',x:-1,y:4,sx:-1,sy:4,cost:1,
+        })),
+      ];
+      return aiPenaltyPressureAt(pieces[0],-1,4).foulProbability;
+    }))()
+  )`));
+  assert.deepEqual(probabilities, [10, 35, 60]);
+});
+
+test("攻撃: VAの低確率シュートより複数守備がいるPAへのドリブルでPKを狙う", () => {
+  for (const seed of [1, 7, 17]) {
+    const { run, seedRandom } = loadPrototype();
+    seedRandom(seed);
+    const result = JSON.parse(run(`
+      (()=>{
+        pieces=[
+          {id:1,team:'r',posType:'fw',x:-1,y:3,sx:-1,sy:3,cost:1},
+          {id:2,team:'r',posType:'gk',x:0,y:-3,sx:0,sy:-3,cost:2},
+          {id:10,team:'b',posType:'gk',x:0,y:4,sx:0,sy:4,cost:3},
+          {id:11,team:'b',posType:'df',x:-1,y:4,sx:-1,sy:4,cost:1},
+          {id:12,team:'b',posType:'df',x:-1,y:4,sx:-1,sy:4,cost:1},
+        ];
+        ball={target:'piece',pieceId:1,x:-1,y:3};
+        const pressure=aiPenaltyPressureAt(pieces[0],-1,4);
+        oppCommands=[]; const decision=aiPlanHolder(pieces[0]);
+        return JSON.stringify({decision,shot:calcShoot(pieces[0]),pressure,commands:oppCommands});
+      })()
+    `));
+    assert.equal(result.shot.area, "VA", "テスト前提: 保持者はVAでシュート可能");
+    assert.equal(result.pressure.defenders, 2);
+    assert.equal(result.pressure.foulProbability, 35);
+    assert.deepEqual(
+      result.commands.map((c) => [c.type, c.tx, c.ty]),
+      [["dribble", -1, 4]],
+      `seed=${seed}: PAへのドリブルよりVAシュート等を選んだ`,
+    );
+  }
+});
+
+test("攻撃: PA内で守備が複数重なったらキープしてPKを誘い、空いていればシュートする", () => {
+  const decide = (defenderCount) => {
+    const { run, seedRandom } = loadPrototype();
+    seedRandom(11);
+    const defenders = Array.from({ length: defenderCount }, (_, index) =>
+      `{id:${11 + index},team:'b',posType:'df',x:-1,y:4,sx:-1,sy:4,cost:1}`,
+    ).join(",");
+    return JSON.parse(run(`
+      (()=>{
+        pieces=[
+          {id:1,team:'r',posType:'fw',x:-1,y:4,sx:-1,sy:4,cost:1},
+          {id:2,team:'r',posType:'gk',x:0,y:-3,sx:0,sy:-3,cost:2},
+          {id:10,team:'b',posType:'gk',x:0,y:4,sx:0,sy:4,cost:3}
+          ${defenders ? `,${defenders}` : ""}
+        ];
+        ball={target:'piece',pieceId:1,x:-1,y:4};
+        oppCommands=[]; const decision=aiPlanHolder(pieces[0]);
+        return JSON.stringify({decision,commands:oppCommands,pressure:aiPenaltyPressureAt(pieces[0],-1,4)});
+      })()
+    `));
+  };
+
+  const crowded = decide(2);
+  assert.equal(crowded.pressure.foulProbability, 35);
+  assert.equal(crowded.decision, "hold-for-penalty");
+  assert.deepEqual(crowded.commands, [], "キープ時はボールコマンドを入れず静止タックルを発生させる");
+
+  const open = decide(0);
+  assert.equal(open.decision, "shoot");
+  assert.equal(open.commands[0]?.type, "shoot", "PAが空いているのにシュートしない");
+});
+
 test("COM編成: 6ペルソナ×6フォーメーションの36通りをコスト16で使い分ける", () => {
   const { run } = loadPrototype();
   const teams = JSON.parse(run(`JSON.stringify(comPersonaVariants().map(persona=>{

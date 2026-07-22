@@ -2055,6 +2055,27 @@ function aiTacticalProfile(){
 
 // 赤から見た「攻撃エリア」＝自分(青)のゴール側。赤の攻める先は y が大きいマス（自陣ゴール前）
 function isRedAttackingArea(x,y){ const c=cellAt(x,y); return c && (c.t==='selfga'||(c.t==='pa'&&y>0)||(c.t==='va'&&y>0)); }
+function isRedPenaltyArea(x,y){ const c=cellAt(x,y); return !!c && (c.t==='selfga'||(c.t==='pa'&&y>0)); }
+
+/* PAでボール保持者と同居する青駒数から、PKを得て得点する期待値を見積もる。
+   実際のファウル判定と同じ calcFoul（1人10%／2人35%／3人60%）を使い、
+   PK成功率も実際の最高コストキッカー対GKの組み合わせで評価する。 */
+function aiPenaltyPressureAt(piece,x,y){
+  const defenders=piecesAt(x,y).filter(q=>q.team==='b');
+  if(!isRedPenaltyArea(x,y)||!defenders.length){
+    return {defenders:0,foulProbability:0,pkProbability:0,expectedGoal:0};
+  }
+  const foulProbability=calcFoul(defenders.length);
+  const kicker=highestCostPiece(aiTeamPieces())||piece;
+  const gk=enemyGKFor('r')||defenders[0];
+  const pkProbability=gk?calcPK(kicker,gk):100;
+  return {
+    defenders:defenders.length,
+    foulProbability,
+    pkProbability,
+    expectedGoal:foulProbability*pkProbability/100,
+  };
+}
 
 // 赤駒の移動候補（Unity PieceMoveLimitDef 準拠、ターン開始位置から）
 function redMoveTargets(p){
@@ -2220,6 +2241,18 @@ function aiPlanHolder(p,profile=aiTacticalProfile()){
     const aceBonus=profile.ownAceIds.has(p.id)?22:0;
     options.push({score:80+sh.prob*2+areaBonus+urgency+aceBonus, act:{type:'shoot',pieceId:p.id,tx:p.x,ty:p.y,team:'r'}});
   }
+  // PA内で守備が2体以上重なった時は、低確率シュートを急がず保持してタックルを受ける手も選ぶ。
+  // ボールを動かさないことでターン末の静止タックルが発生し、35%/60%のファウル抽選からPKを狙える。
+  const currentPenalty=isRedPenaltyArea(p.x,p.y);
+  const currentPressure=aiPenaltyPressureAt(p,p.x,p.y);
+  if(currentPenalty&&currentPressure.defenders>=2){
+    const aceBonus=profile.ownAceIds.has(p.id)?12:0;
+    options.push({
+      score:95+currentPressure.foulProbability*1.1+currentPressure.expectedGoal*2.5+urgency+aceBonus,
+      act:null,
+      intent:'hold-for-penalty',
+    });
+  }
   const passTargets=redPassTargets(p);
   // 通常パス：決定機なら同ターンのパス→シュートを最優先。それ以外は保持後の危険も評価する。
   passTargets.forEach(q=>{
@@ -2291,8 +2324,16 @@ function aiPlanHolder(p,profile=aiTacticalProfile()){
     const reach=aiReachThreatAt(p,x,y);
     // 前進価値はクランプしない（後戻りは減点。2026-07-10）
     const gain=(redGoalDistance(p.x,p.y)-redGoalDistance(x,y))*14;
-    // PA/GA（ゴール至近）への持ち込みは強めのボーナス＝守備壁への突入を恐れすぎない
-    const areaBonus=isRedAttackingArea(x,y)?(redGoalDistance(x,y)<=2?40:18):0;
+    const penaltyTarget=isRedPenaltyArea(x,y);
+    const penaltyPressure=aiPenaltyPressureAt(p,x,y);
+    // VAから撃ち急がずPAへ持ち込む。特に守備が重なるPAは35%/60%のPK機会を攻撃価値として加算する。
+    let areaBonus=penaltyTarget?(currentPenalty?22:145):(isRedAttackingArea(x,y)?18:0);
+    if(penaltyTarget&&penaltyPressure.defenders){
+      areaBonus+=(penaltyPressure.defenders>=2?45:12)
+        +penaltyPressure.foulProbability*1.1
+        +penaltyPressure.expectedGoal*2;
+    }
+    if(currentPenalty&&!penaltyTarget) areaBonus-=90; // PAへ入った後に理由なく外へ持ち出さない
     const follow=aiFollowUpAttackValue(p,x,y);
     const aceCarryBonus=profile.ownAceIds.has(p.id)&&gain>0?14:0;
     options.push({score:(100-risk)*0.25+gain+areaBonus-reach*0.14+follow*0.42+Math.max(0,gain)*urgency*0.025+aceCarryBonus,
@@ -2313,8 +2354,9 @@ function aiPlanHolder(p,profile=aiTacticalProfile()){
   }
   const top=aiPickTop(options);
   if(!top) return;
-  oppCommands.push(top.act);
+  if(top.act) oppCommands.push(top.act);
   if(top.followCommands) oppCommands.push(...top.followCommands);
+  return top.intent||top.act?.type||null;
 }
 /* 赤陣深く（最終ライン付近 y<=-2＝VAより深い側）に張っている青駒＝「SS1トップ張り付き」対策の常時マーク対象。
    GKの脇のマスに高ランクFWを置かれると、パス→至近シュートでほぼ確実に失点するため、
