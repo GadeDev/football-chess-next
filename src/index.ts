@@ -504,7 +504,7 @@ async function handleAuthApi(request: Request, env: Env, pathname: string): Prom
     case "POST /auth/logout":
       return json(await accounts.logout(bearerToken(request)));
     case "GET /auth/me":
-      return json(await accounts.me(bearerToken(request)));
+      return json(await accounts.me(bearerToken(request)), { headers: { "cache-control": "no-store" } });
     case "POST /auth/sso": {
       const secret = (env as { SSO_SECRET?: string }).SSO_SECRET;
       if (!secret) return problem(501, "SSO is not configured (set SSO_SECRET)");
@@ -519,12 +519,11 @@ async function handleAuthApi(request: Request, env: Env, pathname: string): Prom
       if (!accessToken) return problem(400, "access_token is required");
       const profile = await verifyUniversoPlatformToken(env, accessToken);
       if (!profile) return problem(401, "Invalid Universo Futbol access token");
-      return json(await accounts.ssoLogin(profile));
+      return json(await accounts.ssoLogin(profile, accessToken));
     }
     case "POST /billing/subscribe":
-      return json(await accounts.subscribe(bearerToken(request)));
     case "POST /billing/cancel":
-      return json(await accounts.cancelSubscription(bearerToken(request)));
+      return problem(410, "Manage subscriptions through Universo Futbol");
     default:
       return problem(404, "Not found");
   }

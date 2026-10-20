@@ -5300,9 +5300,14 @@ function ogRenderDeck(){
 }
 
 /* ---- ランク（コスト）変更（Unity UICostChangeDialog：上限16超の増加は拒否して戻す） ---- */
-function ogSaveSlot(i){
+async function ogSaveSlot(i){
   if(!Number.isInteger(i)||i<0||i>=6) return false;
   if(!ogIsLoggedIn()){ ogShowLogin(); return false; }
+  try {
+    const result=await ogApi('/auth/me');
+    if(!result.ok) { ogAuth.user=null; ogShowLogin(); return false; }
+    ogAuth.user=result.user;
+  } catch { ogAuth.user=null; ogShowLogin(); return false; }
   if(!ogIsPremium()){ ogShowSubRequired(); return false; }
   try{ localStorage.setItem(OG_SLOT_KEY+i,JSON.stringify(ogDeck)); }
   catch{ return false; }
