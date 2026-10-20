@@ -577,6 +577,30 @@
 #ogToast.show{opacity:1;}
 #ogToast.ok{background:rgba(30,130,70,.92);}
 </style>
+<style>
+/* UI renewal: preserve the original board and pieces; prioritize play and free registration on small screens. */
+#ogHome{background-image:linear-gradient(rgba(8,23,29,.94),rgba(8,23,29,.97)),var(--ogTitleBg);color:#edf3ed}
+#ogHome .ogHeader{background:#0b1d24;border-color:#2a4148;padding:12px 18px}
+#ogHome .ogHeadLogin{background:transparent;border-color:#789994;border-radius:5px;min-height:44px}
+#ogHome .ogPages{max-width:600px;padding:22px 20px 18px}
+.ogWelcome{margin:0 0 22px}.ogWelcome .eyebrow{font-size:10px;letter-spacing:.2em;color:#9cb9b0;margin:0 0 8px}
+.ogWelcome h1{font-size:clamp(24px,5vw,34px);line-height:1.3;margin:0 0 8px;font-weight:750}
+.ogWelcome p{font-size:13px;line-height:1.8;color:#b6c8c6;margin:0}
+.ogWelcomeActions{display:flex;gap:10px;margin-top:16px}.ogWelcomeActions button{flex:1;min-height:48px;border-radius:5px;border:1px solid #799b91;background:transparent;color:#dce9e3;font:inherit;font-size:14px;cursor:pointer}
+.ogWelcomeActions .primary{background:#e2eddf;color:#142b28;border-color:#e2eddf;font-weight:700}
+#ogRegistration{display:flex;align-items:center;gap:14px;padding:14px 16px;margin-bottom:24px;background:#142e32;border:1px solid #36534e;border-radius:6px}
+#ogRegistration p{margin:0;color:#b6c8c6;font-size:12px;line-height:1.6}#ogRegistration strong{display:block;color:#edf3ed;font-size:14px;margin-bottom:3px}
+#ogRegisterBtn{flex-shrink:0;background:transparent;border:1px solid #a3c6b1;color:#e2eddf;padding:12px;border-radius:5px;font-size:12px;cursor:pointer}
+#ogHome .ogSectionTitle{color:#dce9e3;font-size:13px;margin:18px 0 10px}
+#ogHome .ogHint{font-size:12px;line-height:1.7;color:#adc6be}
+#ogHome .ogFooter{position:relative;flex:0 0 auto;display:grid;grid-template-columns:1.35fr repeat(4,1fr);gap:5px;padding:10px max(10px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom));background:#0b1d24;border-top:1px solid #2a4148}
+#ogHome .ogFooter button{width:100%;min-width:0;height:52px;padding:5px 2px;background:transparent;border:1px solid #324b50;border-radius:5px;letter-spacing:0;text-shadow:none;color:#c6d8d3;font-size:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+#ogHome .ogFooter #ogMatchBtn{background:#e2eddf;color:#142b28;border-color:#e2eddf;font-size:14px}
+#ogHome .ogFooter .ogTabIco{display:none}#ogHome .ogFooter .sub{font-size:9px}
+#ogHome button:focus-visible{outline:3px solid #b7dfc7;outline-offset:3px}
+@media(max-width:360px){#ogHome .ogPages{padding:16px 12px}#ogRegistration{gap:8px;padding:12px}#ogRegisterBtn{padding:10px 8px}}
+@media(prefers-reduced-motion:reduce){#ogHome *{animation:none!important;transition:none!important}}
+</style>
 </head>
 <style id="ogCss2">
 /* リプレイ中の誤タップ抑制 */
@@ -821,6 +845,14 @@ body.replaying .boardWrap::after{content:"";position:absolute;inset:0;}
   </div>
   <div class="ogPages">
     <div class="ogPage" id="ogPageDeck">
+      <section class="ogWelcome">
+        <p class="eyebrow">FOOTBALL CHESS</p>
+        <h1 data-i18n="renewal.headline">まずは、ひと試合。</h1>
+        <p data-i18n="renewal.intro">チームは準備済み。登録なしでCOM対戦を楽しめます。</p>
+        <div class="ogWelcomeActions"><button class="primary" id="ogQuickComBtn" data-i18n="renewal.play">COMと対戦する</button><button id="ogQuickHelpBtn" data-i18n="tutorial.open">遊び方</button></div>
+      </section>
+      <section id="ogRegistration"><div><strong data-i18n="renewal.idTitle">無料IDではじめよう</strong><p data-i18n="renewal.idBody">UniversoFutbolのアカウントを登録できます。</p></div><button id="ogRegisterBtn" data-i18n="renewal.register">無料ID登録</button></section>
+
       <div class="ogSectionTitle" data-i18n="home.teamFormation">チーム編成 <span id="ogTeamCost"></span></div>
       <div id="ogDeckBoard"><div class="ogGrid" id="ogDeckGrid"></div></div>
       <div class="ogHint" id="ogCostHint"></div>
@@ -843,9 +875,9 @@ body.replaying .boardWrap::after{content:"";position:absolute;inset:0;}
         <div class="price"><span data-i18n="subscription.price">月額 ¥2,000</span> <span class="demo" data-i18n="subscription.demoNote">StripeまたはXsollaで決済できます</span></div>
         <ul class="benefits">
           <li data-i18n="subscription.benefitAll">UniversoFutbolの全コンテンツで共通のサブスクリプション</li>
-          <li data-i18n="subscription.benefitRank">駒のランク変更（コスト変更）の解放（Unity版と同じプレミアム特典）</li>
+          <li data-i18n="subscription.benefitRank">フォーメーションを6枠に保存</li>
           <li data-i18n="subscription.benefitNoAds">広告なしでプレイ</li>
-          <li data-i18n="subscription.benefitFuture">今後追加: 限定フォーメーション・リプレイ保存 など</li>
+          <li data-i18n="subscription.benefitFuture">保存済みの編成は契約終了後も読み込めます。</li>
         </ul>
         <div class="status" id="ogSubStatus"></div>
         <button class="subBtn" id="ogSubBtn" data-i18n="subscription.joinDemo">プレミアムに加入する</button>
@@ -2597,7 +2629,7 @@ const EN={
   ogCostHint:'Tap a piece to change its rank',ogCostCurrentBadge:'Current',ogCostOverLabel:'Over limit',ogCostPremiumMsg:'Rank change is a premium feature',ogCostPremiumBtn:'About Premium',ogCostTitleTpl:'{pos} rank — current {rank} (cost {cost})',ogCostPreviewTpl:'TEAM COST {total} / {max}',ogCostToastTpl:'Changed {pos} to rank {rank} (TEAM COST {total}/{max})',
   lang_ja:'日本語',lang_en:'English',lang_ko:'한국어',lang_es:'Español',lang_pt:'Português',lang_de:'Deutsch',lang_zhCN:'简体中文'
 };
-const JA={...EN,you:'あなた',opp:'あいて',nav:{online:'オンライン対戦',menu:'メニュー'},common:{back:'← 戻る',join:'参加',cancel:'キャンセル',close:'閉じる',or:'または',selectionCleared:'選択を解除しました'},online:{create:'ROOM作成',leave:'退出',resign:'投了'},match:{firstHalf:'前半',secondHalf:'後半',endTurn:'TURN END（決定）',offsideDemo:'オフサイド実演',spectating:'観戦中',sent:'送信済み'},home:{teamFormation:'チーム編成',formations:'フォーメーション',saveSlots:'保存スロット',comMatch:'COM対戦',onlineMatch:'オンライン対戦',autoMatch:'自動マッチング'},tutorial:{...EN.tutorial,open:'遊び方',title:'遊び方',intro:'Football Chessとは',move:'移動',pass:'パス',defend:'守備',shoot:'シュート',intro1:'両チームが同時に行動を考えます。',intro2:'TURN ENDを押すと、すべての行動が一斉に解決されます。',move1:'駒を選び、光っている移動先を選びます。',move2:'相手の狙いを読み、有利なスペースへ動かします。',pass1:'ボールを選び、味方の駒へパスします。',pass2:'フリーで受けた選手から、さらにパスを続けられます。',defend1:'ボール保持者と同じマスへ守備者を動かして競り合います。',defend2:'人数、位置、駒のコストによって結果が変わります。',shoot1:'攻撃エリアでは、ボール保持者を選んでシュートできます。',shoot2:'試合終了までに多く得点したチームの勝利です。'},settings:{title:'設定',playerName:'プレイヤー名（オンライン対戦の表示名と共通）',clubName:'クラブ名',account:'アカウント',sound:'効果音',haptic:'触覚フィードバック',language:'言語',note:'編成とプレイヤー名はこの端末（ブラウザ）に保存されます。'},subscription:{...EN.subscription,title:'サブスクリプション',short:'サブスク',plan:'UniversoFutbol サブスクリプション',price:'月額 ¥2,000',demoNote:'StripeまたはXsollaで決済できます',benefitAll:'UniversoFutbolの全コンテンツで共通のサブスクリプション',benefitRank:'駒のランク変更（コスト変更）の解放',benefitNoAds:'広告なしでプレイ',benefitFuture:'今後追加: 限定フォーメーション・リプレイ保存 など',billingNote:'決済と会員状態はUniversoFutbolで一元管理されます。',joinDemo:'プレミアムに加入する',cancel:'サブスクを管理',loginToJoin:'加入手続きへ'},friend:{...EN.friend,open:'🤝 フレンド対戦（招待コード/URLで友達と対戦）',title:'フレンド対戦',create:'部屋を作る',joinRoom:'部屋に入る',copyId:'IDをコピー',copyUrl:'URLをコピー',roomId:'ルームID',waiting:'相手の参加を待っています…',enterRoomId:'ルームIDを入力'},matching:{...EN.matching,searching:'対戦相手を探しています…',elapsedTpl:'{seconds}秒',myNameTpl:'表示名：{name}'},auth:{...EN.auth,login:'ログイン',register:'新規登録',loginRegister:'ログイン / 新規登録',logout:'ログアウト',accountTitle:'UniversoFutbol アカウント',universoLogin:'UniversoFutbolでログイン',continueGuest:'ゲストで続ける',username:'ユーザー名（2〜16文字）',password:'パスワード（8文字以上）',demoNote:'本番ではuniversofutbol.comの会員アカウントを利用します。現在はデモ用アカウントのため、パスワードは使い回さないでください。'},cost:{title:'ランク変更'},result:{rematch:'再戦',rsWin:'WIN',rsLose:'LOSE',rsDraw:'DRAW',rsHome:'HOME',rsGoal:'ゴール',rsOppWants:'相手が再戦を希望しています',rsRematchSent:'再戦希望を送信しました'},ogCostHint:'駒をタップでランク変更',ogCostCurrentBadge:'現在',ogCostOverLabel:'コスト超過',ogCostPremiumMsg:'ランク変更はプレミアム限定です',ogCostPremiumBtn:'プレミアムについて',ogCostTitleTpl:'{pos} のランク　現在 {rank}（コスト{cost}）',ogCostPreviewTpl:'TEAM COST {total} / {max}',ogCostToastTpl:'{pos} をランク{rank}に変更（TEAM COST {total}/{max}）'};
+const JA={...EN,you:'あなた',opp:'あいて',nav:{online:'オンライン対戦',menu:'メニュー'},common:{back:'← 戻る',join:'参加',cancel:'キャンセル',close:'閉じる',or:'または',selectionCleared:'選択を解除しました'},online:{create:'ROOM作成',leave:'退出',resign:'投了'},match:{firstHalf:'前半',secondHalf:'後半',endTurn:'TURN END（決定）',offsideDemo:'オフサイド実演',spectating:'観戦中',sent:'送信済み'},home:{teamFormation:'チーム編成',formations:'フォーメーション',saveSlots:'保存スロット',comMatch:'COM対戦',onlineMatch:'オンライン対戦',autoMatch:'自動マッチング'},tutorial:{...EN.tutorial,open:'遊び方',title:'遊び方',intro:'Football Chessとは',move:'移動',pass:'パス',defend:'守備',shoot:'シュート',intro1:'両チームが同時に行動を考えます。',intro2:'TURN ENDを押すと、すべての行動が一斉に解決されます。',move1:'駒を選び、光っている移動先を選びます。',move2:'相手の狙いを読み、有利なスペースへ動かします。',pass1:'ボールを選び、味方の駒へパスします。',pass2:'フリーで受けた選手から、さらにパスを続けられます。',defend1:'ボール保持者と同じマスへ守備者を動かして競り合います。',defend2:'人数、位置、駒のコストによって結果が変わります。',shoot1:'攻撃エリアでは、ボール保持者を選んでシュートできます。',shoot2:'試合終了までに多く得点したチームの勝利です。'},settings:{title:'設定',playerName:'プレイヤー名（オンライン対戦の表示名と共通）',clubName:'クラブ名',account:'アカウント',sound:'効果音',haptic:'触覚フィードバック',language:'言語',note:'編成とプレイヤー名はこの端末（ブラウザ）に保存されます。'},subscription:{...EN.subscription,title:'サブスクリプション',short:'サブスク',plan:'UniversoFutbol サブスクリプション',price:'月額 ¥2,000',demoNote:'StripeまたはXsollaで決済できます',benefitAll:'UniversoFutbolの全コンテンツで共通のサブスクリプション',benefitRank:'駒のランク変更（コスト変更）の解放',benefitNoAds:'広告なしでプレイ',benefitFuture:'保存済みの編成は契約終了後も読み込めます。',billingNote:'決済と会員状態はUniversoFutbolで一元管理されます。',joinDemo:'プレミアムに加入する',cancel:'サブスクを管理',loginToJoin:'加入手続きへ'},friend:{...EN.friend,open:'🤝 フレンド対戦（招待コード/URLで友達と対戦）',title:'フレンド対戦',create:'部屋を作る',joinRoom:'部屋に入る',copyId:'IDをコピー',copyUrl:'URLをコピー',roomId:'ルームID',waiting:'相手の参加を待っています…',enterRoomId:'ルームIDを入力'},matching:{...EN.matching,searching:'対戦相手を探しています…',elapsedTpl:'{seconds}秒',myNameTpl:'表示名：{name}'},auth:{...EN.auth,login:'ログイン',register:'新規登録',loginRegister:'ログイン / 新規登録',logout:'ログアウト',accountTitle:'UniversoFutbol アカウント',universoLogin:'UniversoFutbolでログイン',continueGuest:'ゲストで続ける',username:'ユーザー名（2〜16文字）',password:'パスワード（8文字以上）',demoNote:'本番ではuniversofutbol.comの会員アカウントを利用します。現在はデモ用アカウントのため、パスワードは使い回さないでください。'},cost:{title:'ランク変更'},result:{rematch:'再戦',rsWin:'WIN',rsLose:'LOSE',rsDraw:'DRAW',rsHome:'HOME',rsGoal:'ゴール',rsOppWants:'相手が再戦を希望しています',rsRematchSent:'再戦希望を送信しました'},ogCostHint:'駒をタップでランク変更',ogCostCurrentBadge:'現在',ogCostOverLabel:'コスト超過',ogCostPremiumMsg:'ランク変更はプレミアム限定です',ogCostPremiumBtn:'プレミアムについて',ogCostTitleTpl:'{pos} のランク　現在 {rank}（コスト{cost}）',ogCostPreviewTpl:'TEAM COST {total} / {max}',ogCostToastTpl:'{pos} をランク{rank}に変更（TEAM COST {total}/{max}）'};
 const L10N={ja:JA,en:EN,ko:{...EN,settings:{...EN.settings,title:'설정',language:'언어'},home:{...EN.home,teamFormation:'팀 편성',onlineMatch:'온라인 대전'},friend:{...EN.friend,title:'친구 대전'},lang_ja:'日本語'},es:{...EN,settings:{...EN.settings,title:'Ajustes',language:'Idioma'},home:{...EN.home,teamFormation:'Formación'},friend:{...EN.friend,title:'Partida con amigo'},lang_ja:'Japonés'},pt:{...EN,settings:{...EN.settings,title:'Configurações',language:'Idioma'},home:{...EN.home,teamFormation:'Formação'},friend:{...EN.friend,title:'Partida com amigo'},lang_ja:'Japonês'},de:{...EN,settings:{...EN.settings,title:'Einstellungen',language:'Sprache'},home:{...EN.home,teamFormation:'Teamaufstellung'},friend:{...EN.friend,title:'Freundschaftsspiel'},lang_ja:'Japanisch'},'zh-CN':{...EN,settings:{...EN.settings,title:'设置',language:'语言'},home:{...EN.home,teamFormation:'球队编成'},friend:{...EN.friend,title:'好友对战'},lang_ja:'日语'}};
 Object.assign(L10N.ja.home,{formationChangedTpl:'{name} {style} に変更しました',slotEmpty:'（空き）',save:'保存',load:'呼出',slotSavedTpl:'SLOT{slot} に保存しました',slotLoadedTpl:'SLOT{slot} を呼び出しました'});
 for(const dict of Object.values(L10N)){ Object.assign(dict.online,{teamBlue:'Blue',teamRed:'Red',emptySeat:'Empty',disconnected:'Disconnected',spectatorCountTpl:'Spectators {count}',abnormalClose:'Abnormal close'}); }
@@ -2673,10 +2705,36 @@ Object.assign(L10N.ja,{notInput:'入力待ちではありません',enemyPiece:'
 for(const dict of Object.values(L10N)){ Object.assign(dict.match,{notInput:dict.notInput,enemyPiece:dict.enemyPiece,selectionCleared:dict.selectionCleared,replaying:dict.replaying,finished:dict.finished,spectating:dict.match.spectating}); Object.assign(dict.online,{offline:dict.offline,creating:dict.creating,roomRequired:dict.roomRequired}); Object.assign(dict.action||(dict.action={}),{pass:dict.pass,throughPass:dict.throughPass,shoot:dict.shoot,move:dict.move,dribble:dict.dribble,offside:dict.offside,tackleSuccess:dict.tackleSuccess,tackleFailed:dict.tackleFailed,foul:dict.foul,looseBall:dict.looseBall,kickoff:dict.kickoff}); }
 const LOCALE_NAMES={ja:'日本語',en:'English',ko:'한국어',es:'Español',pt:'Português',de:'Deutsch','zh-CN':'简体中文'};
 const SUPPORTED_LOCALES=['ja','en','ko','es','pt','de','zh-CN'];
+
+// Home renewal copy (existing localization system).
+L10N["ja"].renewal={"headline": "まずは、ひと試合。", "intro": "チームは準備済み。登録なしでCOM対戦を楽しめます。", "play": "COMと対戦する", "idTitle": "無料IDではじめよう", "idBody": "UniversoFutbolのアカウントを登録できます。", "register": "無料ID登録"};
+L10N["en"].renewal={"headline": "Your next move starts here.", "intro": "Your team is ready. Play against the computer without an account.", "play": "Play the computer", "idTitle": "Start with a free ID", "idBody": "Create your UniversoFutbol account.", "register": "Create free ID"};
+L10N["es"].renewal={"headline": "Tu próxima jugada empieza aquí.", "intro": "Tu equipo está listo. Juega contra la computadora sin cuenta.", "play": "Jugar contra la CPU", "idTitle": "Empieza con una ID gratis", "idBody": "Crea tu cuenta de UniversoFutbol.", "register": "Crear ID gratis"};
+L10N["pt"].renewal={"headline": "Sua próxima jogada começa aqui.", "intro": "Seu time está pronto. Jogue contra o computador sem conta.", "play": "Jogar contra a CPU", "idTitle": "Comece com uma ID grátis", "idBody": "Crie sua conta UniversoFutbol.", "register": "Criar ID grátis"};
+L10N["de"].renewal={"headline": "Dein nächster Zug beginnt hier.", "intro": "Dein Team steht bereit. Spiele ohne Konto gegen den Computer.", "play": "Gegen Computer", "idTitle": "Starte mit kostenloser ID", "idBody": "Erstelle dein UniversoFutbol-Konto.", "register": "Kostenlose ID"};
+L10N["zh-CN"].renewal={"headline": "从一场比赛开始。", "intro": "球队已准备好，无需注册即可与电脑对战。", "play": "与电脑对战", "idTitle": "免费注册ID", "idBody": "创建你的UniversoFutbol账号。", "register": "免费注册"};
+L10N["ko"].renewal={"headline": "첫 경기부터 시작하세요.", "intro": "팀이 준비되어 있습니다. 가입 없이 컴퓨터와 대결하세요.", "play": "컴퓨터와 대결", "idTitle": "무료 ID로 시작하세요", "idBody": "UniversoFutbol 계정을 만드세요.", "register": "무료 ID 가입"};
 let currentLocale='ja';
 function normalizeLocale(value){ const v=String(value||'').toLowerCase(); if(v.startsWith('zh')) return 'zh-CN'; if(v.startsWith('ja')) return 'ja'; if(v.startsWith('ko')) return 'ko'; if(v.startsWith('es')) return 'es'; if(v.startsWith('pt')) return 'pt'; if(v.startsWith('de')) return 'de'; if(v.startsWith('en')) return 'en'; return null; }
 function detectLocale(){ try{ const saved=localStorage.getItem('fc.locale'); const normalized=normalizeLocale(saved); if(normalized) return normalized; }catch{} return normalizeLocale(navigator.language)||'ja'; }
 function lookupLocale(locale,key){ const parts=key.split('.'); let value=L10N[locale]; for(const part of parts){ value=value?.[part]; } return typeof value==='string'?value:undefined; }
+// Approved registration benefits: rank changes and ranking free with ID; six local save slots require subscription.
+const registrationBenefitCopy={
+ ja:['無料ID登録でエース駒・ランク変更が使えます。','無料ID登録 / ログイン','フォーメーションを6枠に保存','保存済みの編成は契約終了後も読み込めます。','ランキングは誰でも閲覧できます。ID登録してオンライン対戦すると掲載されます。','無料IDでエース駒とランキング。編成の保存はサブスクで。'],
+ en:['Register for free to use ace pieces and change ranks.','Register / Log in','Save formations in six slots','Saved formations remain loadable after your subscription ends.','Anyone can view rankings. Register and play online to be listed.','Free ID: ace pieces and rankings. Subscription: formation saves.'],
+ ko:['무료 ID로 에이스 말과 등급 변경을 이용하세요.','가입 / 로그인','포메이션을 6개 슬롯에 저장','구독 종료 후에도 저장된 포메이션을 불러올 수 있습니다.','누구나 순위를 볼 수 있습니다. 가입 후 온라인 대전을 하면 순위에 표시됩니다.','무료 ID: 에이스 말과 순위. 구독: 포메이션 저장.'],
+ es:['Regístrate gratis para usar piezas as y cambiar rangos.','Registrarse / Entrar','Guarda formaciones en seis espacios','Puedes cargar las formaciones guardadas tras finalizar la suscripción.','Todos pueden ver la clasificación. Regístrate y juega en línea para aparecer.','ID gratis: piezas as y clasificación. Suscripción: guardar formaciones.'],
+ pt:['Cadastre-se grátis para usar peças craques e alterar níveis.','Cadastrar / Entrar','Salve formações em seis espaços','As formações salvas continuam disponíveis após o fim da assinatura.','Todos podem ver o ranking. Cadastre-se e jogue online para aparecer.','ID grátis: peças craques e ranking. Assinatura: salvar formações.'],
+ de:['Kostenlos registrieren, um Ass-Figuren und Rangänderungen zu nutzen.','Registrieren / Anmelden','Formationen in sechs Plätzen speichern','Gespeicherte Formationen bleiben nach Abo-Ende ladbar.','Alle können die Rangliste sehen. Registriere dich und spiele online, um gelistet zu werden.','Kostenlose ID: Ass-Figuren und Rangliste. Abo: Formationen speichern.'],
+ 'zh-CN':['免费注册ID即可使用王牌棋子和更改等级。','注册 / 登录','在六个栏位保存阵型','订阅结束后仍可载入已保存的阵型。','任何人都能查看排名。注册后参加在线对战即可上榜。','免费ID：王牌棋子和排名。订阅：保存阵型。']
+};
+for(const [locale,copy] of Object.entries(registrationBenefitCopy)){
+ const d=L10N[locale];
+ d.ogCostPremiumMsg=copy[0]; d.ogCostPremiumBtn=copy[1];
+ d.subscription={...d.subscription,benefitRank:copy[2],benefitFuture:copy[3]};
+ d.ranking={...d.ranking,note:copy[4]};
+ d.accountUi={...d.accountUi,freeDescription:copy[5],premiumRequired:copy[2]};
+}
 function t(key){ return lookupLocale(currentLocale,key)??lookupLocale('en',key)??lookupLocale('ja',key)??key; }
 function tFmt(key,params){ let s=t(key); for(const p in (params||{})) s=s.split('{'+p+'}').join(String(params[p])); return s; }
 function setTextPreservingChildren(el,value){ const textNode=[...el.childNodes].find(n=>n.nodeType===Node.TEXT_NODE); if(textNode) textNode.nodeValue=value; else el.insertBefore(document.createTextNode(value),el.firstChild); }
@@ -5163,7 +5221,7 @@ function ogRenderDeck(){
   costEl.classList.remove('punch');
   if(ogCostPunchPending){ void costEl.offsetWidth; costEl.classList.add('punch'); ogCostPunchPending=false; }
   // 「駒をタップでランク変更」ヒントはプレミアム加入者にだけ表示する（未加入者への誘導はしない。2026-07-10ユーザー指定）
-  document.getElementById('ogCostHint').textContent=ogIsPremium()?t('ogCostHint'):'';
+  document.getElementById('ogCostHint').textContent=ogIsLoggedIn()?t('ogCostHint'):'';
   const grid=document.getElementById('ogDeckGrid');
   // フォーメーション切替の滑らか移動（FLIP）：再構築前の各駒の画面位置を記録しておく
   const prevRects={};
@@ -5233,7 +5291,7 @@ function ogRenderDeck(){
     const fm=saved?ogFormation(saved.formationId):null;
     row.innerHTML=`<span class="lab ${saved?'':'empty'}">SLOT${i+1} ${saved?`${fm.name}(${ogDeckCost(saved).toFixed(1)})`:t('home.slotEmpty')}</span>`;
     const bs=document.createElement('button'); bs.className='save'; bs.textContent=t('home.save');
-    bs.addEventListener('click',()=>{ try{ localStorage.setItem(OG_SLOT_KEY+i,JSON.stringify(ogDeck)); }catch{} ogToast(tFmt('home.slotSavedTpl',{slot:i+1}),true); ogRenderDeck(); });
+    bs.addEventListener('click',()=>ogSaveSlot(i));
     const bl=document.createElement('button'); bl.className='load'; bl.textContent=t('home.load'); bl.disabled=!saved;
     bl.addEventListener('click',()=>{ if(!saved)return; ogDeck={formationId:saved.formationId,costs:saved.costs.slice()}; ogSelectedPiece=-1; ogSaveDeck(); ogRenderDeck(); ogToast(tFmt('home.slotLoadedTpl',{slot:i+1}),true); });
     row.appendChild(bs); row.appendChild(bl);
@@ -5242,6 +5300,15 @@ function ogRenderDeck(){
 }
 
 /* ---- ランク（コスト）変更（Unity UICostChangeDialog：上限16超の増加は拒否して戻す） ---- */
+function ogSaveSlot(i){
+  if(!Number.isInteger(i)||i<0||i>=6) return false;
+  if(!ogIsLoggedIn()){ ogShowLogin(); return false; }
+  if(!ogIsPremium()){ ogShowSubRequired(); return false; }
+  try{ localStorage.setItem(OG_SLOT_KEY+i,JSON.stringify(ogDeck)); }
+  catch{ return false; }
+  ogToast(tFmt('home.slotSavedTpl',{slot:i+1}),true); ogRenderDeck();
+  return true;
+}
 function ogRankLabel(cost){ return '★'.repeat(Math.floor(cost))+(cost%1!==0?'+':''); }
 // 変更後のチームコスト合計を返す純粋関数。事前プレビュー表示と実行時の上限判定は必ずこれ経由にする（判定式の二重実装を避ける）。
 function ogCostPreviewTotal(pi,level){ return ogDeckCost()-ogDeck.costs[pi]+level; }
@@ -5253,12 +5320,12 @@ function ogOpenCostPicker(pi){
   const f=ogFormation(ogDeck.formationId);
   const pt=f.pos[pi][0].toUpperCase();
   const cur=ogDeck.costs[pi];
-  const premium=ogIsPremium();
+  const registered=ogIsLoggedIn();
   document.getElementById('ogCostTitle').textContent=tFmt('ogCostTitleTpl',{pos:pt,rank:ogRankLabel(cur),cost:cur.toFixed(1)});
   document.getElementById('ogCostPreview').textContent=tFmt('ogCostPreviewTpl',{total:ogDeckCost().toFixed(1),max:OG_MAX_TEAM_COST.toFixed(1)});
   const lockPanel=document.getElementById('ogCostPremiumLock');
-  lockPanel.style.display=premium?'none':'';
-  if(!premium){
+  lockPanel.style.display=registered?'none':'';
+  if(!registered){
     document.getElementById('ogCostPremiumMsg').textContent=t('ogCostPremiumMsg');
     document.getElementById('ogCostPremiumBtn').textContent=t('ogCostPremiumBtn');
   }
@@ -5267,13 +5334,13 @@ function ogOpenCostPicker(pi){
   OG_COST_LEVELS.forEach(c=>{
     const isCurrent=c===cur;
     const overLimit=!isCurrent&&ogCostExceedsLimit(pi,c);
-    const locked=!premium||overLimit;
+    const locked=!registered||overLimit;
     const b=document.createElement('button');
     b.className='opt'+(isCurrent?' cur':'')+(locked?' locked':'');
-    b.disabled=!premium; // プレミアム未加入時のみ完全無効化。上限超過時は警告トーストを出すためタップ可能にする
+    b.disabled=!registered; // プレミアム未加入時のみ完全無効化。上限超過時は警告トーストを出すためタップ可能にする
     let html=`<span class="ic" style="background-image:var(--cost${c*10})"></span><span class="num">${c.toFixed(1)}</span>`;
     if(isCurrent) html+=`<span class="curBadge">${t('ogCostCurrentBadge')}</span>`;
-    if(!premium){
+    if(!registered){
       html+=`<span class="lockIco">🔒</span>`;
     }else if(overLimit){
       html+=`<span class="lockIco">🔒</span><span class="overLabel">${t('ogCostOverLabel')}</span>`;
@@ -5283,7 +5350,7 @@ function ogOpenCostPicker(pi){
       html+=`<span class="delta">${deltaText}　→${ogCostPreviewTotal(pi,c).toFixed(1)}</span>`;
     }
     b.innerHTML=html;
-    if(premium&&!overLimit){
+    if(registered&&!overLimit){
       b.addEventListener('click',()=>{
         const newTotal=ogCostPreviewTotal(pi,c);
         ogDeck.costs[pi]=c; ogSaveDeck();
@@ -5291,7 +5358,7 @@ function ogOpenCostPicker(pi){
         ogShow('ogCostPicker',false); ogSelectedPiece=-1; ogRenderDeck();
         ogToast(tFmt('ogCostToastTpl',{pos:pt,rank:ogRankLabel(c),total:newTotal.toFixed(1),max:OG_MAX_TEAM_COST.toFixed(1)}),true);
       });
-    }else if(premium&&overLimit){
+    }else if(registered&&overLimit){
       b.addEventListener('click',()=>{
         ogToast(tFmt('accountUi.costOverTpl',{max:OG_MAX_TEAM_COST,total:ogCostPreviewTotal(pi,c).toFixed(1)}));
       });
@@ -5300,7 +5367,7 @@ function ogOpenCostPicker(pi){
   });
   document.getElementById('ogCostPremiumBtn').onclick=()=>{
     ogShow('ogCostPicker',false); ogSelectedPiece=-1; ogRenderDeck();
-    ogShowSubRequired();
+    ogShowLogin();
   };
   ogShow('ogCostPicker',true);
 }
@@ -5325,7 +5392,7 @@ function ogSaveSession(){
   }catch{}
 }
 function ogIsLoggedIn(){ return !!(ogAuth.token&&ogAuth.user); }
-function ogIsPremium(){ return !!(ogAuth.user&&ogAuth.user.subscription&&ogAuth.user.subscription.active); }
+function ogIsPremium(){ const sub=ogAuth.user?.subscription; return !!(ogIsLoggedIn()&&sub?.active&&(!sub.until||Date.parse(sub.until)>=Date.now())); }
 /* ログイン状態をUIへ反映する。
    ⚠プレイヤー名の上書きは syncName:true（明示的なログイン/新規登録/SSO直後）のときだけ行う。
    旧実装は起動時のセッション復元（ogRestoreSession）でも毎回アカウント名で
@@ -5431,6 +5498,7 @@ async function ogLogout(){
   ogToast(t('accountUi.logoutSuccess'),true);
 }
 function ogRenderAuth(){
+  document.getElementById("ogRegistration").style.display=ogIsLoggedIn()?"none":"";
   const badge=document.getElementById('ogHeadBadge');
   if(badge){
     badge.textContent=ogIsLoggedIn()?(ogIsPremium()?'★ PREMIUM':'FREE'):t('accountUi.guest');
@@ -5824,6 +5892,13 @@ async function startMatchmaking(){
    オンライン対戦（自動マッチング・15秒でCOMへ）/ COM対戦 / フレンド対戦 を選ぶ。 */
 function modeOpen(){ ogShow('modeOverlay',true); }
 function modeClose(){ ogShow('modeOverlay',false); }
+document.getElementById('ogQuickComBtn').addEventListener('click',()=>{ playFeedback('submit'); ogSaveDeck(); startComMatch(); });
+document.getElementById('ogQuickHelpBtn').addEventListener('click',()=>{ playFeedback('tap'); tutorialOpen(); });
+document.getElementById('ogRegisterBtn').addEventListener('click',()=>{
+  const to=location.protocol==='https:'?location.origin:'https://mini.footballchess.io';
+  const returnPath='/api/auth/launch?to='+encodeURIComponent(to);
+  location.assign(ogPortalOrigin()+'/login?mode=register&return='+encodeURIComponent(returnPath));
+});
 document.getElementById('ogMatchBtn').addEventListener('click',()=>{ playFeedback('submit'); ogSaveDeck(); modeOpen(); });
 document.getElementById('modeCloseBtn').addEventListener('click',()=>{ playFeedback('cancel'); modeClose(); });
 document.getElementById('modeOverlay').addEventListener('click',e=>{ if(e.target.id==='modeOverlay') modeClose(); });

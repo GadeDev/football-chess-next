@@ -91,7 +91,7 @@ test("online matchmaking falls back to COM silently (never disclosed to the user
   assert.doesNotMatch(html, /id="mmNote"/);
 });
 
-test("TEAM COST label is localized for 7 locales and rank hint is premium-only", () => {
+test("TEAM COST label is localized for 7 locales and rank hint is registration-only", () => {
   // ホームの合計表示とランク変更ウィンドウのTEAM COST表記が英語固定でないこと（2026-07-10ユーザー指摘）
   assert.match(html, /TEAM_COST_LABELS/);
   assert.match(html, /ja:'チームコスト'/);
@@ -99,7 +99,7 @@ test("TEAM COST label is localized for 7 locales and rank hint is premium-only",
   assert.match(html, /tFmt\('ogTeamCostTpl'/);
   assert.doesNotMatch(html, /textContent=`TEAM COST /);
   // 「駒をタップでランク変更」ヒントはプレミアム加入者のみ表示
-  assert.match(html, /ogIsPremium\(\)\?t\('ogCostHint'\):''/);
+  assert.match(html, /ogIsLoggedIn\(\)\?t\('ogCostHint'\):''/);
 });
 
 test("header shows real names and six COM personas combine with all six formations", () => {
@@ -159,11 +159,11 @@ test("ranking is publicly viewable while session binding remains available for e
   assert.match(html, /url\.searchParams\.set\('session',ogAuth\.token\)/);
 });
 
-test("ranking records only active subscribers but exposes the list without authentication", () => {
+test("ranking records registered users but exposes the list without authentication", () => {
   const recordBlock = accountsSource.match(/async recordRankedResult\([\s\S]*?\n  }/)?.[0] ?? "";
   const topBlock = accountsSource.match(/async rankingTop\([\s\S]*?\n  }/)?.[0] ?? "";
-  assert.match(recordBlock, /subscription\.active/);
-  assert.match(topBlock, /if \(!row \|\| !isPremium\) return \{ ok: true, rankings \}/);
+  assert.doesNotMatch(recordBlock, /subscription\.active/);
+  assert.match(topBlock, /if \(!row\) return \{ ok: true, rankings \}/);
   assert.doesNotMatch(topBlock, /reason: "login"/);
   assert.doesNotMatch(topBlock, /reason: "premium"/);
 });

@@ -3,6 +3,10 @@
 Football Chess Web版を universofutbol.com に組み込むためのログイン・サブスク連携の設計。
 現状の実装状態と、UniversoFutbol(WordPress)側で将来やることを分けて書く。
 
+## 2026-10-20 登録特典方針（以下の旧仕様より優先）
+
+正対象はmini.footballchess.io / football-chess-next / game_id=football_chess。エース駒のランク変更とオンライン対戦ランキング掲載は無料IDで利用可能。ランキング閲覧はゲストも可能。サブスクは既存6枠への編成保存・上書きに必要で、保存済み編成の読み込み・利用は契約終了後も保持する。戦績は従来通りMatchRoomが確定し、ゲストの戦績は掲載しない。新規DB migration、価格変更、既存データ削除なし。ManiacSの10枠仕様を転用しない。
+
 ## 現状の実装（2026-07-06 時点・稼働中）
 
 ### 構成
