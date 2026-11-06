@@ -33,6 +33,7 @@ test('AccountStore refreshes a paid session after cancellation without a new SSO
  const {DatabaseSync}=await import('node:sqlite');
  const source=readFileSync(new URL('../.test-dist/src/accounts.js',import.meta.url),'utf8')
   .replace('import { DurableObject } from "cloudflare:workers";','class DurableObject {constructor(ctx,env){this.ctx=ctx;this.env=env;}}')
+  .replace('"./play-stats"',JSON.stringify(new URL('../.test-dist/src/play-stats.js',import.meta.url).href))
   .replace('"./ranking"',JSON.stringify(new URL('../.test-dist/src/ranking.js',import.meta.url).href))
   .replace('"./platform-subscription"',JSON.stringify(new URL('../.test-dist/src/platform-subscription.js',import.meta.url).href));
  const {AccountStore}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));

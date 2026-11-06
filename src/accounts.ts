@@ -6,6 +6,12 @@ import {
   outcomeForSeat,
   type MatchOutcome,
 } from "./ranking";
+import { PLAY_STATS_MAX_DAYS, isUniversoMember, jstDay, normalizeClientId } from "./play-stats";
+
+async function sha256Hex(value: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
 
 /* UniversoFutbol 会員基盤（暫定実装）
    - 現状: Worker 内アカウント（ユーザー名+パスワード）+ デモサブスク（実決済なし）。
@@ -146,6 +152,15 @@ export class AccountStore extends DurableObject<Env> {
           count INTEGER NOT NULL
         )
       `);
+      // KPI-01：対戦を始めた人（1日1人）。who は "m:<アカウントID>"（UF会員）か "b:<目印のSHA-256>"（ログインなし）。
+      this.ctx.storage.sql.exec(`
+        CREATE TABLE IF NOT EXISTS play_starts (
+          day TEXT NOT NULL,
+          who TEXT NOT NULL,
+          kind TEXT NOT NULL,
+          PRIMARY KEY (day, who)
+        )
+      `);
       // ランキング用の戦績カラム（既存DBへの後付けなので ALTER TABLE を冪等に流す）
       for (const ddl of [
         "ALTER TABLE sessions ADD COLUMN platform_token TEXT",
@@ -187,6 +202,62 @@ export class AccountStore extends DurableObject<Env> {
     if (row.count >= limit) return false;
     this.ctx.storage.sql.exec(`UPDATE rate_limits SET count = count + 1 WHERE key = ?`, key);
     return true;
+  }
+
+  // ------------------------------------------------------
+  // KPI-01：対戦を始めた人を数える（数だけを外に出す。目印・IDは返さない）
+
+  /**
+   * 対戦を始めた人を1件記録する。UF IDでログインした会員は会員として、それ以外はブラウザの目印で数える。
+   * 同じ日に同じ人が何度始めても1件。数えられない入力（目印もログインもない）は記録しない。
+   */
+  async recordPlayStart(input: {
+    sessionToken?: unknown;
+    accountId?: string | null;
+    clientId?: unknown;
+    now?: number;
+  }): Promise<boolean> {
+    const day = jstDay(new Date(input.now ?? Date.now()));
+    let row: UserRow | undefined;
+    if (typeof input.accountId === "string" && input.accountId) row = this.userById(input.accountId);
+    else if (input.sessionToken) row = this.userBySession(input.sessionToken);
+    let who: string | null = null;
+    let kind: "member" | "browser" = "member";
+    if (row && isUniversoMember(row.external_id)) {
+      who = `m:${row.id}`;
+    } else {
+      const clientId = normalizeClientId(input.clientId);
+      if (clientId) {
+        who = `b:${await sha256Hex(clientId)}`;
+        kind = "browser";
+      }
+    }
+    if (!who) return false;
+    this.ctx.storage.sql.exec(
+      `INSERT OR IGNORE INTO play_starts (day, who, kind) VALUES (?, ?, ?)`,
+      day,
+      who,
+      kind,
+    );
+    // 400日より古い記録はたまに掃除する（数える期間の上限と同じ）
+    if (Math.random() < 0.02) {
+      const cutoff = jstDay(new Date(Date.now() - (PLAY_STATS_MAX_DAYS + 1) * 86_400_000));
+      this.ctx.storage.sql.exec(`DELETE FROM play_starts WHERE day < ?`, cutoff);
+    }
+    return true;
+  }
+
+  /** 期間中に対戦を始めた人の数（期間中に何回遊んでも1人）。 */
+  async playStats(from: string, to: string): Promise<{ members: number; browsers: number }> {
+    const rows = this.ctx.storage.sql
+      .exec<{ kind: string; n: number }>(
+        `SELECT kind, COUNT(DISTINCT who) AS n FROM play_starts WHERE day >= ? AND day <= ? GROUP BY kind`,
+        from,
+        to,
+      )
+      .toArray();
+    const count = (k: string) => Number(rows.find((r) => r.kind === k)?.n ?? 0);
+    return { members: count("member"), browsers: count("browser") };
   }
 
   // ------------------------------------------------------

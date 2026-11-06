@@ -20,6 +20,7 @@ import {
   type TurnEvent,
   type TurnResolution,
 } from "./game-core";
+import { parseStatsRange, playStatsBody } from "./play-stats";
 
 type SeatRole = Team | "spectator";
 type RoomStatus = "waiting" | "ready" | "playing" | "finished";
@@ -470,6 +471,7 @@ const RATE_LIMITS: Record<string, { limit: number; windowMs: number }> = {
   billing: { limit: 30, windowMs: 60 * 60 * 1000 },
   room: { limit: 12, windowMs: 60 * 60 * 1000 }, // ROOM作成: 12回/時/IP
   telemetry: { limit: 240, windowMs: 60 * 60 * 1000 },
+  plays: { limit: 120, windowMs: 60 * 60 * 1000 }, // 対戦開始の記録: 120回/時/IP
 };
 
 async function rateLimited(env: Env, bucket: keyof typeof RATE_LIMITS, request: Request): Promise<boolean> {
@@ -551,6 +553,24 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
 
   if (url.pathname === `${API_PREFIX}/telemetry` && request.method === "POST") {
     return receiveTelemetry(request, env);
+  }
+
+  // KPI-01：コンピューター戦を始めた時にブラウザが1回知らせる（オンライン戦は MatchRoom が記録する）。
+  if (url.pathname === `${API_PREFIX}/plays/start` && request.method === "POST") {
+    if (await rateLimited(env, "plays", request)) return problem(429, "Too many play events");
+    const body = parseJsonObject(await request.text()) ?? {};
+    await accountStub(env).recordPlayStart({ sessionToken: bearerToken(request), clientId: body.client_id });
+    return json({ ok: true }, { status: 202 });
+  }
+
+  // KPI-01：期間中に対戦を始めた人の数だけを返す（公開・読み取りだけ。名前・ID・目印は返さない）。
+  if (url.pathname === `${API_PREFIX}/public/stats/players` && request.method === "GET") {
+    const range = parseStatsRange(url.searchParams);
+    if (!range.ok) return problem(400, range.error);
+    const counts = await accountStub(env).playStats(range.from, range.to);
+    return json(playStatsBody(range.from, range.to, counts.members, counts.browsers), {
+      headers: { "cache-control": "no-store" },
+    });
   }
 
   // ランキング一覧は公開。掲載・戦績反映はサブスク有効なアカウントのみ。
@@ -945,6 +965,19 @@ export class MatchRoom extends DurableObject<Env> {
   /* オンライン試合の確定結果（フルタイム/投了）をアカウント戦績へ記録する。
      プレミアム限定ランキングの元データ。サーバー権威で1試合につき1回だけ送る。
      winner 省略時はスコアから勝敗を判定（フルタイム用）。ゲスト同士なら何もしない。 */
+  /** KPI-01：オンライン戦の1ターン目が解決された時、青・赤の席の2人を「対戦を始めた人」として記録する。失敗しても試合は止めない。 */
+  private async recordPlayStarts(snapshot: MatchSnapshot): Promise<void> {
+    const accounts = accountStub(this.env);
+    for (const seat of [snapshot.players.b, snapshot.players.r]) {
+      if (!seat) continue;
+      try {
+        await accounts.recordPlayStart({ accountId: seat.accountId ?? null, clientId: seat.clientId });
+      } catch (error) {
+        console.warn(JSON.stringify({ type: "football_chess.play_start_failed", message: String(error).slice(0, 120) }));
+      }
+    }
+  }
+
   private async recordRankedResult(snapshot: MatchSnapshot, winner?: Team): Promise<void> {
     if (snapshot.rankedRecorded) return;
     snapshot.rankedRecorded = true;
@@ -1310,7 +1343,9 @@ export class MatchRoom extends DurableObject<Env> {
     resolvedTurn: TurnInfo,
     reason: "both-ready" | "timeout",
   ): Promise<TurnResolution> {
+    const startedNow = snapshot.status !== "playing";
     snapshot.status = "playing";
+    if (startedNow) await this.recordPlayStarts(snapshot); // KPI-01：オンライン戦を始めた2人を数える
     const resolution = this.resolveTurn(snapshot);
     snapshot.pendingIntents = {};
     this.advanceMatchClock(snapshot, resolution);
