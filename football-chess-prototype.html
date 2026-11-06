@@ -2847,6 +2847,15 @@ function sendTelemetry(event,properties={}){
     fetch(url,{method:'POST',headers:{'content-type':'application/json'},body,keepalive:true}).catch(()=>{});
   }catch{}
 }
+/* KPI-01：コンピューター戦を始めたことを1回だけ知らせる。送るのはブラウザの目印（オンライン用clientIdと同じ）とログイン中のセッションだけ。
+   失敗してもゲームは止めない。数は1日1人に丸められ、外には人数だけが出る。 */
+function sendPlayStart(){
+  try{
+    const headers={'content-type':'application/json'};
+    if(ogAuth.token&&ogAuth.user) headers['authorization']='Bearer '+ogAuth.token;
+    fetch(`${defaultOnlineApiBase()}/plays/start`,{method:'POST',headers,body:JSON.stringify({client_id:getOnlineClientId()}),keepalive:true}).catch(()=>{});
+  }catch{}
+}
 function roomCodeFromUrl(){
   const raw=new URLSearchParams(location.search).get('room');
   return raw ? raw.trim().toUpperCase() : '';
@@ -5800,6 +5809,7 @@ function startComMatch(){
   ogCloseHome();
   if(online.connected){ return; } // オンライン中はサーバー盤面を維持したまま戻る
   telemetryMatchStartedAt=Date.now(); sendTelemetry('match.start',{mode:'com'}); // 集計は正直にcom（非表示情報）
+  sendPlayStart(); // KPI-01：対戦を始めた人を数える（オンライン戦はサーバーが記録する）
   document.getElementById('resetBtn').click(); // 編成を反映してキックオフ配置を作り直す
 }
 /* ===== COM対戦の対戦相手ペルソナ（2026-07-10実装・2026-07-13に36通り化） =====
